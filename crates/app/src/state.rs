@@ -126,6 +126,10 @@ pub enum Target {
     ToggleExpand,
     ToggleSide,
     SideTab(u8),
+    /// Folds or opens a sidebar section.
+    Fold(u8),
+    /// A choice in a chip's editor: chip, then the value.
+    ChipSet(u8, u8),
     ToggleColumn(crate::library::Column),
     ResetColumns,
     /// A hot cue row in the side panel: jumps there, or sets it at the play position when empty.
@@ -187,7 +191,7 @@ pub enum Shelf {
 /// The library's filter chips, in order, each a bit of `State::filters`.
 pub const FILTERS: [&str; 4] = ["Near BPM", "Mixes in key", "Rated", "Colored"];
 /// How far a tempo may be from the lead deck's for the Near BPM chip.
-const NEAR_BPM: f32 = 0.06;
+pub const NEAR_BPM: [u8; 5] = [2, 4, 6, 8, 10];
 
 pub fn entry_key(e: &Entry) -> String {
     match &e.source {
@@ -548,6 +552,14 @@ pub struct State {
     /// The side panel right of the library.
     pub side_panel: bool,
     pub side_tab: u8,
+    /// Folded sidebar sections, one bit each.
+    pub folded: u8,
+    /// The Near BPM chip's tolerance, a place in `NEAR_BPM`.
+    pub near_bpm: u8,
+    /// The fewest stars the Rated chip lets through.
+    pub min_stars: u8,
+    /// The chip whose editor is open.
+    pub chip_menu: Option<u8>,
     /// The large waveforms' zoom, each step twice as close; 0 is the default.
     pub wave_zoom: i8,
     /// The large waveforms' height, each step a fifth taller; 0 is the default.
@@ -698,6 +710,10 @@ impl State {
             hidden_cols: 0,
             side_panel: false,
             side_tab: 0,
+            folded: 0,
+            near_bpm: 2,
+            min_stars: 1,
+            chip_menu: None,
             prefs: None,
             pref_menu: None,
             app_menu: false,
@@ -1205,14 +1221,15 @@ impl State {
         };
         let lead = self.lead();
         let f = self.filters;
+        let near = f32::from(NEAR_BPM[usize::from(self.near_bpm).min(NEAR_BPM.len() - 1)]) / 100.0;
+        let min_stars = self.min_stars.max(1);
         let (meta, store, entries) = (&self.meta, &self.store, &self.entries);
         let keep = |i: u32| {
             let m = meta.get(i as usize).copied().flatten();
             let saved = || store.get(&entry_key(&entries[i as usize])).unwrap_or_default();
-            (f & 1 == 0
-                || lead.0.zip(m.map(|m| m.bpm)).is_some_and(|(b, t)| t > 0.0 && (t / b - 1.0).abs() <= NEAR_BPM))
+            (f & 1 == 0 || lead.0.zip(m.map(|m| m.bpm)).is_some_and(|(b, t)| t > 0.0 && (t / b - 1.0).abs() <= near))
                 && (f & 2 == 0 || lead.1.zip(m.and_then(|m| m.key)).is_some_and(|(a, b)| a.mixes(b)))
-                && (f & 4 == 0 || saved().rating > 0)
+                && (f & 4 == 0 || saved().rating >= min_stars)
                 && (f & 8 == 0 || saved().colour > 0)
         };
         self.shown = order.into_iter().filter(|&i| keep(i) && library::matches(&self.entries[i as usize], q)).collect();
@@ -1299,12 +1316,14 @@ impl State {
         }
         let open = self.track_menu.is_some()
             || self.column_menu
+            || self.chip_menu.is_some()
             || self.list_menu.is_some()
             || self.cue_menu.is_some()
             || self.grid_menu.is_some()
             || self.picker.is_some();
         self.track_menu = None;
         self.column_menu = false;
+        self.chip_menu = None;
         self.list_menu = None;
         self.cue_menu = None;
         self.grid_menu = None;
@@ -1568,6 +1587,14 @@ impl State {
                 self.menu_at = g.start;
                 self.submenu = None;
             }
+        }
+        if self.chip_menu.is_none()
+            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
+            && let Some(Target::Filter(n @ (0 | 2))) = g.target
+        {
+            g.moved = true;
+            self.chip_menu = Some(n);
+            self.menu_at = g.start;
         }
         if !self.column_menu
             && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
@@ -2169,6 +2196,7 @@ impl State {
             }
             Target::MenuClose => {
                 self.column_menu = false;
+                self.chip_menu = None;
                 self.list_menu = None;
                 self.track_menu = None;
                 self.submenu = None;
@@ -2244,6 +2272,18 @@ impl State {
             Target::SideTab(n) => {
                 self.side_tab = n;
                 self.save_panels();
+            }
+            Target::Fold(b) => self.folded ^= 1 << b,
+            Target::ChipSet(chip, v) => {
+                if chip == 0 {
+                    self.near_bpm = v;
+                } else {
+                    self.min_stars = v;
+                }
+                self.filters |= 1 << if chip == 0 { 0 } else { 2 };
+                self.chip_menu = None;
+                let q = std::mem::take(&mut self.query);
+                self.search(q);
             }
             Target::ToggleColumn(c) => {
                 self.hidden_cols ^= 1 << c as u8;

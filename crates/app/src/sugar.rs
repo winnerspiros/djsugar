@@ -94,6 +94,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     track_menu(p, s, w, h);
     list_menu(p, s, w, h);
     column_menu(p, s, w, h);
+    chip_menu(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
     crate::prefs::overlay(p, s, w, h);
 }
@@ -760,6 +761,8 @@ fn mmss(secs: f32) -> String {
 }
 
 /// The library's rail: the collection, playlists, streaming services and folders, each under its heading.
+/// The sidebar tree: collection, playlists, streaming services and folders, each a
+/// section that folds away under its heading.
 fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::state::Shelf;
     p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
@@ -767,7 +770,14 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
     let rh = 26.0;
     let bottom = r.y + r.h;
     let mut y = r.y + 4.0;
-    let row = |p: &mut Painter, s: &mut State, y: &mut f32, label: &str, t: Target, on: bool, tint: Option<u32>| {
+    let count = Style { colour: theme::FAINT, ..SMALL };
+    let row = |p: &mut Painter,
+               s: &mut State,
+               y: &mut f32,
+               (label, n): (&str, Option<usize>),
+               t: Target,
+               on: bool,
+               tint: Option<u32>| {
         if *y + rh > bottom {
             return;
         }
@@ -778,56 +788,90 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect) {
         if on {
             p.rect(b.x, b.y + 4.0, 3.0, b.h - 8.0, 1.5, ACCENT);
         }
-        let mut tx = b.x + 10.0;
+        let mut tx = b.x + 22.0;
         if let Some(c) = tint {
             p.rect(tx, b.y + b.h * 0.5 - 4.0, 8.0, 8.0, 4.0, c);
             tx += 14.0;
         }
-        p.text_in(
-            tx,
-            b.y + b.h * 0.5 + 4.0,
-            b.x + b.w - tx - 4.0,
-            Style { colour: if on { TEXT } else { GREY }, ..ARTIST },
-            label,
-        );
+        let mut right = b.x + b.w - 6.0;
+        if let Some(n) = n {
+            let n = n.to_string();
+            right -= p.text_width(count, &n);
+            p.text(right, b.y + b.h * 0.5 + 4.0, count, &n);
+            right -= 6.0;
+        }
+        let ink = Style { colour: if on { TEXT } else { GREY }, ..ARTIST };
+        p.text_in(tx, b.y + b.h * 0.5 + 4.0, right - tx, ink, label);
         hit(s, b, t);
         *y += rh;
     };
-    let head = |p: &mut Painter, y: &mut f32, name: &str| {
-        if *y + 18.0 + rh <= bottom {
-            p.text(r.x + 12.0, *y + 14.0, SMALL, name);
-            *y += 20.0;
+    // A heading with its fold arrow; returns whether the section is open.
+    let head = |p: &mut Painter, s: &mut State, y: &mut f32, name: &str, bit: u8| -> bool {
+        if *y + 18.0 + rh > bottom {
+            return false;
         }
+        let open = s.folded & (1 << bit) == 0;
+        let b = Rect::new(r.x + 6.0, *y, r.w - 12.0, 20.0);
+        let (ax, ay) = (b.x + 8.0, b.y + 10.0);
+        if open {
+            p.line((ax - 3.5, ay - 1.5), (ax, ay + 2.0), 1.4, GREY);
+            p.line((ax, ay + 2.0), (ax + 3.5, ay - 1.5), 1.4, GREY);
+        } else {
+            p.line((ax - 1.5, ay - 3.5), (ax + 2.0, ay), 1.4, GREY);
+            p.line((ax + 2.0, ay), (ax - 1.5, ay + 3.5), 1.4, GREY);
+        }
+        p.text(b.x + 18.0, b.y + 14.0, SMALL, name);
+        hit(s, b, Target::Fold(bit));
+        *y += 22.0;
+        open
     };
     let lib = s.view != View::Stream;
-    head(p, &mut y, "COLLECTION");
-    let all = format!("All Tracks  {}", s.entries.len().saturating_sub(crate::state::SAMPLES.len()));
-    row(p, s, &mut y, &all, Target::Shelf(Shelf::Tracks), lib && s.shelf == Shelf::Tracks, None);
-    let hist = format!("History  {}", s.history.len());
-    row(p, s, &mut y, &hist, Target::Shelf(Shelf::History), lib && s.shelf == Shelf::History, None);
-    head(p, &mut y, "PLAYLISTS");
-    let lists: Vec<String> = s.playlists.iter().map(|(n, k)| format!("{n}  {}", k.len())).collect();
-    for (n, label) in lists.iter().enumerate() {
-        let sh = Shelf::Playlist(n);
-        row(p, s, &mut y, label, Target::Shelf(sh), lib && s.shelf == sh, None);
+    if head(p, s, &mut y, "COLLECTION", 0) {
+        let all = s.entries.len().saturating_sub(crate::state::SAMPLES.len());
+        row(
+            p,
+            s,
+            &mut y,
+            ("All Tracks", Some(all)),
+            Target::Shelf(Shelf::Tracks),
+            lib && s.shelf == Shelf::Tracks,
+            None,
+        );
+        let hist = s.history.len();
+        row(
+            p,
+            s,
+            &mut y,
+            ("History", Some(hist)),
+            Target::Shelf(Shelf::History),
+            lib && s.shelf == Shelf::History,
+            None,
+        );
     }
-    if y + rh <= bottom {
-        let b = Rect::new(r.x + 6.0, y + 2.0, r.w - 12.0, rh - 4.0);
-        button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
-        y += rh + 2.0;
+    if head(p, s, &mut y, "PLAYLISTS", 1) {
+        let lists: Vec<(String, usize)> = s.playlists.iter().map(|(n, k)| (n.clone(), k.len())).collect();
+        for (n, (name, len)) in lists.iter().enumerate() {
+            let sh = Shelf::Playlist(n);
+            row(p, s, &mut y, (name, Some(*len)), Target::Shelf(sh), lib && s.shelf == sh, None);
+        }
+        if y + rh <= bottom {
+            let b = Rect::new(r.x + 6.0, y + 2.0, r.w - 12.0, rh - 4.0);
+            button(p, s, b, "+ NEW PLAYLIST", false, ACCENT, Target::NewPlaylist);
+            y += rh + 2.0;
+        }
     }
-    head(p, &mut y, "STREAMING");
-    for sv in crate::hub::Service::ALL {
-        let on = !lib && s.hub.service == sv;
-        row(p, s, &mut y, sv.label(), Target::StreamFrom(sv), on, Some(rgb(sv.colour())));
+    if head(p, s, &mut y, "STREAMING", 2) {
+        for sv in crate::hub::Service::ALL {
+            let on = !lib && s.hub.service == sv;
+            row(p, s, &mut y, (sv.label(), None), Target::StreamFrom(sv), on, Some(rgb(sv.colour())));
+        }
     }
     let folders: Vec<String> = s.folders().into_iter().map(str::to_string).collect();
-    if !folders.is_empty() {
-        head(p, &mut y, "FOLDERS");
-    }
-    for (n, f) in folders.iter().enumerate() {
-        let sh = Shelf::Folder(n);
-        row(p, s, &mut y, f, Target::Shelf(sh), lib && s.shelf == sh, None);
+    if !folders.is_empty() && head(p, s, &mut y, "FOLDERS", 3) {
+        for (n, f) in folders.iter().enumerate() {
+            let sh = Shelf::Folder(n);
+            row(p, s, &mut y, (f, None), Target::Shelf(sh), lib && s.shelf == sh, None);
+        }
     }
 }
 
@@ -849,6 +893,29 @@ fn toast(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 }
 
 /// A held playlist's menu: load its first track, move it, empty it, delete it.
+/// A chip's editor: how near in tempo for Near BPM, how many stars for Rated.
+fn chip_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some(chip) = s.chip_menu else { return };
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let lines: Vec<Line> = if chip == 0 {
+        let mut v = vec![Line::item("Tempo within", Target::MenuBody).enabled(false), Line::Rule];
+        v.extend(crate::state::NEAR_BPM.iter().enumerate().map(|(n, pc)| {
+            Line::item(format!("{pc}%"), Target::ChipSet(0, n as u8)).mark(Mark::Check(usize::from(s.near_bpm) == n))
+        }));
+        v
+    } else {
+        let mut v = vec![Line::item("At least", Target::MenuBody).enabled(false), Line::Rule];
+        v.extend((1..=5u8).map(|n| {
+            let label = if n == 1 { "1 star".to_string() } else { format!("{n} stars") };
+            Line::item(label, Target::ChipSet(2, n)).mark(Mark::Check(s.min_stars == n))
+        }));
+        v
+    };
+    theme::menu(p, s, s.menu_at, screen, &lines);
+}
+
 /// Which columns the track list shows; the title always stays.
 fn column_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     use crate::library::Column as C;
@@ -1036,8 +1103,18 @@ fn chips(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
     let h = 30.0;
     let st = Style::new(11.0, Weight::Semibold, GREY);
     let mut x = r.x + 12.0;
+    p.text(x, r.y + h * 0.5 + 4.0, Style { colour: TEXT, ..st }, "Filter");
+    x += p.text_width(st, "Filter") + 10.0;
     for (n, name) in crate::state::FILTERS.iter().enumerate() {
-        let w = p.text_width(st, name) + 20.0;
+        // Chips with a value say it, and carry a mark that holding opens their editor.
+        let label = match n {
+            0 => format!("{name} {}%", crate::state::NEAR_BPM[usize::from(s.near_bpm)]),
+            2 if s.min_stars > 1 => format!("{name} {}+", s.min_stars),
+            _ => (*name).to_string(),
+        };
+        let name = label.as_str();
+        let editable = matches!(n, 0 | 2);
+        let w = p.text_width(st, name) + if editable { 32.0 } else { 20.0 };
         if x + w > r.x + r.w - 8.0 {
             break;
         }
@@ -1053,6 +1130,11 @@ fn chips(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
         };
         p.outlined(b.x, b.y, b.w, b.h, b.h * 0.5, fill, 1.0, if on { ACCENT } else { EDGE });
         p.text(b.x + 10.0, b.y + b.h * 0.5 + 4.0, Style { colour: if on { TEXT } else { GREY }, ..st }, name);
+        if editable {
+            let (ax, ay) = (b.x + b.w - 13.0, b.y + b.h * 0.5);
+            p.line((ax - 3.0, ay - 1.5), (ax, ay + 1.5), 1.3, GREY);
+            p.line((ax, ay + 1.5), (ax + 3.0, ay - 1.5), 1.3, GREY);
+        }
         hit(s, b, t);
         x += w + 6.0;
     }

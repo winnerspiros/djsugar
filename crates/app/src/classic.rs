@@ -592,7 +592,7 @@ fn spinny(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let known = bpm.is_some();
     let bpm = bpm.map_or_else(|| "--.--".to_string(), |b| format!("{b:.2}"));
     let big = bold((rad * 0.3).clamp(10.0, 26.0), if known { WHITE } else { FAINT });
-    let sm = Style::new((rad * 0.11).clamp(7.0, 11.0).round(), Weight::Semibold, DIM);
+    let sm = Style::new((rad * 0.13).clamp(8.0, 13.0).round(), Weight::Semibold, DIM);
     let line = |dy: f32, h: f32| Rect::new(cx - face, cy + dy, face * 2.0, h);
     centred(p, line(-big.px * 0.6 - sm.px * 1.5, sm.px * 1.3), sm, &format!("{:+.1}%", rate * 100.0));
     centred(p, line(-big.px * 0.6, big.px * 1.2), big, &bpm);

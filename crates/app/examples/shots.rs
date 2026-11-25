@@ -195,6 +195,17 @@ fn main() {
                 ui.tap("ToggleSide");
                 ui.render(&mut r);
             }
+            // Right-click the Near BPM chip: its editor must open and a choice must close it.
+            if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Filter(0)") {
+                ui.context((x + w * 0.5) * scale, (y + h * 0.5) * scale);
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-chip.png")));
+                if !ui.tap("ChipSet(0, 2)") {
+                    faults.push(format!("{name}: no Near BPM chip editor"));
+                }
+                ui.tap("Filter(0)");
+                ui.render(&mut r);
+            }
             // Right-click a heading, hide BPM: its heading must go, and Reset must bring it back.
             if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Sort(Title)") {
                 // Columns persist, so compare with what was shown before rather than assume.
@@ -210,10 +221,13 @@ fn main() {
                     faults.push(format!("{name}: toggling the BPM column changed nothing"));
                 }
                 ui.key(Key::Escape, Mods::default());
+                ui.render(&mut r);
                 if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Sort(Title)") {
                     ui.context((x + w * 0.5) * scale, (y + h * 0.5) * scale);
                     ui.render(&mut r);
-                    ui.tap("ResetColumns");
+                    if !ui.tap("ResetColumns") {
+                        ui.tap("ToggleColumn(Bpm)");
+                    }
                     ui.key(Key::Escape, Mods::default());
                     ui.render(&mut r);
                 }
