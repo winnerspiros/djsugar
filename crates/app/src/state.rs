@@ -305,6 +305,9 @@ pub enum Mode {
 }
 
 pub const ECHO_BEATS: [f64; 5] = [0.25, 0.5, 0.75, 1.0, 2.0];
+/// The engine's Echo and Echo Out, as `loaded_effect` values.
+const PAD_ECHO: u8 = 1;
+const PAD_ECHO_OUT: u8 = 9;
 pub const FX_PADS: [&str; 8] = ["1/4", "1/2", "3/4", "1", "2", "OUT", "BRK", "REV"];
 
 pub const LOOP_BEATS: [f64; 8] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0];
@@ -1942,19 +1945,21 @@ impl State {
         let beat = l.grid.map_or(0.5 * f64::from(rate), |g| g.beat_frames(rate)) / speed;
         let out_beat = beat * f64::from(self.out_rate) / f64::from(rate);
         match p {
-            0..5 if self.decks[d].echo == Some(p) => {
+            0..6 if self.decks[d].echo == Some(p) => {
                 self.decks[d].echo = None;
                 self.send(Command::Echo(d, 0.0, out_beat));
+                self.send(Command::Fx(d, FxSet::Pad(0, 0.0, false)));
             }
             0..5 => {
                 self.decks[d].echo = Some(p);
                 self.send(Command::Echo(d, 0.6, out_beat * ECHO_BEATS[p]));
+                self.send(Command::Fx(d, FxSet::Pad(PAD_ECHO, ECHO_BEATS[p] as f32, true)));
             }
             5 => {
-                self.decks[d].echo = Some(3);
+                // Echo Out: the echo rings on while the dry track drops away.
+                self.decks[d].echo = Some(5);
                 self.send(Command::Echo(d, 0.75, out_beat));
-                self.send(Command::Play(d, false));
-                self.telemetry.decks[d].playing = false;
+                self.send(Command::Fx(d, FxSet::Pad(PAD_ECHO_OUT, 0.0, true)));
             }
             6 => self.send(Command::Brake(d, 1.2)),
             _ => self.send(Command::Spin(d, 0.8)),

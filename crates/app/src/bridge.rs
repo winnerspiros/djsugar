@@ -19,6 +19,35 @@ struct Slot {
     ready: Arc<AtomicU64>,
 }
 
+/// Carries out one effect unit change through the engine's named controls.
+fn fx(reg: &ControlRegistry, d: usize, set: FxSet) {
+    let put = |group: &str, item: &str, v: f64| {
+        if let Some(c) = reg.get(group, item) {
+            c.set(v);
+        }
+    };
+    match set {
+        FxSet::Kind(slot, k) => put(&effect_group(d, slot), "loaded_effect", f64::from(k)),
+        FxSet::On(slot, on) => put(&effect_group(d, slot), "enabled", f64::from(u8::from(on))),
+        FxSet::Meta(slot, v) => put(&effect_group(d, slot), "meta", f64::from(v)),
+        FxSet::Mix(v) => put(&effect_unit_group(d), "mix", f64::from(v)),
+        FxSet::Pad(kind, beats, on) => {
+            let u = djsugar_engine::pad_fx_unit(d);
+            let (unit, slot) = (effect_unit_group(u), effect_group(u, 0));
+            if on {
+                put(&slot, "loaded_effect", f64::from(kind));
+                if beats > 0.0 {
+                    // The beat switch spans 1/16 to 4 beats as powers of two.
+                    put(&slot, "parameter1", f64::from((beats.log2() + 4.0) / 6.0).clamp(0.0, 1.0));
+                }
+                put(&unit, &format!("group_{}_enable", deck_group(d)), 1.0);
+                put(&unit, "enabled", 1.0);
+            }
+            put(&slot, "enabled", f64::from(u8::from(on)));
+        }
+    }
+}
+
 pub struct Bridge {
     engine: AudioEngine,
     reg: Arc<ControlRegistry>,
@@ -202,12 +231,7 @@ impl Bridge {
                     self.set(&djsugar_engine::sampler::sampler_group(i), "cue_gotoandstop", 1.0);
                 }
             }
-            Command::Fx(d, set) => match set {
-                FxSet::Kind(slot, k) => self.set(&effect_group(d, slot), "loaded_effect", f64::from(k)),
-                FxSet::On(slot, on) => self.set(&effect_group(d, slot), "enabled", f64::from(u8::from(on))),
-                FxSet::Meta(slot, v) => self.set(&effect_group(d, slot), "meta", f64::from(v)),
-                FxSet::Mix(v) => self.set(&effect_unit_group(d), "mix", f64::from(v)),
-            },
+            Command::Fx(d, set) => fx(&self.reg, d, set),
             Command::Crossfader(x) => self.set("[Master]", "crossfader", f64::from(x)),
             Command::Curve(c) => {
                 use sugar_engine::Curve;
@@ -263,5 +287,35 @@ impl Bridge {
     /// The engine writes recordings itself.
     pub fn drain_recording(&mut self, _out: &mut Vec<f32>) -> usize {
         0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every control the screen's effect changes name exists in the engine, and takes the value.
+    #[test]
+    fn effect_changes_reach_the_engine() {
+        let reg = ControlRegistry::new();
+        let _engine = djsugar_engine::engine::Engine::new(&reg, 48_000.0);
+        let get = |g: &str, i: &str| reg.get(g, i).unwrap_or_else(|| panic!("{g} {i}")).get();
+        fx(&reg, 1, FxSet::Kind(2, 4));
+        fx(&reg, 1, FxSet::On(2, true));
+        fx(&reg, 1, FxSet::Meta(2, 0.3));
+        fx(&reg, 1, FxSet::Mix(0.6));
+        assert_eq!(get("[EffectRack1_EffectUnit2_Effect3]", "loaded_effect"), 4.0);
+        assert_eq!(get("[EffectRack1_EffectUnit2_Effect3]", "enabled"), 1.0);
+        assert!((get("[EffectRack1_EffectUnit2_Effect3]", "meta") - 0.3).abs() < 1e-6);
+        assert!((get("[EffectRack1_EffectUnit2]", "mix") - 0.6).abs() < 1e-6);
+        fx(&reg, 0, FxSet::Pad(1, 0.5, true));
+        let (unit, slot) =
+            (effect_unit_group(djsugar_engine::pad_fx_unit(0)), effect_group(djsugar_engine::pad_fx_unit(0), 0));
+        assert_eq!(get(&slot, "loaded_effect"), 1.0);
+        assert_eq!(get(&slot, "enabled"), 1.0);
+        assert_eq!(get(&unit, "group_[Channel1]_enable"), 1.0);
+        assert!((get(&slot, "parameter1") - 0.5).abs() < 1e-6, "half a beat sits mid-switch");
+        fx(&reg, 0, FxSet::Pad(0, 0.0, false));
+        assert_eq!(get(&slot, "enabled"), 0.0);
     }
 }

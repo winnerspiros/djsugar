@@ -75,6 +75,8 @@ pub enum FxSet {
     /// The slot's one main knob, 0 to 1.
     Meta(usize, f32),
     Mix(f32),
+    /// The deck's pad effect: the effect, its length in beats (0 leaves it), and on or off.
+    Pad(u8, f32, bool),
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
