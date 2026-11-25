@@ -855,6 +855,17 @@ fn mmss(secs: f32) -> String {
     format!("{}:{:02}", t / 60, t % 60)
 }
 
+/// How wide the rail is in a browser this wide: labelled, icons alone, or absent.
+fn rail_width(w: f32) -> f32 {
+    if w >= 1360.0 {
+        168.0
+    } else if w >= 900.0 {
+        50.0
+    } else {
+        0.0
+    }
+}
+
 /// The sources down the browser's edge: the collection, the history, then the streaming
 /// services. Labelled where the window is wide, icons alone where it is not.
 fn rail(p: &mut Painter, s: &mut State, r: Rect) {
@@ -1377,14 +1388,7 @@ fn chips(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
 pub fn library(p: &mut Painter, s: &mut State, r: Rect) {
     let r = if r.h > 220.0 && !s.search_in_bar { library_head(p, s, r) } else { r };
     let r = if r.w >= 640.0 {
-        // A source rail joins the lists once there is room for both.
-        let rw = if r.w >= 1360.0 {
-            168.0
-        } else if r.w >= 900.0 {
-            50.0
-        } else {
-            0.0
-        };
+        let rw = rail_width(r.w);
         if rw > 0.0 {
             rail(p, s, Rect::new(r.x, r.y, rw, r.h));
         }
@@ -1752,11 +1756,18 @@ pub const HUB_ROW: f32 = 44.0;
 /// Streaming hub: service tabs, search, results with a load button per deck.
 fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     use crate::hub::Service;
+    // The browser's rail stays put, so the collection is one tap away.
+    let rw = rail_width(r.w);
+    if rw > 0.0 {
+        rail(p, s, Rect::new(r.x, r.y, rw, r.h));
+    }
+    let r = Rect::new(r.x + rw, r.y, r.w - rw, r.h);
     p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
     let bar = 40.0;
     p.rect(r.x, r.y + bar - 1.0, r.w, 1.0, 0.0, EDGE);
     let mut x = r.x + 10.0;
-    for sv in Service::ALL {
+    // The rail already names the services; the tabs stand in where it is absent.
+    for sv in Service::ALL.into_iter().filter(|_| rw == 0.0) {
         let on = s.hub.service == sv;
         let tw = p.text_width(TAB, sv.name()) + 24.0;
         p.text(x + 12.0, r.y + 24.0, Style { colour: if on { TEXT } else { GREY }, ..TAB }, sv.name());
@@ -1766,8 +1777,8 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
         hit(s, Rect::new(x, r.y, tw, bar), Target::HubService(sv));
         x += tw;
     }
-    let fx = x + 12.0;
-    let fw = (r.w - fx - 110.0).max(120.0);
+    let fx = x + if rw > 0.0 { 2.0 } else { 12.0 };
+    let fw = (r.x + r.w - fx - 110.0).max(120.0);
     let field = Rect::new(fx, r.y + 6.0, fw, bar - 12.0);
     p.outlined(field.x, field.y, field.w, field.h, 4.0, DEEP, 1.0, if s.hub.focus { ACCENT } else { EDGE });
     let (shown, ink) = if s.hub.query.is_empty() && !s.hub.focus {
@@ -2023,7 +2034,7 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             );
         }
         None => {
-            let msg = if deck.loading { "Loading" } else { "Tap LOAD to pick a track" };
+            let msg = if deck.loading { "Loading" } else { "Tap to pick a track" };
             p.text_in(tx, r.y + r.h * 0.5 + 4.0, tw, Style { colour: DARK, ..ARTIST }, msg);
         }
     }
