@@ -10,6 +10,7 @@ mod prefs;
 mod record;
 mod settings;
 mod skips;
+mod sounds;
 mod spotify;
 mod state;
 mod store;
@@ -500,8 +501,9 @@ pub(crate) mod android {
         Some(bytes)
     }
 
+    /// Whether the app may use what `name` names for this system version; when not, the user is asked.
     #[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
-    fn request_audio(app: &AndroidApp) -> jni::errors::Result<()> {
+    fn permit(app: &AndroidApp, name: impl Fn(i32) -> &'static str) -> jni::errors::Result<bool> {
         use jni::objects::{JObject, JValue};
         use jni::{jni_sig, jni_str};
         let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) };
@@ -509,12 +511,7 @@ pub(crate) mod android {
             let activity = unsafe { JObject::from_raw(env, app.activity_as_ptr().cast()) };
             let sdk =
                 env.get_static_field(jni_str!("android/os/Build$VERSION"), jni_str!("SDK_INT"), jni_sig!("I"))?.i()?;
-            let name = if sdk >= 33 {
-                "android.permission.READ_MEDIA_AUDIO"
-            } else {
-                "android.permission.READ_EXTERNAL_STORAGE"
-            };
-            let perm = env.new_string(name)?;
+            let perm = env.new_string(name(sdk))?;
             let state = env
                 .call_method(
                     &activity,
@@ -532,8 +529,13 @@ pub(crate) mod android {
                     &[JValue::Object(&list), JValue::Int(1)],
                 )?;
             }
-            Ok(())
+            Ok(state == 0)
         })
+    }
+
+    /// Whether the microphone may be used; when not, the user is asked.
+    pub(crate) fn mic() -> bool {
+        APP.get().is_some_and(|app| permit(app, |_| "android.permission.RECORD_AUDIO").unwrap_or(false))
     }
 
     /// Hides the status and navigation bars; a swipe from the edge shows them for a moment.
@@ -644,7 +646,9 @@ pub(crate) mod android {
         if let Some(dir) = app.internal_data_path() {
             crate::store::set_dir(dir);
         }
-        let _ = request_audio(&app);
+        let _ = permit(&app, |sdk| {
+            if sdk >= 33 { "android.permission.READ_MEDIA_AUDIO" } else { "android.permission.READ_EXTERNAL_STORAGE" }
+        });
         sugar_net::youtube::set_po_token_source(crate::potoken::mint);
         crate::stage("permissions");
         crate::droid::run(app, read);

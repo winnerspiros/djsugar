@@ -9,6 +9,7 @@ pub mod background;
 pub mod beats;
 pub mod beatthis;
 pub mod cache;
+pub mod capture;
 pub mod clock_in;
 mod controls;
 pub mod cover;

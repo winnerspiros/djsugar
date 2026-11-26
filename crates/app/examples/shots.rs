@@ -269,6 +269,46 @@ fn main() {
                     ui.wheel(100.0, 100.0, -1e5);
                     ui.render(&mut r);
                     save(&r, &out.join(format!("{name}-picker.png")));
+                    // With no microphone a take says so and nothing is left running.
+                    if !ui.tap("SoundRec") {
+                        faults.push(format!("{name}: the sample list has no record button"));
+                    }
+                    ui.render(&mut r);
+                    // The DJ's own sound is the last one: coming from the end of the list, the first cell that is one.
+                    if let Some((_, [x, y, w, h])) = ui.targets().into_iter().rfind(|(t, _)| t == "Picker") {
+                        let cells = (0..(h / 30.0) as usize)
+                            .flat_map(|row| (0..(w / 40.0) as usize).map(move |col| (row as f32, col as f32)));
+                        for (row, col) in cells {
+                            let at = (y + h - 17.0 - row * 30.0) * scale;
+                            ui.pointer_down(9, (x + w - 20.0 - col * 40.0) * scale, at);
+                            ui.pointer_up(9, at);
+                            ui.render(&mut r);
+                            if ui.targets().iter().any(|(t, _)| t == "CutOpen") {
+                                break;
+                            }
+                        }
+                    }
+                    if ui.tap("CutOpen") {
+                        ui.render(&mut r);
+                        if let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Cut") {
+                            for at in [0.2, 0.7] {
+                                ui.pointer_down(9, (x + w * at) * scale, (y + h * 0.5) * scale);
+                                ui.pointer_up(9, (y + h * 0.5) * scale);
+                            }
+                            ui.render(&mut r);
+                            save(&r, &out.join(format!("{name}-cut.png")));
+                            ui.tap("CutPlay");
+                            ui.tap("CutClose");
+                            ui.render(&mut r);
+                            if ui.targets().iter().any(|(t, _)| t == "Cut") {
+                                faults.push(format!("{name}: cancel left the sound open for cutting"));
+                            }
+                        } else {
+                            faults.push(format!("{name}: trim shows no sound to cut"));
+                        }
+                    } else {
+                        faults.push(format!("{name}: the DJ's own sound cannot be trimmed"));
+                    }
                     ui.tap("PickerClose");
                     ui.render(&mut r);
                 } else {

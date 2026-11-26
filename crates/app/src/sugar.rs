@@ -2008,7 +2008,18 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         let own = Rect::new(done.x - 118.0, done.y, 110.0, done.h);
         button(p, s, own, "YOUR SOUNDS", false, DECK[d], Target::Open(3));
     }
-    let list = Rect::new(r.x + 8.0, r.y + 38.0, r.w - 16.0, r.h - 46.0);
+    let foot = Rect::new(r.x + 8.0, r.y + r.h - 34.0, r.w - 16.0, 26.0);
+    let list = Rect::new(r.x + 8.0, r.y + 38.0, r.w - 16.0, r.h - 80.0);
+    if s.cut.is_some() {
+        cut(p, s, list, foot, DECK[d]);
+        return;
+    }
+    let taking = s.take.as_ref().map(|t| t.seconds());
+    let label = taking.map_or_else(|| "RECORD".to_string(), |t| format!("STOP {}:{:02}", t as u32 / 60, t as u32 % 60));
+    button(p, s, Rect::new(foot.x, foot.y, 104.0, foot.h), &label, taking.is_some(), DECK[1], Target::SoundRec);
+    if s.picked_sound().is_some() && taking.is_none() {
+        button(p, s, Rect::new(foot.x + 112.0, foot.y, 72.0, foot.h), "TRIM", false, DECK[d], Target::CutOpen);
+    }
     let cols = ((list.w / 150.0) as usize).max(2);
     let cell = (list.w / cols as f32, 30.0);
     s.picker_grid = crate::state::Picker { cols, cell };
@@ -2052,6 +2063,36 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             &label,
         );
     }
+}
+
+/// The sound being cut, in the picker: its outline with the chosen part lit, and what to do with the part.
+fn cut(p: &mut Painter, s: &mut State, area: Rect, foot: Rect, colour: u32) {
+    let Some(c) = &s.cut else { return };
+    let (from, to, len) = (c.from, c.to, c.seconds());
+    let says = format!("{}   {:.2} s to {:.2} s of {:.2} s", c.name, from * len, to * len, len);
+    p.text_in(area.x + 4.0, area.y + 14.0, area.w - 8.0, SMALL, &says);
+    let wave = Rect::new(area.x, area.y + 24.0, area.w, (area.h - 28.0).min(260.0));
+    p.rect(wave.x, wave.y, wave.w, wave.h, 0.0, theme::WELL);
+    let bars = (wave.w / 2.0) as usize;
+    for i in 0..bars {
+        let at = i as f32 / bars as f32;
+        let v = c.outline.get((at * c.outline.len() as f32) as usize).copied().unwrap_or(0.0);
+        let bh = (v * (wave.h - 12.0)).max(1.0);
+        let lit = at >= from && at < to;
+        p.rect(wave.x + i as f32 * 2.0, wave.y + (wave.h - bh) * 0.5, 1.0, bh, 0.0, if lit { colour } else { GREY });
+    }
+    let (x0, x1) = (wave.x + from * wave.w, wave.x + to * wave.w);
+    p.rect(x0, wave.y, x1 - x0, wave.h, 0.0, fade(colour, 0x20));
+    for x in [x0, x1 - 2.0] {
+        p.rect(x, wave.y, 2.0, wave.h, 0.0, ACCENT);
+        p.rect(x - 6.0, wave.y + wave.h * 0.5 - 22.0, 14.0, 44.0, 4.0, ACCENT);
+    }
+    hit(s, wave, Target::Cut);
+    // Right under the outline, where the hand already is, on a screen taller than the outline.
+    let foot = Rect::new(foot.x, foot.y.min(wave.y + wave.h + 10.0), foot.w, foot.h);
+    button(p, s, Rect::new(foot.x, foot.y, 72.0, foot.h), "PLAY", false, colour, Target::CutPlay);
+    button(p, s, Rect::new(foot.x + 80.0, foot.y, 72.0, foot.h), "SAVE", true, colour, Target::CutSave);
+    button(p, s, Rect::new(foot.x + 160.0, foot.y, 72.0, foot.h), "CANCEL", false, colour, Target::CutClose);
 }
 
 pub const HUB_ROW: f32 = 44.0;

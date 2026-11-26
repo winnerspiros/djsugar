@@ -445,7 +445,7 @@ pub fn input_devices() -> Vec<OutputDevice> {
 }
 
 /// The input device called `name`, or the default one for an empty name.
-fn find_input(name: &str) -> Option<cpal::Device> {
+pub(crate) fn find_input(name: &str) -> Option<cpal::Device> {
     if name.is_empty() {
         return cpal::default_host().default_input_device();
     }
@@ -461,7 +461,7 @@ pub fn default_output_device() -> Option<String> {
     find("").map(|d| device_name(&d))
 }
 
-fn no_audio() -> bool {
+pub(crate) fn no_audio() -> bool {
     std::env::var_os("DJSUGAR_NO_AUDIO").is_some()
 }
 
@@ -1237,7 +1237,7 @@ fn input_config_at(device: &cpal::Device, rate: f64, channels: u16) -> Option<cp
 /// Opens and starts an input stream that hands `take` its audio in f32, interleaved, with
 /// buffers of `frames` if the device takes them (the outputs' size: a bigger input buffer
 /// is heard as delay), else its default. `lost` is set if the stream stops.
-fn input_stream(
+pub(crate) fn input_stream(
     device: &cpal::Device,
     config: &cpal::SupportedStreamConfig,
     frames: Option<u32>,

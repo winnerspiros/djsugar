@@ -117,6 +117,15 @@ pub enum Target {
     PrefPick(crate::settings::Opt, u8),
     Rescan,
     PickerClose,
+    /// Starts a take from the microphone for the pad being picked, or ends the one running.
+    SoundRec,
+    /// Opens the picked pad's own sound for cutting.
+    CutOpen,
+    /// The outline of the sound being cut: a drag moves the nearer end.
+    Cut,
+    CutPlay,
+    CutSave,
+    CutClose,
     Scene(usize),
     Xy,
     XyHold,
@@ -701,6 +710,11 @@ pub struct State {
     /// Sample picker open for (deck, pad), its scroll and grid geometry.
     pub picker: Option<(usize, usize)>,
     pub picker_scroll: f32,
+    /// The take running from the microphone.
+    pub take: Option<djsugar_engine::capture::Capture>,
+    /// The sound open for cutting, and how many times its part has been played.
+    pub cut: Option<crate::sounds::Cut>,
+    cut_plays: usize,
     pub picker_grid: Picker,
     pub entries: Vec<Entry>,
     pub shown: Vec<u32>,
@@ -896,6 +910,9 @@ impl State {
             sounds,
             bank: [0; 2],
             picker: None,
+            take: None,
+            cut: None,
+            cut_plays: 0,
             picker_scroll: 0.0,
             picker_grid: Picker::default(),
             entries: library::samples().into_iter().chain(streamed(&crate::store::load_streamed())).collect(),
@@ -1032,6 +1049,13 @@ impl State {
     }
 
     pub fn tick(&mut self) {
+        if self.take.as_ref().is_some_and(|t| self.picker.is_none() || t.seconds() >= djsugar_engine::capture::LONGEST)
+        {
+            self.sound_rec();
+        }
+        if self.picker.is_none() && self.cut.is_some() {
+            self.cut_close();
+        }
         let now = [self.status.clone().unwrap_or_default(), self.hub.status.clone()];
         for (msg, last) in now.into_iter().zip(&mut self.last_msgs) {
             if msg != *last {
@@ -2407,6 +2431,96 @@ impl State {
         self.sounds = found;
     }
 
+    /// The sound on the pad being picked, when it is one of the user's own.
+    pub fn picked_sound(&self) -> Option<&(String, std::path::PathBuf)> {
+        let (d, p) = self.picker?;
+        self.pads[d][self.bank[d] * 8 + p].checked_sub(SAMPLES.len()).and_then(|n| self.sounds.get(n))
+    }
+
+    /// Starts a take from the microphone, or ends the one running and keeps it as a sound of the user's own.
+    fn sound_rec(&mut self) {
+        let Some(take) = self.take.take() else {
+            #[cfg(target_os = "android")]
+            if !crate::android::mic() {
+                self.status = Some("Allow the microphone, then record again".into());
+                return;
+            }
+            match djsugar_engine::capture::Capture::start() {
+                Ok(take) => self.take = Some(take),
+                Err(why) => self.status = Some(why),
+            }
+            return;
+        };
+        let rate = take.rate;
+        let mut heard = take.stop();
+        crate::sounds::tighten(&mut heard, rate);
+        if heard.is_empty() {
+            self.status = Some("Nothing was heard".into());
+        } else {
+            self.keep_sound("take", 1, rate, &heard);
+        }
+    }
+
+    /// Writes a sound among the user's own, puts it on the pad being picked and plays it.
+    fn keep_sound(&mut self, name: &str, channels: u16, rate: u32, samples: &[f32]) {
+        let Some(dir) = crate::store::dir().map(|d| d.join("samples")) else { return };
+        let _ = std::fs::create_dir_all(&dir);
+        let path = crate::sounds::free(&dir, name);
+        if let Err(e) = std::fs::write(&path, crate::sounds::wav(channels, rate, samples)) {
+            self.status = Some(format!("Could not keep the sound: {e}"));
+            return;
+        }
+        self.find_sounds();
+        let Some(i) = self.sounds.iter().position(|s| s.1 == path).map(|n| SAMPLES.len() + n) else { return };
+        if let Some((d, p)) = self.picker {
+            self.pads[d][self.bank[d] * 8 + p] = i;
+            crate::store::save_pads(&self.pads, SAMPLES.len(), &self.sounds);
+        }
+        self.sample(i);
+    }
+
+    fn cut_open(&mut self) {
+        let Some((_, path)) = self.picked_sound().cloned() else { return };
+        match crate::sounds::Cut::open(&path) {
+            Ok(cut) => self.cut = Some(cut),
+            Err(why) => self.status = Some(why),
+        }
+    }
+
+    /// Where the chosen part is written to be heard before it is kept.
+    fn cut_dir() -> Option<std::path::PathBuf> {
+        crate::store::dir().map(|d| d.join("cut"))
+    }
+
+    fn cut_play(&mut self) {
+        let (Some(cut), Some(dir)) = (&self.cut, Self::cut_dir()) else { return };
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::create_dir_all(&dir);
+        // A name of its own each time, so the part as it is now is read and not the one before.
+        self.cut_plays += 1;
+        let name = format!("cut-{}", self.cut_plays);
+        let path = dir.join(format!("{name}.wav"));
+        if std::fs::write(&path, crate::sounds::wav(2, cut.rate, &cut.part())).is_ok()
+            && let Some(c) = &mut self.control
+        {
+            c.sample(&name, path, 0.9);
+        }
+    }
+
+    fn cut_save(&mut self) {
+        if let Some(cut) = self.cut.take() {
+            self.keep_sound(&cut.name, 2, cut.rate, &cut.part());
+        }
+        self.cut_close();
+    }
+
+    fn cut_close(&mut self) {
+        self.cut = None;
+        if let Some(dir) = Self::cut_dir() {
+            let _ = std::fs::remove_dir_all(dir);
+        }
+    }
+
     fn pad(&mut self, deck: usize, pad: usize) {
         self.sample(self.pads[deck % 2][self.bank[deck % 2] * 8 + pad]);
     }
@@ -2756,6 +2870,11 @@ impl State {
                 self.decks[d].mode = m;
             }
             Target::PickerClose => self.picker = None,
+            Target::SoundRec => self.sound_rec(),
+            Target::CutOpen => self.cut_open(),
+            Target::CutPlay => self.cut_play(),
+            Target::CutSave => self.cut_save(),
+            Target::CutClose => self.cut_close(),
             Target::AutoDj => self.toggle_auto(),
             Target::TimeLyrics(d) => {
                 let Some(l) = &mut self.decks[d].loaded else { return };
@@ -3345,13 +3464,15 @@ impl State {
                     }
                 }
             }
-            Some(Target::Picker) if !d.moved => {
+            Some(Target::Picker) if !d.moved && self.cut.is_none() => {
                 let g = self.picker_grid;
-                if let (Some((deck, pad)), Some(r)) = (self.picker, self.rect_of(Target::Picker)) {
+                // The list is the last of the picker's areas; the first is the card around it.
+                let list = self.hits.iter().rev().find(|h| h.target == Target::Picker).map(|h| h.rect);
+                if let (Some((deck, pad)), Some(r)) = (self.picker, list) {
                     let col = ((d.last.0 - r.x) / g.cell.0) as usize;
                     let row = ((y - r.y + self.picker_scroll) / g.cell.1) as usize;
                     let i = row * g.cols + col;
-                    if col < g.cols && i < SAMPLES.len() + self.sounds.len() {
+                    if d.last.0 >= r.x && y >= r.y && col < g.cols && i < SAMPLES.len() + self.sounds.len() {
                         self.pads[deck][self.bank[deck] * 8 + pad] = i;
                         self.sample(i);
                         crate::store::save_pads(&self.pads, SAMPLES.len(), &self.sounds);
@@ -3494,6 +3615,12 @@ impl State {
                 self.send(Command::Fx(d, FxSet::Meta(slot, v)));
             }
             Target::FxParam(k) => self.fx_param(k, ((x - r.x) / r.w).clamp(0.0, 1.0)),
+            Target::Cut => {
+                let v = ((x - r.x) / r.w).clamp(0.0, 1.0);
+                if let Some(c) = &mut self.cut {
+                    if (v - c.from).abs() <= (v - c.to).abs() { c.set_from(v) } else { c.set_to(v) }
+                }
+            }
             Target::FxMix(d) => {
                 let v = (self.fx[d].1 - delta.1 / 160.0).clamp(0.0, 1.0);
                 self.fx[d].1 = v;
