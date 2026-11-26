@@ -271,7 +271,11 @@ pub fn run(app: AndroidApp, read: Reader) {
                     shell.fit();
                 }
                 MainEvent::RedrawNeeded { .. } => shell.dirty = true,
-                MainEvent::GainedFocus => crate::android::immersive(&app),
+                MainEvent::GainedFocus => {
+                    crate::android::immersive(&app);
+                    shell.ui.rescan_if_empty();
+                    shell.dirty = true;
+                }
                 MainEvent::LostFocus => {
                     shell.ui.release_all();
                     shell.dirty = true;

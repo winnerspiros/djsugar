@@ -428,6 +428,12 @@ pub(crate) fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 p.rect(r.x + (cue / len) as f32 * r.w, r.y, 1.5, r.h, 0.0, cue_colour(s, d, i));
             }
         }
+        if let Some((from, to)) = s.mix_span(d) {
+            let (x0, x1) = (r.x + r.w * from, r.x + r.w * to);
+            p.rect(x0, r.y + 1.0, x1 - x0, r.h - 2.0, 0.0, fade(crate::theme::AUTOMIX, 0x2e));
+            p.rect(x0, r.y + 1.0, 1.0, r.h - 2.0, 0.0, crate::theme::AUTOMIX);
+            p.rect(x1 - 1.0, r.y + 1.0, 1.0, r.h - 2.0, 0.0, crate::theme::AUTOMIX);
+        }
         p.rect(r.x + r.w * played - 1.0, r.y, 2.0, r.h, 1.0, WHITE);
     }
     hit(s, r, Target::Overview(d));
@@ -447,7 +453,8 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     }
     let xf = Rect::new(top.x + 4.0, r.y + r.h - xf_h - 4.0, top.w - 8.0, xf_h);
     let pos = (s.crossfader + 1.0) * 0.5;
-    fader(p, s, xf, (pos, true, true), ACCENT, Target::Crossfader);
+    let tint = if s.auto.is_some() { crate::theme::AUTOMIX } else { ACCENT };
+    fader(p, s, xf, (pos, true, true), tint, Target::Crossfader);
 }
 
 fn eq_column(p: &mut Painter, s: &mut State, r: Rect, d: usize) {

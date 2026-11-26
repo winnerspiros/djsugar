@@ -107,7 +107,7 @@ impl Clients {
 pub enum Reply {
     Page(Page, bool),
     Progress(String, f32),
-    Ready(String, PathBuf, usize),
+    Ready(String, PathBuf, usize, Service),
     Failed(Option<String>, String),
 }
 
@@ -195,7 +195,7 @@ impl Hub {
         }
         let (id, art) = (h.id.clone(), h.art.clone());
         self.fetching.push((id.clone(), deck, 0.0));
-        self.status = format!("Getting \"{}\" for deck {}", h.title, deck + 1);
+        self.status = format!("Getting \"{}\" for deck {}", h.title, ["A", "B"][deck.min(1)]);
         let (c, tx, dir, sv) = (self.clients.clone(), self.tx.clone(), self.cache.clone(), self.service);
         std::thread::spawn(move || {
             let last = std::sync::Mutex::new(0u8);
@@ -214,7 +214,7 @@ impl Hub {
                 let _ = sugar_net::http::save_art(&art, path);
             }
             let _ = tx.send(match r {
-                Ok(path) => Reply::Ready(id, path, deck),
+                Ok(path) => Reply::Ready(id, path, deck, sv),
                 Err(e) => Reply::Failed(Some(id), e.to_string()),
             });
         });
@@ -232,8 +232,8 @@ impl Hub {
         self.search();
     }
 
-    /// Replies since the last frame; finished downloads come back as (file, title, artist, deck).
-    pub fn poll(&mut self) -> Vec<(PathBuf, String, String, usize)> {
+    /// Replies since the last frame; finished downloads come back as (file, title, artist, deck, service).
+    pub fn poll(&mut self) -> Vec<(PathBuf, String, String, usize, &'static str)> {
         let mut ready = Vec::new();
         while let Ok(r) = self.rx.try_recv() {
             match r {
@@ -253,13 +253,13 @@ impl Hub {
                         x.2 = f;
                     }
                 }
-                Reply::Ready(id, path, deck) => {
+                Reply::Ready(id, path, deck, sv) => {
                     self.fetching.retain(|x| x.0 != id);
                     let h = self.hits.iter().find(|h| h.id == id);
                     let (title, artist) =
                         h.map_or_else(|| (id.clone(), String::new()), |h| (h.title.clone(), h.artist.clone()));
-                    self.status = format!("Loaded \"{title}\" to deck {}", deck + 1);
-                    ready.push((path, title, artist, deck));
+                    self.status = format!("Loaded \"{title}\" to deck {}", ["A", "B"][deck.min(1)]);
+                    ready.push((path, title, artist, deck, sv.title()));
                 }
                 Reply::Failed(id, why) => {
                     self.searching = id.is_some() && self.searching;

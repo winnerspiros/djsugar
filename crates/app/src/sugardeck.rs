@@ -486,5 +486,6 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     }
     let x = Rect::new(r.x + 18.0, r.y + r.h - 8.0 - xf, r.w - 36.0, xf);
     let pos = (s.crossfader + 1.0) * 0.5;
-    fader(p, s, x, (pos, true, true), PINK, Target::Crossfader);
+    let tint = if s.auto.is_some() { crate::theme::AUTOMIX } else { PINK };
+    fader(p, s, x, (pos, true, true), tint, Target::Crossfader);
 }

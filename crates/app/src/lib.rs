@@ -157,6 +157,13 @@ impl Ui {
         self.state.scan();
     }
 
+    /// Looks again when the last look found nothing: the DJ may just have let the app read the music.
+    pub fn rescan_if_empty(&mut self) {
+        if self.state.found == 0 {
+            self.state.scan();
+        }
+    }
+
     pub fn wheel(&mut self, x: f32, y: f32, dy: f32) {
         self.state.wheel(x / self.scale, y / self.scale, dy);
     }

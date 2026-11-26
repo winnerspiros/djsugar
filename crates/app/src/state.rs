@@ -132,6 +132,9 @@ pub enum Target {
     QueueClear,
     MixNow,
     MixSkip,
+    OrderMenu,
+    /// Puts Automix's list in an order, by its place in `automix::ORDERS`.
+    MixOrder(u8),
     /// Steps a setting to its next choice, round to the first.
     Cycle(crate::settings::Opt),
     /// Folds or opens a sidebar section.
@@ -233,6 +236,15 @@ const NAME_MAX: usize = 48;
 pub type FxUnit = ([(u8, bool, f32); 3], f32);
 
 pub const NEAR_BPM: [u8; 5] = [2, 4, 6, 8, 10];
+
+/// The streamed tracks whose files are still there, as library entries.
+fn streamed(saved: &[(String, Vec<String>)]) -> impl Iterator<Item = Entry> + '_ {
+    let field = |t: &'_ [String], n: usize| t.get(n).cloned().unwrap_or_default();
+    saved
+        .iter()
+        .filter(|(path, _)| std::path::Path::new(path).is_file())
+        .map(move |(path, t)| library::file(path.into(), &field(t, 0), &field(t, 1), &field(t, 2)))
+}
 
 pub fn entry_key(e: &Entry) -> String {
     match &e.source {
@@ -631,6 +643,13 @@ pub struct State {
     pub history: Vec<u32>,
     /// Automix's list: each track's key, then its title and artist.
     pub queue: Vec<(String, Vec<String>)>,
+    /// Tracks got from the streaming services: the file, then its title, artist and service.
+    pub streamed: Vec<(String, Vec<String>)>,
+    /// How many tracks the last look through the music folders found.
+    pub found: usize,
+    /// The list track waiting or playing on each deck; it stays on the list until it has played.
+    pub mix_held: [Option<String>; 2],
+    pub order_menu: bool,
     pub track_menu: Option<u32>,
     pub settings: crate::settings::Settings,
     /// The open settings page.
@@ -736,7 +755,7 @@ impl State {
             picker: None,
             picker_scroll: 0.0,
             picker_grid: Picker::default(),
-            entries: library::samples(),
+            entries: library::samples().into_iter().chain(streamed(&crate::store::load_streamed())).collect(),
             shown: Vec::new(),
             query: String::new(),
             focus: 0,
@@ -771,6 +790,10 @@ impl State {
             tags: crate::store::load_tags(),
             history: Vec::new(),
             queue: crate::store::load_queue(),
+            streamed: crate::store::load_streamed(),
+            found: 0,
+            mix_held: [None, None],
+            order_menu: false,
             track_menu: None,
             settings: crate::settings::Settings::load(),
             fx,
@@ -866,11 +889,16 @@ impl State {
                 *last = msg;
             }
         }
-        for (path, title, artist, deck) in self.hub.poll() {
+        for (path, title, artist, deck, service) in self.hub.poll() {
+            let key = path.to_string_lossy().into_owned();
+            if !self.streamed.iter().any(|t| t.0 == key) {
+                self.streamed.push((key, vec![title.clone(), artist.clone(), service.to_string()]));
+                crate::store::save_streamed(&self.streamed);
+            }
             let at =
                 self.entries.iter().position(|e| matches!(&e.source, Source::File(p) if **p == *path)).unwrap_or_else(
                     || {
-                        self.entries.push(library::file(path, &title, &artist, "YouTube"));
+                        self.entries.push(library::file(path, &title, &artist, service));
                         self.entries.len() - 1
                     },
                 );
@@ -927,7 +955,13 @@ impl State {
                 }
                 (Job::Scan(found), _) => {
                     self.entries.truncate(SAMPLES.len());
+                    self.found = found.len();
                     self.entries.extend(found);
+                    // Streamed tracks live outside the music folders, so a scan never finds them.
+                    let kept: Vec<_> = streamed(&self.streamed)
+                        .filter(|t| !self.entries.iter().any(|e| entry_key(e) == entry_key(t)))
+                        .collect();
+                    self.entries.extend(kept);
                     self.selected = None;
                     let q = std::mem::take(&mut self.query);
                     self.search(q);
@@ -966,13 +1000,14 @@ impl State {
             if let Some((from, ..)) = a.fade {
                 self.mix_done(from);
             }
+            self.mix_held = [None, None];
             return;
         }
         let mut a = Auto { next: 0, fade: None, listed: !self.queue.is_empty(), now: false, bass: 0 };
         for d in 0..2 {
             if self.decks[d].loaded.is_none()
                 && !self.decks[d].loading
-                && let Some(i) = self.auto_next(&mut a)
+                && let Some(i) = self.auto_next(&mut a, d)
             {
                 self.load_deck(d, i);
             }
@@ -982,22 +1017,93 @@ impl State {
 
     /// The track Automix loads next: the head of its list, or the next of the list on screen
     /// when it was started with nothing on its own.
-    fn auto_next(&mut self, a: &mut Auto) -> Option<usize> {
+    fn auto_next(&mut self, a: &mut Auto, deck: usize) -> Option<usize> {
         if !a.listed {
             let i = *self.shown.get(a.next % self.shown.len().max(1))?;
             a.next += 1;
             return Some(i as usize);
         }
-        let mut found = None;
-        while found.is_none() && !self.queue.is_empty() {
-            let track = self.queue.remove(0);
-            found = self.entries.iter().position(|e| entry_key(e) == track.0);
-            if found.is_some() && self.settings.on(crate::settings::Opt::MixRepeat) {
-                self.queue.push(track);
+        self.mix_held[deck] = None;
+        // The other deck's track is still on the list, so it is passed over once.
+        let mut other = self.mix_held[1 - deck].as_deref();
+        for (key, _) in &self.queue {
+            if other == Some(key.as_str()) {
+                other = None;
+            } else if let Some(i) = self.entries.iter().position(|e| entry_key(e) == *key) {
+                self.mix_held[deck] = Some(key.clone());
+                return Some(i);
             }
         }
+        None
+    }
+
+    /// Takes a deck's track off Automix's list: it has played, or been skipped. Repeat sends it to the end.
+    fn mix_off_list(&mut self, deck: usize) {
+        let Some(key) = self.mix_held[deck].take() else { return };
+        if let Some(at) = self.queue.iter().position(|t| t.0 == key) {
+            let track = self.queue.remove(at);
+            if self.settings.on(crate::settings::Opt::MixRepeat) {
+                self.queue.push(track);
+            }
+            crate::store::save_queue(&self.queue);
+        }
+    }
+
+    /// Puts Automix's list in an order. The first track and the ones on the decks stay where they are.
+    fn mix_order(&mut self, order: u8) {
+        let fact = |s: &Self, key: &str| {
+            let meta =
+                s.entries.iter().position(|e| entry_key(e) == key).and_then(|i| s.meta.get(i).copied().flatten());
+            meta.map_or((0.0, None), |m| (m.bpm, m.key))
+        };
+        let free: Vec<usize> =
+            (1..self.queue.len()).filter(|&n| !self.mix_held.iter().flatten().any(|k| *k == self.queue[n].0)).collect();
+        let Some(first) = self.queue.first() else { return };
+        let facts: Vec<_> = free.iter().map(|&n| fact(self, &self.queue[n].0)).collect();
+        let seed =
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |d| d.as_nanos() as u64 | 1);
+        let places = crate::automix::arrange(order, fact(self, &first.0), &facts, seed);
+        let moved: Vec<_> = places.into_iter().map(|k| self.queue[free[k]].clone()).collect();
+        for (slot, track) in free.into_iter().zip(moved) {
+            self.queue[slot] = track;
+        }
         crate::store::save_queue(&self.queue);
-        found
+    }
+
+    /// Where Automix's mix runs on a deck's track, as parts of its length: the mix to come on the
+    /// playing deck, the one under way on the deck coming in.
+    pub fn mix_span(&self, d: usize) -> Option<(f32, f32)> {
+        let a = self.auto?;
+        let len = self.decks[d].length();
+        if len <= 0.0 {
+            return None;
+        }
+        match a.fade {
+            Some((from, start, mix)) if from != d => {
+                Some(((start / len) as f32, ((start + mix) / len).min(1.0) as f32))
+            }
+            Some(_) => None,
+            None if self.telemetry.decks[d].playing => Some((1.0 - (self.mix_frames(d)? / len) as f32, 1.0)),
+            None => None,
+        }
+    }
+
+    /// How long the mix out of a deck's track runs, in its frames.
+    fn mix_frames(&self, d: usize) -> Option<f64> {
+        use crate::settings::Opt;
+        let l = self.decks[d].loaded.as_ref()?;
+        let (len, rate) = (l.track.frames.len() as f64, f64::from(l.track.rate));
+        let beat = l.grid.map_or(0.5 * rate, |g| g.beat_frames(l.track.rate));
+        let (length, style) = (self.settings.get(Opt::MixLength), self.settings.get(Opt::MixStyle));
+        Some(crate::automix::frames(length, style, beat, rate).min(len * 0.4))
+    }
+
+    /// Automix holds the crossfader while it is on; says so and returns true when it does.
+    fn crossfader_held(&mut self) -> bool {
+        if self.auto.is_some() {
+            self.status = Some("Automix has the crossfader: stop Automix to take over".into());
+        }
+        self.auto.is_some()
     }
 
     /// Hands the mixer back as the DJ left it, once a mix is over or called off.
@@ -1015,7 +1121,8 @@ impl State {
             return;
         }
         let waiting = (0..2).rev().find(|&d| !self.telemetry.decks[d].playing).unwrap_or(1);
-        if let Some(i) = self.auto_next(&mut a) {
+        self.mix_off_list(waiting);
+        if let Some(i) = self.auto_next(&mut a, waiting) {
             self.load_deck(waiting, i);
         }
         self.auto = Some(a);
@@ -1023,6 +1130,12 @@ impl State {
 
     fn auto_step(&mut self) {
         let Some(mut a) = self.auto else { return };
+        for d in 0..2 {
+            let t = &self.telemetry.decks[d];
+            if t.playing && self.decks[d].seconds(t.position) >= crate::automix::PLAYED_AFTER {
+                self.mix_off_list(d);
+            }
+        }
         let live = (0..2).find(|&d| self.telemetry.decks[d].playing);
         let Some(live) = live else {
             a.fade = None;
@@ -1037,7 +1150,7 @@ impl State {
                 self.telemetry.decks[d].playing = true;
                 self.crossfade(if d == 0 { -1.0 } else { 1.0 });
             } else if let Some(d) = (0..2).find(|&d| self.decks[d].loaded.is_some() && !self.decks[d].loading)
-                && let Some(i) = self.auto_next(&mut a)
+                && let Some(i) = self.auto_next(&mut a, d)
             {
                 self.load_deck(d, i);
             }
@@ -1069,21 +1182,20 @@ impl State {
                 a.fade = None;
                 a.bass = 0;
                 self.mix_done(from);
-                if let Some(i) = self.auto_next(&mut a) {
+                if let Some(i) = self.auto_next(&mut a, from) {
                     self.load_deck(from, i);
                 }
             }
             self.auto = Some(a);
             return;
         }
-        let (Some(l), Some(o)) = (&self.decks[live].loaded, &self.decks[other].loaded) else { return };
-        let len = l.track.frames.len() as f64;
+        let (Some(l), Some(o), Some(mix)) =
+            (&self.decks[live].loaded, &self.decks[other].loaded, self.mix_frames(live))
+        else {
+            return;
+        };
         let rate = f64::from(l.track.rate);
-        let beat = l.grid.map_or(0.5 * rate, |g| g.beat_frames(l.track.rate));
-        use crate::settings::Opt;
-        let (length, style) = (self.settings.get(Opt::MixLength), self.settings.get(Opt::MixStyle));
-        let left = len - self.telemetry.decks[live].position;
-        let mix = crate::automix::frames(length, style, beat, rate).min(len * 0.4);
+        let left = l.track.frames.len() as f64 - self.telemetry.decks[live].position;
         // A mix of no length still has to start the next deck before this one runs out.
         if !a.now && left > mix.max(rate * 0.05) {
             return;
@@ -1473,6 +1585,7 @@ impl State {
         }
         let open = self.track_menu.is_some()
             || self.column_menu
+            || self.order_menu
             || self.chip_menu.is_some()
             || self.tag_menu.is_some()
             || self.fx_menu.is_some()
@@ -1482,6 +1595,7 @@ impl State {
             || self.picker.is_some();
         self.track_menu = None;
         self.column_menu = false;
+        self.order_menu = false;
         self.chip_menu = None;
         self.tag_menu = None;
         self.fx_menu = None;
@@ -1669,7 +1783,7 @@ impl State {
                 self.pointer_target(t);
                 self.send(Command::Play(d, false));
             }
-            Target::XfadeStep(by) => {
+            Target::XfadeStep(by) if !self.crossfader_held() => {
                 self.crossfader = (self.crossfader + f32::from(by) * 0.02).clamp(-1.0, 1.0);
                 let x = self.crossfader_out();
                 self.send(Command::Crossfader(x));
@@ -2263,6 +2377,7 @@ impl State {
                 crate::store::save_queue(&self.queue);
             }
             Target::QueueClear => {
+                self.order_menu = false;
                 self.queue.clear();
                 crate::store::save_queue(&self.queue);
             }
@@ -2272,6 +2387,15 @@ impl State {
                 }
             }
             Target::MixSkip => self.mix_skip(),
+            Target::OrderMenu => {
+                self.order_menu = true;
+                // The menu hangs under its button, clear of the row it belongs to.
+                self.menu_at = self.rect_of(t).map_or((x, y), |r| (r.x, r.y + r.h + 2.0));
+            }
+            Target::MixOrder(order) => {
+                self.order_menu = false;
+                self.mix_order(order);
+            }
             Target::Cycle(o) => {
                 let choices = match crate::settings::spec(o).kind {
                     crate::settings::Kind::Switch => 2,
@@ -2502,6 +2626,7 @@ impl State {
             }
             Target::MenuClose => {
                 self.column_menu = false;
+                self.order_menu = false;
                 self.chip_menu = None;
                 self.tag_menu = None;
                 self.fx_menu = None;
@@ -2533,7 +2658,7 @@ impl State {
                     self.send(Command::Record(true));
                 }
             }
-            Target::XfadeStep(by) => {
+            Target::XfadeStep(by) if !self.crossfader_held() => {
                 self.crossfader = (self.crossfader + f32::from(by) * 0.1).clamp(-1.0, 1.0);
                 let x = self.crossfader_out();
                 self.send(Command::Crossfader(x));
@@ -2818,7 +2943,7 @@ impl State {
                 self.decks[d].rate = v;
                 self.send(Command::Rate(d, f64::from(v) * self.settings.rate_range()));
             }
-            Target::Crossfader => {
+            Target::Crossfader if !self.crossfader_held() => {
                 let v = ((x - r.x) / r.w * 2.0 - 1.0).clamp(-1.0, 1.0);
                 let v = if v.abs() < 0.04 { 0.0 } else { v };
                 self.crossfader = v;

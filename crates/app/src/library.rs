@@ -143,8 +143,10 @@ pub fn roots() -> Vec<PathBuf> {
         v.push(Path::new(&home).join("Music"));
     }
     if cfg!(target_os = "android") {
-        v.push("/storage/emulated/0/Music".into());
-        v.push("/storage/emulated/0/Download".into());
+        // The phone's own storage and any card in it, wherever the music was put.
+        v.push("/storage/emulated/0".into());
+        let cards = std::fs::read_dir("/storage").into_iter().flatten().flatten().map(|e| e.path());
+        v.extend(cards.filter(|p| !p.ends_with("emulated") && !p.ends_with("self")));
     }
     v.retain(|p| p.is_dir());
     v
@@ -157,6 +159,9 @@ pub fn file(path: PathBuf, title: &str, artist: &str, folder: &str) -> Entry {
     Entry::new(Source::File(path.into()), &name, folder)
 }
 
+/// Folders a phone keeps sounds in that are not music, and other apps' own data.
+const NOT_MUSIC: [&str; 6] = ["Android", "Ringtones", "Notifications", "Alarms", "Recordings", "Podcasts"];
+
 pub fn scan(roots: &[PathBuf]) -> Vec<Entry> {
     let mut out = Vec::new();
     let mut stack: Vec<PathBuf> = roots.to_vec();
@@ -166,7 +171,9 @@ pub fn scan(roots: &[PathBuf]) -> Vec<Entry> {
             let p = e.path();
             let Ok(kind) = e.file_type() else { continue };
             if kind.is_dir() {
-                if !e.file_name().to_string_lossy().starts_with('.') {
+                let name = e.file_name();
+                let name = name.to_string_lossy();
+                if !name.starts_with('.') && !NOT_MUSIC.contains(&&*name) {
                     stack.push(p);
                 }
                 continue;
@@ -216,7 +223,8 @@ mod tests {
     fn scan_finds_audio_and_skips_hidden() {
         let root = std::env::temp_dir().join(format!("djsugar-scan-{}", std::process::id()));
         std::fs::create_dir_all(root.join("House/.cache")).unwrap();
-        for f in ["House/a.mp3", "House/b.FLAC", "House/notes.txt", "House/.cache/c.mp3", "d.wav"] {
+        std::fs::create_dir_all(root.join("Ringtones")).unwrap();
+        for f in ["House/a.mp3", "House/b.FLAC", "House/notes.txt", "House/.cache/c.mp3", "d.wav", "Ringtones/e.mp3"] {
             std::fs::write(root.join(f), b"").unwrap();
         }
         let found = scan(std::slice::from_ref(&root));

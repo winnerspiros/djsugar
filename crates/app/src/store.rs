@@ -166,6 +166,15 @@ pub fn load_tags() -> Vec<(String, Vec<String>)> {
     load_lists("tags.tsv")
 }
 
+/// Tracks got from the streaming services, each a file with its title, artist and service.
+pub fn save_streamed(tracks: &[(String, Vec<String>)]) {
+    save_lists("streamed.tsv", tracks);
+}
+
+pub fn load_streamed() -> Vec<(String, Vec<String>)> {
+    load_lists("streamed.tsv")
+}
+
 fn save_lists(file: &str, lists: &[(String, Vec<String>)]) {
     let Some(d) = dir() else { return };
     let text: String = lists

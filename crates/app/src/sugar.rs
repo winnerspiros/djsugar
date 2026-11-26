@@ -98,6 +98,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     track_menu(p, s, w, h);
     list_menu(p, s, w, h);
     column_menu(p, s, w, h);
+    order_menu(p, s, w, h);
     chip_menu(p, s, w, h);
     tag_menu(p, s, w, h);
     fx_menu(p, s, w, h);
@@ -250,7 +251,7 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
     let count = if s.queue.is_empty() { "The list on screen".to_string() } else { tracks(s.queue.len()) };
     p.text_in(x + 12.0 + tw, r.y + 21.0, w - tw - 108.0, ARTIST, &count);
     let label = if on { "STOP" } else { "START" };
-    button(p, s, Rect::new(x + w - 84.0, r.y + 3.0, 84.0, 26.0), label, on, GREEN, Target::AutoDj);
+    button(p, s, Rect::new(x + w - 84.0, r.y + 3.0, 84.0, 26.0), label, on, theme::AUTOMIX, Target::AutoDj);
     let half = (w - 6.0) * 0.5;
     let picks =
         [(Opt::MixLength, "LENGTH", &crate::automix::LENGTHS[..]), (Opt::MixStyle, "STYLE", &crate::automix::STYLES)];
@@ -272,11 +273,11 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         ("MIX NOW", false, Target::MixNow),
         ("SKIP", false, Target::MixSkip),
         ("REPEAT", repeat, Target::Cycle(Opt::MixRepeat)),
-        ("CLEAR", false, Target::QueueClear),
+        ("ORDER", s.order_menu, Target::OrderMenu),
     ];
     for (n, (name, lit, target)) in acts.into_iter().enumerate() {
         let b = Rect::new(x + n as f32 * (quarter + 6.0), r.y + 80.0, quarter, 28.0);
-        button(p, s, b, name, lit, GREEN, target);
+        button(p, s, b, name, lit, theme::AUTOMIX, target);
     }
     p.rect(x, r.y + 115.0, w, 1.0, 0.0, EDGE);
     let mut y = r.y + 120.0;
@@ -287,11 +288,21 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         }
         return;
     }
+    // The row each deck's track sits on; a track listed twice is held once.
+    let mut held = [None; 2];
+    for d in 0..2 {
+        held[d] = (0..s.queue.len())
+            .find(|&n| s.mix_held[d].as_deref() == Some(s.queue[n].0.as_str()) && held[1 - d] != Some(n));
+    }
     let rows = (((r.y + r.h - y - 18.0) / 38.0) as usize).min(s.queue.len());
     for n in 0..rows {
         let b = Rect::new(x, y, w, 34.0);
         p.outlined(b.x, b.y, b.w, b.h, 6.0, SURFACE, 1.0, EDGE);
-        p.text(b.x + 9.0, b.y + 21.0, Style { colour: theme::FAINT, ..TAB }, &(n + 1).to_string());
+        // A track on a deck shows which, until it has played and leaves the list.
+        let deck = held.iter().position(|&row| row == Some(n));
+        let place = deck.map_or_else(|| (n + 1).to_string(), |d| ["A", "B"][d].to_string());
+        let ink = if deck.is_some() { theme::AUTOMIX } else { theme::FAINT };
+        p.text(b.x + 9.0, b.y + 21.0, Style { colour: ink, ..TAB }, &place);
         let (title, artist) = (s.queue[n].1.first().cloned(), s.queue[n].1.get(1).cloned());
         let (title, artist) = (title.unwrap_or_default(), artist.unwrap_or_default());
         let tx = b.x + 32.0;
@@ -1206,6 +1217,24 @@ fn chip_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         }));
         v
     };
+    theme::menu(p, s, s.menu_at, screen, &lines);
+}
+
+/// The orders Automix's list can be put in, and a way to empty it.
+fn order_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    if !s.order_menu {
+        return;
+    }
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let some = s.queue.len() > 1;
+    let mut lines = vec![Line::item("Put the list in order", Target::MenuBody).enabled(false), Line::Rule];
+    lines.extend(
+        crate::automix::ORDERS.iter().zip(0u8..).map(|(&n, k)| Line::item(n, Target::MixOrder(k)).enabled(some)),
+    );
+    lines.push(Line::Rule);
+    lines.push(Line::item("Clear the list", Target::QueueClear).enabled(!s.queue.is_empty()));
     theme::menu(p, s, s.menu_at, screen, &lines);
 }
 

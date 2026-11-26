@@ -19,6 +19,8 @@ pub const TEXT: u32 = rgb(0xf2f2f7);
 pub const DIM: u32 = rgb(0x8e8e93);
 pub const FAINT: u32 = rgb(0x55555c);
 pub const ACCENT: u32 = rgb(0xff4fa8);
+/// Automix's own colour: what it is running, and what it holds.
+pub const AUTOMIX: u32 = rgb(0x30c158);
 
 pub fn style(px: f32, weight: Weight, colour: u32) -> Style {
     Style::new(px.round().max(7.0), weight, colour)

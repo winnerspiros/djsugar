@@ -205,6 +205,21 @@ fn main() {
                         }
                         ui.tap("Cycle(MixStyle)");
                         ui.render(&mut r);
+                        // The Order button opens its menu, and a pick closes it.
+                        ui.tap("OrderMenu");
+                        ui.render(&mut r);
+                        save(&r, &out.join(format!("{name}-automix-order.png")));
+                        // A list of one has nothing to order, so its menu can only be closed.
+                        if !ui.tap("MixOrder(5)") && !ui.tap("MenuClose") {
+                            faults.push(format!("{name}: no Automix order menu"));
+                        }
+                        ui.render(&mut r);
+                        // Running, Automix marks what it holds: the crossfader and the mix to come.
+                        ui.tap("AutoDj");
+                        ui.render(&mut r);
+                        save(&r, &out.join(format!("{name}-automix-on.png")));
+                        ui.tap("AutoDj");
+                        ui.render(&mut r);
                         if !ui.targets().iter().any(|(t, _)| t == "QueueRemove(0)") {
                             faults.push(format!("{name}: the added track is not on the Automix list"));
                         }
