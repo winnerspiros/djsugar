@@ -57,9 +57,12 @@ fn take(h: &ControlHandle) -> isize {
 impl Desk {
     /// The library's controls, with devices watched when the mappings are found.
     pub fn start(reg: &Arc<ControlRegistry>, decks: usize) -> Self {
-        // Beside the samples when the app is told where its files are, else where the mappings are looked for.
+        // Beside the samples when the app is told where its files are, or in its own folder, where a phone's package
+        // unpacks them; else where the mappings are looked for.
         let told = std::env::var_os("DJSUGAR_RES").map(|d| std::path::PathBuf::from(d).join("controllers"));
-        let dir = told.filter(|d| d.is_dir()).or_else(djsugar_controllers::default_mappings_dir);
+        let own = || crate::store::dir().map(|d| d.join("controllers"));
+        let dir = told.filter(|d| d.is_dir()).or_else(|| own().filter(|d| d.is_dir()));
+        let dir = dir.or_else(djsugar_controllers::default_mappings_dir);
         let devices = dir.map(|dir| Controllers::start(reg.clone(), dir, Default::default(), Default::default()));
         Self { devices, ..Self::controls(reg, decks) }
     }

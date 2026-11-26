@@ -17,9 +17,20 @@ pub const OS: &str = if cfg!(target_os = "android") {
 };
 
 // Valid versions: 'android' 30, 'ios' 17.
-/// See [sysinfo::System::os_version]
+/// The system's version as it reports it. An iPhone is not asked: reading it there does not build.
 pub fn os_version() -> String {
-    sysinfo::System::os_version().unwrap_or("0".into())
+    #[cfg(not(target_os = "ios"))]
+    return sysinfo::System::os_version().unwrap_or("0".into());
+    #[cfg(target_os = "ios")]
+    "17".into()
+}
+
+/// The kernel's version, "0" when it is not known.
+pub fn kernel_version() -> String {
+    #[cfg(not(target_os = "ios"))]
+    return sysinfo::System::kernel_version().unwrap_or_else(|| "0".into());
+    #[cfg(target_os = "ios")]
+    "0".into()
 }
 
 #[derive(Clone, Debug)]

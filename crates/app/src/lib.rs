@@ -533,6 +533,35 @@ pub(crate) mod android {
         })
     }
 
+    /// Puts the package's controller mappings in the app's own folder, where they are read as files. The package
+    /// carries a mark of what they are, so this is done once for each set of them.
+    fn unpack_mappings(app: &AndroidApp) {
+        let whole = |name: &std::ffi::CStr| {
+            let mut asset = app.asset_manager().open(name)?;
+            let mut bytes = Vec::with_capacity(asset.length());
+            asset.read_to_end(&mut bytes).ok().map(|_| bytes)
+        };
+        let (Some(data), Some(mark)) = (app.internal_data_path(), whole(c"controllers.mark")) else { return };
+        let (to, marked) = (data.join("controllers"), data.join("controllers.mark"));
+        if std::fs::read(&marked).is_ok_and(|have| have == mark) {
+            return;
+        }
+        let Some(names) = app.asset_manager().open_dir(c"controllers") else { return };
+        let _ = std::fs::remove_dir_all(&to);
+        if std::fs::create_dir_all(&to).is_err() {
+            return;
+        }
+        for name in names {
+            let Ok(file) = name.to_str() else { continue };
+            let Ok(path) = std::ffi::CString::new(format!("controllers/{file}")) else { continue };
+            match whole(&path).map(|bytes| std::fs::write(to.join(file), bytes)) {
+                Some(Ok(())) => {}
+                _ => return crate::diag(&format!("could not unpack the mapping {file}")),
+            }
+        }
+        let _ = std::fs::write(marked, mark);
+    }
+
     /// Whether the microphone may be used; when not, the user is asked.
     pub(crate) fn mic() -> bool {
         APP.get().is_some_and(|app| permit(app, |_| "android.permission.RECORD_AUDIO").unwrap_or(false))
@@ -646,6 +675,7 @@ pub(crate) mod android {
         if let Some(dir) = app.internal_data_path() {
             crate::store::set_dir(dir);
         }
+        unpack_mappings(&app);
         let _ = permit(&app, |sdk| {
             if sdk >= 33 { "android.permission.READ_MEDIA_AUDIO" } else { "android.permission.READ_EXTERNAL_STORAGE" }
         });
@@ -659,9 +689,21 @@ pub(crate) mod android {
 /// gives the same density of controls. Desktops draw at the system scale.
 pub const UI_SCALE: f32 = if cfg!(target_os = "android") { 0.45 } else { 1.0 };
 
+/// Where the app's own files are: where it is told, else beside the program, where a package puts them, or in the
+/// source tree it was built from.
+fn res_dir() -> &'static std::path::Path {
+    static DIR: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        if let Some(told) = std::env::var_os("DJSUGAR_RES") {
+            return told.into();
+        }
+        let beside = std::env::current_exe().ok().and_then(|e| e.parent().map(std::path::Path::to_path_buf));
+        let packed = beside.iter().flat_map(|d| [d.clone(), d.join("../share/djsugar"), d.join("../Resources")]);
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../res");
+        packed.into_iter().find(|d| d.join("samples").is_dir()).unwrap_or(source)
+    })
+}
+
 pub fn read_dir_sample(name: &str) -> Option<Vec<u8>> {
-    let root = std::env::var_os("DJSUGAR_RES")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../res"));
-    std::fs::read(root.join("samples").join(name)).ok()
+    std::fs::read(res_dir().join("samples").join(name)).ok()
 }

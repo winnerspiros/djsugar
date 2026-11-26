@@ -76,10 +76,12 @@ jobs:
           s=$(stat -c %s $f)
           echo "Linux binary: $((s / 1024)) KiB" >> $GITHUB_STEP_SUMMARY
           [ $s -lt 67108864 ] || { echo "::error::Linux binary over 64 MiB: $s"; exit 1; }
+      - name: Put the samples and controller mappings beside the binary
+        run: mkdir dist && cp -r target/release/djsugar res/samples res/controllers dist/
       - uses: actions/upload-artifact@v7
         with:
           name: djsugar-linux
-          path: target/release/djsugar
+          path: dist
 
   miri:
     needs: check
@@ -116,10 +118,13 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
       - run: cargo test --workspace --profile ci --locked
       - run: cargo build --release -p djsugar --locked
+      - name: Put the samples and controller mappings beside the binary
+        shell: bash
+        run: mkdir dist && cp -r ${{ matrix.bin }} res/samples res/controllers dist/
       - uses: actions/upload-artifact@v7
         with:
           name: djsugar-${{ runner.os }}
-          path: ${{ matrix.bin }}
+          path: dist
 
   ios:
     needs: check

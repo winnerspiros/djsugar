@@ -78,6 +78,20 @@ pub fn fetch(
     if path.is_file() {
         return Ok(path);
     }
+    // Spotify's own lyrics come along, whichever way the sound does.
+    let words = std::thread::spawn({
+        let (d, id) = (dir.to_path_buf(), hit.id.clone());
+        move || djsugar_spotify::lyrics(&d, &id).ok().flatten()
+    });
+    let with_words = |sound: PathBuf| {
+        let lrc = sound.with_extension("lrc");
+        if !lrc.exists()
+            && let Ok(Some(text)) = words.join()
+        {
+            let _ = std::fs::write(lrc, text);
+        }
+        sound
+    };
     let (tx, rx) = std::sync::mpsc::channel();
     let (d, id, out) = (dir.to_path_buf(), hit.id.clone(), path.clone());
     let job = std::thread::spawn(move || {
@@ -89,14 +103,14 @@ pub fn fetch(
         progress((f * 1000.0) as u64, 1000);
     }
     let why = match job.join() {
-        Ok(Ok(())) => return Ok(path),
+        Ok(Ok(())) => return Ok(with_words(path)),
         Ok(Err(why)) => why,
         Err(_) => "Spotify: internal error".to_owned(),
     };
     said(format!("{why}. Looking for \"{}\" on YouTube", hit.title));
     let found = youtube.search(&format!("{} {}", hit.artist, hit.title), None)?;
     let best = found.hits.first().ok_or(Error::Refused(why))?;
-    youtube.fetch(&best.id, cache, progress)
+    youtube.fetch(&best.id, cache, progress).map(with_words)
 }
 
 #[cfg(test)]

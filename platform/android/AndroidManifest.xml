@@ -18,7 +18,7 @@
         android:label="DJ Sugar"
         android:hasCode="false"
         android:resizeableActivity="true"
-        android:extractNativeLibs="false">
+        android:extractNativeLibs="true">
         <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
         <meta-data android:name="com.samsung.android.keepalive.density" android:value="true" />
         <activity

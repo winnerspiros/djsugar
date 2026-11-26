@@ -4,6 +4,7 @@
 
 mod browse;
 mod keys;
+mod lyrics;
 
 use std::fs::File;
 use std::future::Future;
@@ -544,6 +545,21 @@ pub fn browse(dir: &Path, request: &str, offset: usize, limit: usize) -> Result<
 pub fn fetch(dir: &Path, track: &str, out: &Path, progress: impl Fn(f64) + Send + 'static) -> Result<(), String> {
     let (dir, track, out) = (dir.to_path_buf(), track.to_owned(), out.to_path_buf());
     guarded(move || download(dir, track, out, Box::new(progress)))
+}
+
+/// A track's (base62 id) lyrics as LRC text, timed as far as Spotify times them; None when it has none. Any account
+/// may ask. Blocks until done.
+pub fn lyrics(dir: &Path, track: &str) -> Result<Option<String>, String> {
+    let (dir, track) = (dir.to_path_buf(), track.to_owned());
+    guarded(move || async move {
+        let id = SpotifyId::from_base62(&track).map_err(|e| format!("Track id: {e}"))?;
+        let session = session(&dir).await?;
+        match session.spclient().get_lyrics(&id).await {
+            Ok(reply) => Ok(serde_json::from_slice(&reply).ok().and_then(|v| lyrics::to_lrc(&v))),
+            Err(e) if e.kind == librespot_core::error::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(format!("Lyrics: {e}")),
+        }
+    })
 }
 
 #[cfg(test)]

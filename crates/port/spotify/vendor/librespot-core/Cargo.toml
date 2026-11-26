@@ -182,7 +182,7 @@ features = ["oid"]
 [dependencies.shannon]
 version = "0.2"
 
-[dependencies.sysinfo]
+[target.'cfg(not(target_os = "ios"))'.dependencies.sysinfo]
 version = "0.36"
 features = ["system"]
 default-features = false

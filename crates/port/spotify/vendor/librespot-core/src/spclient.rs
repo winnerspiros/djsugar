@@ -38,7 +38,6 @@ use hyper_util::client::legacy::ResponseFuture;
 use protobuf::{Enum, EnumOrUnknown, Message, MessageFull};
 use rand::RngCore;
 use serde::Serialize;
-use sysinfo::System;
 use thiserror::Error;
 
 component! {
@@ -196,7 +195,7 @@ impl SpClient {
             .mut_or_insert_default();
 
         let os_version = os_version();
-        let kernel_version = System::kernel_version().unwrap_or_else(|| String::from("0"));
+        let kernel_version = crate::config::kernel_version();
 
         match os {
             "windows" => {
