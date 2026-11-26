@@ -6,6 +6,7 @@ mod lyrics;
 mod prefs;
 mod record;
 mod settings;
+mod skips;
 mod state;
 mod store;
 /// Where saved state lives, set before the app starts.

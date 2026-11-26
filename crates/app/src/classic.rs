@@ -428,6 +428,13 @@ pub(crate) fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 p.rect(r.x + (cue / len) as f32 * r.w, r.y, 1.5, r.h, 0.0, cue_colour(s, d, i));
             }
         }
+        if s.settings.on(crate::settings::Opt::SkipNonMusic) {
+            let secs = deck.seconds(len).max(0.001);
+            for &(a, b) in &l.skips {
+                let (x0, x1) = (r.x + r.w * (a / secs) as f32, r.x + r.w * (b / secs).min(1.0) as f32);
+                p.rect(x0, r.y + 1.0, x1 - x0, r.h - 2.0, 0.0, fade(WELL, 0xc0));
+            }
+        }
         if let Some((from, to)) = s.mix_span(d) {
             let (x0, x1) = (r.x + r.w * from, r.x + r.w * to);
             p.rect(x0, r.y + 1.0, x1 - x0, r.h - 2.0, 0.0, fade(crate::theme::AUTOMIX, 0x2e));

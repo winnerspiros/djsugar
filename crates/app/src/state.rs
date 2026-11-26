@@ -349,6 +349,8 @@ pub struct Loaded {
     pub lyrics: crate::lyrics::Lyrics,
     /// The album art, `ART` by `ART` colours row by row, if the file or its folder has any.
     pub art: Option<Box<[u32]>>,
+    /// The parts that are not music, in seconds.
+    pub skips: Vec<(f64, f64)>,
 }
 
 /// Cells on a side of the deck's album art.
@@ -992,6 +994,7 @@ impl State {
             }
             self.telemetry = c.poll();
         }
+        self.skip_step();
         self.auto_step();
     }
 
@@ -1126,6 +1129,29 @@ impl State {
             self.load_deck(waiting, i);
         }
         self.auto = Some(a);
+    }
+
+    /// Jumps each playing deck past a part that is not music. A paused deck is left where the DJ put it.
+    fn skip_step(&mut self) {
+        if !self.settings.on(crate::settings::Opt::SkipNonMusic) {
+            return;
+        }
+        for d in 0..2 {
+            let t = self.telemetry.decks[d];
+            let Some(l) = &self.decks[d].loaded else { continue };
+            let rate = f64::from(l.track.rate);
+            if t.playing
+                && !self.scrubbing(d)
+                && let Some(to) = crate::skips::past(&l.skips, t.position / rate)
+            {
+                self.send(Command::Seek(d, (to * rate).min(self.decks[d].length())));
+            }
+        }
+    }
+
+    /// Whether the DJ has a hand on deck `d`'s platter or its overview.
+    fn scrubbing(&self, d: usize) -> bool {
+        self.drags.iter().any(|g| matches!(g.target, Some(Target::Jog(n) | Target::Overview(n)) if n == d))
     }
 
     fn auto_step(&mut self) {
@@ -1265,7 +1291,11 @@ impl State {
                     }
                     _ => crate::lyrics::Lyrics::default(),
                 };
-                Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics, art }
+                let skips = match &entry.source {
+                    Source::File(path) if !detail.is_empty() => crate::skips::find(path, &t),
+                    _ => Vec::new(),
+                };
+                Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics, art, skips }
             });
             let _ = tx.send((job, loaded));
         });

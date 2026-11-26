@@ -212,6 +212,13 @@ impl Hub {
             let r = c.fetch(sv, &id, &dir, &progress);
             if let Ok(path) = &r {
                 let _ = sugar_net::http::save_art(&art, path);
+                // Asked once a track; a failed ask is made again the next time it is got.
+                if sv == Service::YouTube
+                    && !crate::skips::file(path).is_file()
+                    && let Ok(parts) = sugar_net::sponsorblock::segments(&id)
+                {
+                    crate::skips::save(path, &parts);
+                }
             }
             let _ = tx.send(match r {
                 Ok(path) => Reply::Ready(id, path, deck, sv),
