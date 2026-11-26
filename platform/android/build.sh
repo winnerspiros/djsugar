@@ -14,7 +14,7 @@ cp -r res/samples "$OUT/assets/samples"
 rm -f "$OUT/assets/samples/README.md"
 # The controller mappings, and a mark of what they are, so the app unpacks them again only when they changed.
 cp -r res/controllers "$OUT/assets/controllers"
-(cd res/controllers && find . -type f | LC_ALL=C sort | xargs cat | sha256sum | cut -d' ' -f1) > "$OUT/assets/controllers.mark"
+(cd res/controllers && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 cat | sha256sum | cut -d' ' -f1) > "$OUT/assets/controllers.mark"
 cp "target/$TARGET/release/libdjsugar.so" "$OUT/lib/$ABI/"
 llvm-strip --strip-unneeded "$OUT/lib/$ABI/libdjsugar.so"
 "$BT/aapt2" compile --dir platform/android/res -o "$OUT/res.zip"
