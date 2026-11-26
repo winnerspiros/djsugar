@@ -3164,6 +3164,7 @@ version = "0.1.0"
 dependencies = [
  "android-activity",
  "djsugar-control",
+ "djsugar-controllers",
  "djsugar-engine",
  "jni 0.22.4",
  "ndk",
@@ -3182,6 +3183,19 @@ dependencies = [
 [[package]]
 name = "djsugar-control"
 version = "0.1.0"
+
+[[package]]
+name = "djsugar-controllers"
+version = "0.1.0"
+dependencies = [
+ "djsugar-control",
+ "djsugar-hid",
+ "djsugar-js",
+ "djsugar-script",
+ "midir",
+ "roxmltree",
+ "serde_json",
+]
 
 [[package]]
 name = "djsugar-engine"
@@ -3216,6 +3230,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "djsugar-hid"
+version = "0.1.0"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "djsugar-js"
+version = "0.1.0"
+
+[[package]]
 name = "djsugar-link"
 version = "0.1.0"
 dependencies = [
@@ -3238,6 +3265,13 @@ dependencies = [
  "serde_json",
  "vst3",
  "winit",
+]
+
+[[package]]
+name = "djsugar-script"
+version = "0.1.0"
+dependencies = [
+ "djsugar-control",
 ]
 
 [[package]]
@@ -7236,6 +7270,15 @@ checksum = "18bd8a37d17a58532776dcdf6041ce64929adca78e8489d5cacbafe99229d3e1"
 dependencies = [
  "bytemuck",
  "byteorder",
+]
+
+[[package]]
+name = "roxmltree"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9da7f59328b09405b181fee1018925fad50f157afb43c0c0f5c522c256dd5907"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]

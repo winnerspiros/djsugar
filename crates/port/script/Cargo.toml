@@ -1,0 +1,12 @@
+[package]
+name = "djsugar-script"
+description = "One-line actions for shortcuts, pads and mappings"
+version.workspace = true
+edition = "2021"
+publish = false
+license.workspace = true
+
+[dependencies]
+djsugar-control = { path = "../control" }
+
+[lints]

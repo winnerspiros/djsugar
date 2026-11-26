@@ -98,6 +98,11 @@ impl Bridge {
         Self { engine, reg, rate: [44_100.0; DECKS], slots, next: 0, last: Telemetry::default() }
     }
 
+    /// The controls a controller mapping drives, and the library's own.
+    pub fn desk(&self) -> crate::controllers::Desk {
+        crate::controllers::Desk::start(&self.reg, DECKS)
+    }
+
     /// Deck `d`'s effect unit as the engine holds it: each slot's effect, on, knob; then the mix.
     pub fn fx(&self, d: usize) -> crate::state::FxUnit {
         let slots = std::array::from_fn(|s| {

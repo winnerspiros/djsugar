@@ -19,4 +19,4 @@ skool = "skool"
 continous = "continous"
 
 [files]
-extend-exclude = ["res/samples", "*.lock"]
+extend-exclude = ["res/samples", "res/controllers", "docs/controller-status.txt", "*.lock"]

@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<MixxxControllerPreset mixxxVersion="2.4.0" schemaVersion="1">
+    <info>
+        <name>Native Instruments Maschine Mikro MK3</name>
+        <author>DJ Sugar</author>
+        <description>Plays and edits DJ Sugar's Groove Box: steps, live play with recording, grooves and kits on the 16 pads, with the screen, encoder and touch strip.</description>
+        <devices>
+            <product protocol="hid" vendor_id="0x17cc" product_id="0x1700" />
+        </devices>
+    </info>
+    <controller id="MikroMK3">
+        <scriptfiles>
+            <file filename="Native-Instruments-Maschine-Mikro-MK3.js" functionprefix="MikroMK3" />
+        </scriptfiles>
+    </controller>
+</MixxxControllerPreset>

@@ -112,6 +112,10 @@ pub enum Target {
     Scene(usize),
     Xy,
     XyHold,
+    /// The pad's next aim: the master, then each deck.
+    XyAim,
+    /// The pad's deck back as it was, or flat.
+    XyReset,
     StationTime,
     Iso(usize),
     Release(usize),
@@ -264,6 +268,16 @@ pub fn entry_key(e: &Entry) -> String {
     }
 }
 
+/// How a deck was before the pad played it.
+#[derive(Clone, Copy, Debug)]
+pub struct Before {
+    deck: usize,
+    filter: f32,
+    mix: f32,
+    /// The pad turned the first effect on, none being on.
+    lit: bool,
+}
+
 /// FX station settings shown on its page.
 #[derive(Clone, Copy, Debug)]
 pub struct Station {
@@ -272,6 +286,10 @@ pub struct Station {
     pub xy: (f32, f32),
     /// The pad keeps the effect on after the finger lifts.
     pub hold: bool,
+    /// What the pad plays: 0 the scene on the master, else that deck's filter across and its effects up.
+    pub aim: usize,
+    /// How the pad's deck was before the pad was touched.
+    pub before: Option<Before>,
     pub time: f32,
     pub iso: [f32; 3],
     pub release: Release,
@@ -285,6 +303,8 @@ impl Default for Station {
             on: false,
             xy: (0.5, 0.5),
             hold: false,
+            aim: 0,
+            before: None,
             time: 0.5,
             iso: [0.0; 3],
             release: Release::Brake,
@@ -642,6 +662,8 @@ struct Drag {
 
 pub struct State {
     control: Option<Control>,
+    /// The controllers plugged in.
+    pub desk: Option<crate::controllers::Desk>,
     pub telemetry: Telemetry,
     pub decks: [DeckUi; DECKS],
     pub crossfader: f32,
@@ -826,7 +848,9 @@ impl State {
         for (i, p) in pads.iter_mut().flatten().enumerate() {
             *p = i.min(SAMPLES.len().saturating_sub(1));
         }
+        let desk = control.as_ref().map(Control::desk);
         let mut s = Self {
+            desk,
             control,
             telemetry: Telemetry::default(),
             decks: std::array::from_fn(|_| DeckUi::new()),
@@ -1080,6 +1104,12 @@ impl State {
                 }
             }
             self.telemetry = c.poll();
+        }
+        for ask in self.desk.as_ref().map(|d| d.poll()).unwrap_or_default() {
+            match ask {
+                crate::controllers::Ask::Move(by) => self.select_by(by),
+                crate::controllers::Ask::Load(d) => self.load_pick(d),
+            }
         }
         self.jog_step();
         self.skip_step();
@@ -1969,6 +1999,42 @@ impl State {
         }
     }
 
+    /// A deck's filter knob and how much of its effects is heard.
+    fn xy_set(&mut self, d: usize, filter: f32, mix: f32) {
+        self.decks[d].knobs[3] = filter;
+        self.send(Command::Filter(d, filter * 2.0 - 1.0));
+        self.fx[d].1 = mix;
+        self.send(Command::Fx(d, FxSet::Mix(mix)));
+    }
+
+    /// The pad on deck `d`. What it changes is noted first, and an effect turned on if none is, so the pad is heard.
+    fn xy_deck(&mut self, d: usize, xy: (f32, f32)) {
+        if self.station.before.is_none() {
+            let lit = self.fx[d].0.iter().all(|slot| !slot.1);
+            if lit {
+                self.fx[d].0[0].1 = true;
+                self.send(Command::Fx(d, FxSet::On(0, true)));
+            }
+            self.station.before = Some(Before { deck: d, filter: self.decks[d].knobs[3], mix: self.fx[d].1, lit });
+        }
+        self.xy_set(d, xy.0, xy.1);
+    }
+
+    /// The pad let go: the scene stops, and a deck the pad played goes back to how it was.
+    fn xy_let_go(&mut self) {
+        if self.station.on {
+            self.station.on = false;
+            self.send(Command::Station(Set::On(false)));
+        }
+        if let Some(b) = self.station.before.take() {
+            self.xy_set(b.deck, b.filter, b.mix);
+            if b.lit {
+                self.fx[b.deck].0[0].1 = false;
+                self.send(Command::Fx(b.deck, FxSet::On(0, false)));
+            }
+        }
+    }
+
     /// Moves the library's selection, keeping it in view.
     fn select_by(&mut self, by: isize) {
         if self.shown.is_empty() {
@@ -2689,10 +2755,22 @@ impl State {
             Target::Pref(_) | Target::PrefPick(..) | Target::PrefsScroll => {}
             Target::XyHold => {
                 self.station.hold = !self.station.hold;
-                if !self.station.hold && self.station.on {
-                    self.station.on = false;
-                    self.send(Command::Station(Set::On(false)));
+                if !self.station.hold {
+                    self.xy_let_go();
                 }
+            }
+            Target::XyAim => {
+                self.xy_let_go();
+                self.station.aim = (self.station.aim + 1) % (DECKS + 1);
+            }
+            Target::XyReset => {
+                if self.station.before.is_none()
+                    && let Some(d) = self.station.aim.checked_sub(1)
+                {
+                    self.xy_set(d, 0.5, 0.0);
+                }
+                self.xy_let_go();
+                self.station.xy = (0.5, 0.5);
             }
             Target::Rescan => {
                 self.app_menu = false;
@@ -3142,10 +3220,7 @@ impl State {
                     }
                 }
             }
-            Some(Target::Xy) if !self.station.hold => {
-                self.station.on = false;
-                self.send(Command::Station(Set::On(false)));
-            }
+            Some(Target::Xy) if !self.station.hold => self.xy_let_go(),
             // A tap matches tempo and phase once, so a stray touch never locks the
             // deck, or unlocks a locked one; holding locks it (see `tick`).
             Some(Target::Sync(deck)) if !d.moved => {
@@ -3333,6 +3408,10 @@ impl State {
             Target::Xy => {
                 let xy = (((x - r.x) / r.w).clamp(0.0, 1.0), (1.0 - (y - r.y) / r.h).clamp(0.0, 1.0));
                 self.station.xy = xy;
+                if let Some(d) = self.station.aim.checked_sub(1) {
+                    self.xy_deck(d, xy);
+                    return;
+                }
                 self.send(Command::Station(Set::Dial(xy.0)));
                 self.send(Command::Station(Set::Params(self.station.time, xy.1)));
                 if !self.station.on {

@@ -41,7 +41,7 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             Line::item("Load Selected on Deck B", Target::LoadPick(1)).hint("Ctrl+Shift+O"),
             Line::Rule,
             Line::item("Look for New Tracks", Target::Rescan),
-            Line::item("Music Folders", Target::Prefs(4)),
+            Line::item("Music Folders", Target::Prefs(5)),
         ],
         Some(3) => vec![
             Line::item("Find", Target::Find).hint("Ctrl+F"),
@@ -81,7 +81,7 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             Line::item("Report a Problem", Target::Open(1)),
             Line::item("Show the App's Files", Target::Open(2)),
             Line::Rule,
-            Line::item("About DJ Sugar", Target::Prefs(7)),
+            Line::item("About DJ Sugar", Target::Prefs(8)),
         ],
     };
     theme::submenu(p, s, r, top, screen, &sub);
@@ -134,7 +134,8 @@ pub fn overlay(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Style::new(20.0, Weight::Bold, theme::TEXT),
         settings::PAGES[page.min(settings::PAGES.len() - 1)],
     );
-    let rows = settings::page(page, &crate::library::roots(), s.out_rate, &s.audio_device());
+    let ports = s.desk.as_ref().map(|d| (d.ports(), d.known())).unwrap_or_default();
+    let rows = settings::page(page, &crate::library::roots(), s.out_rate, &s.audio_device(), (&ports.0, ports.1));
     let top = body.y + 50.0;
     let bottom = body.y + body.h;
     let total: f32 = rows.iter().map(row_h).sum();
@@ -164,9 +165,19 @@ pub fn overlay(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 fn row_h(row: &Row) -> f32 {
     match row {
         Row::Heading(_) => 34.0,
-        Row::Info(..) => 44.0,
+        Row::Info(..) | Row::Device(..) => 44.0,
         Row::Rescan | Row::Opt(_) => 52.0,
     }
+}
+
+/// A label with its value at the right, each cut short where the other needs the room.
+fn info(p: &mut Painter, r: Rect, title: Style, small: Style, label: &str, value: &str) -> f32 {
+    let h = 44.0;
+    let vw = p.text_width(small, value).min(r.w * 0.6);
+    p.text_in(r.x, r.y + 27.0, r.w - vw - 12.0, title, label);
+    p.text_in(r.x + r.w - vw, r.y + 27.0, vw, small, value);
+    p.rect(r.x, r.y + h - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
+    h
 }
 
 fn row_at(p: &mut Painter, s: &mut State, r: Rect, row: &Row) -> f32 {
@@ -177,14 +188,9 @@ fn row_at(p: &mut Painter, s: &mut State, r: Rect, row: &Row) -> f32 {
             p.text(r.x, r.y + 26.0, Style::new(11.0, Weight::Semibold, theme::DIM), t);
             34.0
         }
-        Row::Info(label, value) => {
-            let h = 44.0;
-            p.text(r.x, r.y + 27.0, title, label);
-            let vw = p.text_width(small, value).min(r.w * 0.6);
-            p.text_in(r.x + r.w - vw, r.y + 27.0, vw, small, value);
-            p.rect(r.x, r.y + h - 1.0, r.w, 1.0, 0.0, theme::SEPARATOR);
-            h
-        }
+        Row::Device(label, value) => info(p, r, title, small, label, value),
+        Row::Info(label, value) => info(p, r, title, small, label, value),
+
         Row::Rescan => {
             let b = Rect::new(r.x, r.y + 12.0, 170.0, 28.0);
             let down = s.pressed(Target::Rescan);

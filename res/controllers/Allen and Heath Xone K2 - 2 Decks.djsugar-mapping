@@ -1,0 +1,937 @@
+{
+ "format": "djsugar-mapping",
+ "version": 1,
+ "name": "Allen & Heath Xone:K2 - 2 Decks",
+ "author": "DJ Sugar",
+ "description": "DJ Sugar's own mapping for one Xone:K2 with two decks. Set the K2 to its factory settings: Latching Layers off and MIDI channel 15. Bottom right is SHIFT.\n\nLeft half is deck 1, right half deck 2, mirrored. Top encoders: filter (outer; Shift: headphones on the left, master on the right; press resets) and gain (inner; turns the loop size while a loop is on; press: 4-beat loop; Shift: move the loop). Outer knobs: the deck's three FX, with ON under each (Shift: next effect). Inner knobs: treble, mid, bass, with kills under them (red); those buttons and the gain encoder's light are the deck's level meter. Faders: pitch (outer), volume (inner). Bottom buttons: hot cues 1-4 (Shift deletes), beat jump back and forward 32 beats (Shift: 16), SYNC (outer; Shift: tempo reset) and PLAY (inner; Shift: back to start). Bottom encoders: browse, press to load the side's deck, hold to open a folder; Shift turns are the deck's jog wheel.",
+ "controller": {
+  "name": "Allen & Heath Xone:K2",
+  "ports": [
+   "XONE:K2"
+  ],
+  "layout": "xone-k2"
+ },
+ "variables": {
+  "shift": {
+   "default": 0,
+   "saved": false
+  }
+ },
+ "rows": [
+  {
+   "midi": "9E 0F",
+   "name": "SHIFT",
+   "script": "set_var 'shift' 1"
+  },
+  {
+   "midi": "9E 0F",
+   "name": "SHIFT",
+   "when": "release",
+   "script": "set_var 'shift' 0"
+  },
+  {
+   "midi": "BE 00",
+   "name": "FILTER 1",
+   "script": "deck 1 filter",
+   "steps": true
+  },
+  {
+   "midi": "BE 00",
+   "name": "HEADPHONES LEVEL",
+   "layer": "shift",
+   "script": "adjust '[Master],headGain'",
+   "steps": true
+  },
+  {
+   "midi": "9E 34",
+   "name": "FILTER 1 RESET",
+   "script": "deck 1 filter 50%"
+  },
+  {
+   "midi": "BE 01",
+   "name": "GAIN 1 / LOOP SIZE",
+   "script": "(deck 1 loop ? (value > 0 ? deck 1 loop_double : deck 1 loop_half) : deck 1 gain)",
+   "steps": true
+  },
+  {
+   "midi": "BE 01",
+   "name": "LOOP 1 MOVE",
+   "layer": "shift",
+   "script": "deck 1 loop_move 1",
+   "steps": true
+  },
+  {
+   "midi": "9E 35",
+   "name": "LOOP 1",
+   "script": "(deck 1 loop ? deck 1 loop_exit : deck 1 loop 4)"
+  },
+  {
+   "midi": "9E 35",
+   "name": "RELOOP 1",
+   "layer": "shift",
+   "script": "deck 1 reloop"
+  },
+  {
+   "midi": "BE 04",
+   "name": "FX 1 DECK 1",
+   "bind": "[EffectRack1_EffectUnit1_Effect1],meta"
+  },
+  {
+   "midi": "9E 30",
+   "name": "FX 1 ON DECK 1",
+   "script": "toggle '[EffectRack1_EffectUnit1_Effect1],enabled'"
+  },
+  {
+   "midi": "9E 30",
+   "name": "FX 1 NEXT DECK 1",
+   "layer": "shift",
+   "script": "press '[EffectRack1_EffectUnit1_Effect1],next_effect'"
+  },
+  {
+   "midi": "BE 05",
+   "name": "TREBLE 1",
+   "bind": "[EqualizerRack1_[Channel1]_Effect1],parameter3"
+  },
+  {
+   "midi": "9E 31",
+   "name": "TREBLE 1 KILL",
+   "script": "toggle '[EqualizerRack1_[Channel1]_Effect1],button_parameter3'"
+  },
+  {
+   "midi": "BE 08",
+   "name": "FX 2 DECK 1",
+   "bind": "[EffectRack1_EffectUnit1_Effect2],meta"
+  },
+  {
+   "midi": "9E 2C",
+   "name": "FX 2 ON DECK 1",
+   "script": "toggle '[EffectRack1_EffectUnit1_Effect2],enabled'"
+  },
+  {
+   "midi": "9E 2C",
+   "name": "FX 2 NEXT DECK 1",
+   "layer": "shift",
+   "script": "press '[EffectRack1_EffectUnit1_Effect2],next_effect'"
+  },
+  {
+   "midi": "BE 09",
+   "name": "MID 1",
+   "bind": "[EqualizerRack1_[Channel1]_Effect1],parameter2"
+  },
+  {
+   "midi": "9E 2D",
+   "name": "MID 1 KILL",
+   "script": "toggle '[EqualizerRack1_[Channel1]_Effect1],button_parameter2'"
+  },
+  {
+   "midi": "BE 0C",
+   "name": "FX 3 DECK 1",
+   "bind": "[EffectRack1_EffectUnit1_Effect3],meta"
+  },
+  {
+   "midi": "9E 28",
+   "name": "FX 3 ON DECK 1",
+   "script": "toggle '[EffectRack1_EffectUnit1_Effect3],enabled'"
+  },
+  {
+   "midi": "9E 28",
+   "name": "FX 3 NEXT DECK 1",
+   "layer": "shift",
+   "script": "press '[EffectRack1_EffectUnit1_Effect3],next_effect'"
+  },
+  {
+   "midi": "BE 0D",
+   "name": "BASS 1",
+   "bind": "[EqualizerRack1_[Channel1]_Effect1],parameter1"
+  },
+  {
+   "midi": "9E 29",
+   "name": "BASS 1 KILL",
+   "script": "toggle '[EqualizerRack1_[Channel1]_Effect1],button_parameter1'"
+  },
+  {
+   "midi": "BE 10",
+   "name": "PITCH 1",
+   "bind": "[Channel1],rate"
+  },
+  {
+   "midi": "BE 11",
+   "name": "VOLUME 1",
+   "bind": "[Channel1],volume"
+  },
+  {
+   "midi": "9E 24",
+   "name": "HOT CUE 1 DECK 1",
+   "script": "deck 1 hot_cue 1"
+  },
+  {
+   "midi": "9E 24",
+   "name": "DELETE HOT CUE 1 DECK 1",
+   "layer": "shift",
+   "script": "deck 1 press 'hotcue_1_clear'"
+  },
+  {
+   "midi": "9E 25",
+   "name": "HOT CUE 2 DECK 1",
+   "script": "deck 1 hot_cue 2"
+  },
+  {
+   "midi": "9E 25",
+   "name": "DELETE HOT CUE 2 DECK 1",
+   "layer": "shift",
+   "script": "deck 1 press 'hotcue_2_clear'"
+  },
+  {
+   "midi": "9E 20",
+   "name": "HOT CUE 3 DECK 1",
+   "script": "deck 1 hot_cue 3"
+  },
+  {
+   "midi": "9E 20",
+   "name": "DELETE HOT CUE 3 DECK 1",
+   "layer": "shift",
+   "script": "deck 1 press 'hotcue_3_clear'"
+  },
+  {
+   "midi": "9E 21",
+   "name": "HOT CUE 4 DECK 1",
+   "script": "deck 1 hot_cue 4"
+  },
+  {
+   "midi": "9E 21",
+   "name": "DELETE HOT CUE 4 DECK 1",
+   "layer": "shift",
+   "script": "deck 1 press 'hotcue_4_clear'"
+  },
+  {
+   "midi": "9E 1C",
+   "name": "JUMP BACK DECK 1",
+   "script": "deck 1 jump -32"
+  },
+  {
+   "midi": "9E 1C",
+   "name": "JUMP BACK 16 DECK 1",
+   "layer": "shift",
+   "script": "deck 1 jump -16"
+  },
+  {
+   "midi": "9E 1D",
+   "name": "JUMP FORWARD DECK 1",
+   "script": "deck 1 jump 32"
+  },
+  {
+   "midi": "9E 1D",
+   "name": "JUMP FORWARD 16 DECK 1",
+   "layer": "shift",
+   "script": "deck 1 jump 16"
+  },
+  {
+   "midi": "9E 18",
+   "name": "SYNC 1",
+   "script": "deck 1 sync"
+  },
+  {
+   "midi": "9E 18",
+   "name": "TEMPO RESET 1",
+   "layer": "shift",
+   "script": "deck 1 pitch_zero"
+  },
+  {
+   "midi": "9E 19",
+   "name": "PLAY 1",
+   "script": "deck 1 play_pause"
+  },
+  {
+   "midi": "9E 19",
+   "name": "BACK TO START 1",
+   "layer": "shift",
+   "script": "deck 1 goto_start"
+  },
+  {
+   "midi": "BE 14",
+   "name": "BROWSE",
+   "bind": "[Library],MoveVertical",
+   "options": [
+    "selectknob"
+   ]
+  },
+  {
+   "midi": "BE 14",
+   "name": "SEEK 1",
+   "layer": "shift",
+   "script": "deck 1 song_pos",
+   "steps": true
+  },
+  {
+   "midi": "9E 0D",
+   "name": "LOAD 1",
+   "layer": "shift=0",
+   "when": "tap",
+   "script": "(get '[Library],focused_widget' < 2.5 ? press '[Library],GoToItem' : deck 1 load)"
+  },
+  {
+   "midi": "9E 0D",
+   "name": "OPEN FOLDER",
+   "layer": "shift=0",
+   "when": "long",
+   "script": "press '[Playlist],ToggleSelectedSidebarItem'"
+  },
+  {
+   "midi": "BE 03",
+   "name": "FILTER 2",
+   "script": "deck 2 filter",
+   "steps": true
+  },
+  {
+   "midi": "BE 03",
+   "name": "MASTER LEVEL",
+   "layer": "shift",
+   "script": "adjust '[Master],gain'",
+   "steps": true
+  },
+  {
+   "midi": "9E 37",
+   "name": "FILTER 2 RESET",
+   "script": "deck 2 filter 50%"
+  },
+  {
+   "midi": "BE 02",
+   "name": "GAIN 2 / LOOP SIZE",
+   "script": "(deck 2 loop ? (value > 0 ? deck 2 loop_double : deck 2 loop_half) : deck 2 gain)",
+   "steps": true
+  },
+  {
+   "midi": "BE 02",
+   "name": "LOOP 2 MOVE",
+   "layer": "shift",
+   "script": "deck 2 loop_move 1",
+   "steps": true
+  },
+  {
+   "midi": "9E 36",
+   "name": "LOOP 2",
+   "script": "(deck 2 loop ? deck 2 loop_exit : deck 2 loop 4)"
+  },
+  {
+   "midi": "9E 36",
+   "name": "RELOOP 2",
+   "layer": "shift",
+   "script": "deck 2 reloop"
+  },
+  {
+   "midi": "BE 07",
+   "name": "FX 1 DECK 2",
+   "bind": "[EffectRack1_EffectUnit2_Effect1],meta"
+  },
+  {
+   "midi": "9E 33",
+   "name": "FX 1 ON DECK 2",
+   "script": "toggle '[EffectRack1_EffectUnit2_Effect1],enabled'"
+  },
+  {
+   "midi": "9E 33",
+   "name": "FX 1 NEXT DECK 2",
+   "layer": "shift",
+   "script": "press '[EffectRack1_EffectUnit2_Effect1],next_effect'"
+  },
+  {
+   "midi": "BE 06",
+   "name": "TREBLE 2",
+   "bind": "[EqualizerRack1_[Channel2]_Effect1],parameter3"
+  },
+  {
+   "midi": "9E 32",
+   "name": "TREBLE 2 KILL",
+   "script": "toggle '[EqualizerRack1_[Channel2]_Effect1],button_parameter3'"
+  },
+  {
+   "midi": "BE 0B",
+   "name": "FX 2 DECK 2",
+   "bind": "[EffectRack1_EffectUnit2_Effect2],meta"
+  },
+  {
+   "midi": "9E 2F",
+   "name": "FX 2 ON DECK 2",
+   "script": "toggle '[EffectRack1_EffectUnit2_Effect2],enabled'"
+  },
+  {
+   "midi": "9E 2F",
+   "name": "FX 2 NEXT DECK 2",
+   "layer": "shift",
+   "script": "press '[EffectRack1_EffectUnit2_Effect2],next_effect'"
+  },
+  {
+   "midi": "BE 0A",
+   "name": "MID 2",
+   "bind": "[EqualizerRack1_[Channel2]_Effect1],parameter2"
+  },
+  {
+   "midi": "9E 2E",
+   "name": "MID 2 KILL",
+   "script": "toggle '[EqualizerRack1_[Channel2]_Effect1],button_parameter2'"
+  },
+  {
+   "midi": "BE 0F",
+   "name": "FX 3 DECK 2",
+   "bind": "[EffectRack1_EffectUnit2_Effect3],meta"
+  },
+  {
+   "midi": "9E 2B",
+   "name": "FX 3 ON DECK 2",
+   "script": "toggle '[EffectRack1_EffectUnit2_Effect3],enabled'"
+  },
+  {
+   "midi": "9E 2B",
+   "name": "FX 3 NEXT DECK 2",
+   "layer": "shift",
+   "script": "press '[EffectRack1_EffectUnit2_Effect3],next_effect'"
+  },
+  {
+   "midi": "BE 0E",
+   "name": "BASS 2",
+   "bind": "[EqualizerRack1_[Channel2]_Effect1],parameter1"
+  },
+  {
+   "midi": "9E 2A",
+   "name": "BASS 2 KILL",
+   "script": "toggle '[EqualizerRack1_[Channel2]_Effect1],button_parameter1'"
+  },
+  {
+   "midi": "BE 13",
+   "name": "PITCH 2",
+   "bind": "[Channel2],rate"
+  },
+  {
+   "midi": "BE 12",
+   "name": "VOLUME 2",
+   "bind": "[Channel2],volume"
+  },
+  {
+   "midi": "9E 26",
+   "name": "HOT CUE 1 DECK 2",
+   "script": "deck 2 hot_cue 1"
+  },
+  {
+   "midi": "9E 26",
+   "name": "DELETE HOT CUE 1 DECK 2",
+   "layer": "shift",
+   "script": "deck 2 press 'hotcue_1_clear'"
+  },
+  {
+   "midi": "9E 27",
+   "name": "HOT CUE 2 DECK 2",
+   "script": "deck 2 hot_cue 2"
+  },
+  {
+   "midi": "9E 27",
+   "name": "DELETE HOT CUE 2 DECK 2",
+   "layer": "shift",
+   "script": "deck 2 press 'hotcue_2_clear'"
+  },
+  {
+   "midi": "9E 22",
+   "name": "HOT CUE 3 DECK 2",
+   "script": "deck 2 hot_cue 3"
+  },
+  {
+   "midi": "9E 22",
+   "name": "DELETE HOT CUE 3 DECK 2",
+   "layer": "shift",
+   "script": "deck 2 press 'hotcue_3_clear'"
+  },
+  {
+   "midi": "9E 23",
+   "name": "HOT CUE 4 DECK 2",
+   "script": "deck 2 hot_cue 4"
+  },
+  {
+   "midi": "9E 23",
+   "name": "DELETE HOT CUE 4 DECK 2",
+   "layer": "shift",
+   "script": "deck 2 press 'hotcue_4_clear'"
+  },
+  {
+   "midi": "9E 1E",
+   "name": "JUMP BACK DECK 2",
+   "script": "deck 2 jump -32"
+  },
+  {
+   "midi": "9E 1E",
+   "name": "JUMP BACK 16 DECK 2",
+   "layer": "shift",
+   "script": "deck 2 jump -16"
+  },
+  {
+   "midi": "9E 1F",
+   "name": "JUMP FORWARD DECK 2",
+   "script": "deck 2 jump 32"
+  },
+  {
+   "midi": "9E 1F",
+   "name": "JUMP FORWARD 16 DECK 2",
+   "layer": "shift",
+   "script": "deck 2 jump 16"
+  },
+  {
+   "midi": "9E 1B",
+   "name": "SYNC 2",
+   "script": "deck 2 sync"
+  },
+  {
+   "midi": "9E 1B",
+   "name": "TEMPO RESET 2",
+   "layer": "shift",
+   "script": "deck 2 pitch_zero"
+  },
+  {
+   "midi": "9E 1A",
+   "name": "PLAY 2",
+   "script": "deck 2 play_pause"
+  },
+  {
+   "midi": "9E 1A",
+   "name": "BACK TO START 2",
+   "layer": "shift",
+   "script": "deck 2 goto_start"
+  },
+  {
+   "midi": "BE 15",
+   "name": "BROWSE",
+   "bind": "[Library],MoveVertical",
+   "options": [
+    "selectknob"
+   ]
+  },
+  {
+   "midi": "BE 15",
+   "name": "SEEK 2",
+   "layer": "shift",
+   "script": "deck 2 song_pos",
+   "steps": true
+  },
+  {
+   "midi": "9E 0E",
+   "name": "LOAD 2",
+   "layer": "shift=0",
+   "when": "tap",
+   "script": "(get '[Library],focused_widget' < 2.5 ? press '[Library],GoToItem' : deck 2 load)"
+  },
+  {
+   "midi": "9E 0E",
+   "name": "OPEN FOLDER",
+   "layer": "shift=0",
+   "when": "long",
+   "script": "press '[Playlist],ToggleSelectedSidebarItem'"
+  },
+  {
+   "midi": "9E 0D",
+   "name": "NEXT PANE",
+   "layer": "shift",
+   "script": "press '[Library],MoveFocusForward'"
+  },
+  {
+   "midi": "9E 0E",
+   "name": "EXPAND BROWSER",
+   "layer": "shift",
+   "script": "expand_browser"
+  }
+ ],
+ "lights": [
+  {
+   "midi": "9E 0F",
+   "name": "SHIFT",
+   "script": "(var 'shift' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 4,
+    "yellow": 4,
+    "green": 8
+   }
+  },
+  {
+   "midi": "9E 34",
+   "name": "FILTER 1",
+   "script": "(deck 1 filter > 52% ? color 'amber' : (deck 1 filter < 48% ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 35",
+   "name": "LOOP 1 / METER",
+   "script": "(deck 1 vu_meter > 95% ? color 'red' : (deck 1 loop ? color 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 30",
+   "name": "FX 1 ON DECK 1",
+   "script": "(get '[EffectRack1_EffectUnit1_Effect1],enabled' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 31",
+   "name": "TREBLE 1 KILL / METER",
+   "script": "(get '[EqualizerRack1_[Channel1]_Effect1],button_parameter3' ? color 'red' : (deck 1 vu_meter > 75% ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2C",
+   "name": "FX 2 ON DECK 1",
+   "script": "(get '[EffectRack1_EffectUnit1_Effect2],enabled' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2D",
+   "name": "MID 1 KILL / METER",
+   "script": "(get '[EqualizerRack1_[Channel1]_Effect1],button_parameter2' ? color 'red' : (deck 1 vu_meter > 50% ? color 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 28",
+   "name": "FX 3 ON DECK 1",
+   "script": "(get '[EffectRack1_EffectUnit1_Effect3],enabled' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 29",
+   "name": "BASS 1 KILL / METER",
+   "script": "(get '[EqualizerRack1_[Channel1]_Effect1],button_parameter1' ? color 'red' : (deck 1 vu_meter > 35% ? color 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 24",
+   "name": "HOT CUE 1 DECK 1",
+   "script": "(deck 1 hot_cue 1 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 25",
+   "name": "HOT CUE 2 DECK 1",
+   "script": "(deck 1 hot_cue 2 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 20",
+   "name": "HOT CUE 3 DECK 1",
+   "script": "(deck 1 hot_cue 3 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 21",
+   "name": "HOT CUE 4 DECK 1",
+   "script": "(deck 1 hot_cue 4 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1C",
+   "name": "JUMP BACK DECK 1",
+   "script": "(deck 1 get 'track_loaded' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1D",
+   "name": "JUMP FORWARD DECK 1",
+   "script": "(deck 1 get 'track_loaded' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 18",
+   "name": "SYNC 1",
+   "script": "(deck 1 sync ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 19",
+   "name": "PLAY 1",
+   "script": "(deck 1 play ? color 'green' : (deck 1 get 'track_loaded' ? blink 500 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 37",
+   "name": "FILTER 2",
+   "script": "(deck 2 filter > 52% ? color 'amber' : (deck 2 filter < 48% ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 36",
+   "name": "LOOP 2 / METER",
+   "script": "(deck 2 vu_meter > 95% ? color 'red' : (deck 2 loop ? color 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 33",
+   "name": "FX 1 ON DECK 2",
+   "script": "(get '[EffectRack1_EffectUnit2_Effect1],enabled' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 32",
+   "name": "TREBLE 2 KILL / METER",
+   "script": "(get '[EqualizerRack1_[Channel2]_Effect1],button_parameter3' ? color 'red' : (deck 2 vu_meter > 75% ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2F",
+   "name": "FX 2 ON DECK 2",
+   "script": "(get '[EffectRack1_EffectUnit2_Effect2],enabled' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2E",
+   "name": "MID 2 KILL / METER",
+   "script": "(get '[EqualizerRack1_[Channel2]_Effect1],button_parameter2' ? color 'red' : (deck 2 vu_meter > 50% ? color 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2B",
+   "name": "FX 3 ON DECK 2",
+   "script": "(get '[EffectRack1_EffectUnit2_Effect3],enabled' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2A",
+   "name": "BASS 2 KILL / METER",
+   "script": "(get '[EqualizerRack1_[Channel2]_Effect1],button_parameter1' ? color 'red' : (deck 2 vu_meter > 35% ? color 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 26",
+   "name": "HOT CUE 1 DECK 2",
+   "script": "(deck 2 hot_cue 1 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 27",
+   "name": "HOT CUE 2 DECK 2",
+   "script": "(deck 2 hot_cue 2 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 22",
+   "name": "HOT CUE 3 DECK 2",
+   "script": "(deck 2 hot_cue 3 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 23",
+   "name": "HOT CUE 4 DECK 2",
+   "script": "(deck 2 hot_cue 4 ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1E",
+   "name": "JUMP BACK DECK 2",
+   "script": "(deck 2 get 'track_loaded' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1F",
+   "name": "JUMP FORWARD DECK 2",
+   "script": "(deck 2 get 'track_loaded' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1B",
+   "name": "SYNC 2",
+   "script": "(deck 2 sync ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1A",
+   "name": "PLAY 2",
+   "script": "(deck 2 play ? color 'green' : (deck 2 get 'track_loaded' ? blink 500 'green' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  }
+ ]
+}

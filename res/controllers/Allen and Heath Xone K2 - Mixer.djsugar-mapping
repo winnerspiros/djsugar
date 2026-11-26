@@ -1,0 +1,591 @@
+{
+ "format": "djsugar-mapping",
+ "version": 1,
+ "name": "Allen & Heath Xone:K2 - Mixer",
+ "author": "DJ Sugar",
+ "description": "DJ Sugar's own mapping for one Xone:K2 on the Mixer deck: each column is a Mixer channel, Ch 1 to Ch 4 from left to right, top to bottom as the channel on screen. Set the K2 to its factory settings: Latching Layers off and MIDI channel 15.\n\nTop encoder: TRIM (press: back to 0 dB; its light shows clipping in red). First knob: PAN. The buttons under the knobs: FX (red), S solo (amber), cue in the headphones (green). Fader: the channel's volume. The first row of the matrix is the channel's on/off number button (green while on); the three rows below are its meter (green, green, amber, red on a clip). Bottom encoders: headphones level (left) and headphones cue/main mix (right; press the right one to centre it). The second and third knobs are free for your own rows.",
+ "controller": {
+  "name": "Allen & Heath Xone:K2",
+  "ports": [
+   "XONE:K2"
+  ],
+  "layout": "xone-k2"
+ },
+ "rows": [
+  {
+   "midi": "BE 00",
+   "name": "TRIM 1",
+   "script": "adjust '[Auxiliary1],pregain'",
+   "steps": true
+  },
+  {
+   "midi": "9E 34",
+   "name": "TRIM 1 RESET",
+   "script": "set '[Auxiliary1],pregain' 1"
+  },
+  {
+   "midi": "BE 04",
+   "name": "PAN 1",
+   "bind": "[Auxiliary1],pan",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 30",
+   "name": "FX 1",
+   "script": "toggle '[Auxiliary1],fx'"
+  },
+  {
+   "midi": "9E 2C",
+   "name": "SOLO 1",
+   "script": "toggle '[Auxiliary1],solo'"
+  },
+  {
+   "midi": "9E 28",
+   "name": "CUE 1",
+   "script": "toggle '[Auxiliary1],pfl'"
+  },
+  {
+   "midi": "BE 10",
+   "name": "VOLUME 1",
+   "bind": "[Auxiliary1],volume",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 24",
+   "name": "ON 1",
+   "script": "toggle '[Auxiliary1],main_mix'"
+  },
+  {
+   "midi": "BE 01",
+   "name": "TRIM 2",
+   "script": "adjust '[Auxiliary2],pregain'",
+   "steps": true
+  },
+  {
+   "midi": "9E 35",
+   "name": "TRIM 2 RESET",
+   "script": "set '[Auxiliary2],pregain' 1"
+  },
+  {
+   "midi": "BE 05",
+   "name": "PAN 2",
+   "bind": "[Auxiliary2],pan",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 31",
+   "name": "FX 2",
+   "script": "toggle '[Auxiliary2],fx'"
+  },
+  {
+   "midi": "9E 2D",
+   "name": "SOLO 2",
+   "script": "toggle '[Auxiliary2],solo'"
+  },
+  {
+   "midi": "9E 29",
+   "name": "CUE 2",
+   "script": "toggle '[Auxiliary2],pfl'"
+  },
+  {
+   "midi": "BE 11",
+   "name": "VOLUME 2",
+   "bind": "[Auxiliary2],volume",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 25",
+   "name": "ON 2",
+   "script": "toggle '[Auxiliary2],main_mix'"
+  },
+  {
+   "midi": "BE 02",
+   "name": "TRIM 3",
+   "script": "adjust '[Auxiliary3],pregain'",
+   "steps": true
+  },
+  {
+   "midi": "9E 36",
+   "name": "TRIM 3 RESET",
+   "script": "set '[Auxiliary3],pregain' 1"
+  },
+  {
+   "midi": "BE 06",
+   "name": "PAN 3",
+   "bind": "[Auxiliary3],pan",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 32",
+   "name": "FX 3",
+   "script": "toggle '[Auxiliary3],fx'"
+  },
+  {
+   "midi": "9E 2E",
+   "name": "SOLO 3",
+   "script": "toggle '[Auxiliary3],solo'"
+  },
+  {
+   "midi": "9E 2A",
+   "name": "CUE 3",
+   "script": "toggle '[Auxiliary3],pfl'"
+  },
+  {
+   "midi": "BE 12",
+   "name": "VOLUME 3",
+   "bind": "[Auxiliary3],volume",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 26",
+   "name": "ON 3",
+   "script": "toggle '[Auxiliary3],main_mix'"
+  },
+  {
+   "midi": "BE 03",
+   "name": "TRIM 4",
+   "script": "adjust '[Auxiliary4],pregain'",
+   "steps": true
+  },
+  {
+   "midi": "9E 37",
+   "name": "TRIM 4 RESET",
+   "script": "set '[Auxiliary4],pregain' 1"
+  },
+  {
+   "midi": "BE 07",
+   "name": "PAN 4",
+   "bind": "[Auxiliary4],pan",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 33",
+   "name": "FX 4",
+   "script": "toggle '[Auxiliary4],fx'"
+  },
+  {
+   "midi": "9E 2F",
+   "name": "SOLO 4",
+   "script": "toggle '[Auxiliary4],solo'"
+  },
+  {
+   "midi": "9E 2B",
+   "name": "CUE 4",
+   "script": "toggle '[Auxiliary4],pfl'"
+  },
+  {
+   "midi": "BE 13",
+   "name": "VOLUME 4",
+   "bind": "[Auxiliary4],volume",
+   "takeover": "pickup"
+  },
+  {
+   "midi": "9E 27",
+   "name": "ON 4",
+   "script": "toggle '[Auxiliary4],main_mix'"
+  },
+  {
+   "midi": "BE 14",
+   "name": "HEADPHONES LEVEL",
+   "script": "adjust '[Master],headGain'",
+   "steps": true
+  },
+  {
+   "midi": "BE 15",
+   "name": "HEADPHONES MIX",
+   "script": "adjust '[Master],headMix'",
+   "steps": true
+  },
+  {
+   "midi": "9E 0E",
+   "name": "HEADPHONES MIX RESET",
+   "script": "set '[Master],headMix' 0"
+  }
+ ],
+ "lights": [
+  {
+   "midi": "9E 34",
+   "name": "TRIM 1 / CLIP",
+   "script": "(get '[Auxiliary1],peak_indicator' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 30",
+   "name": "FX 1",
+   "script": "(get '[Auxiliary1],fx' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2C",
+   "name": "SOLO 1",
+   "script": "(get '[Auxiliary1],solo' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 28",
+   "name": "CUE 1",
+   "script": "(get '[Auxiliary1],pfl' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 24",
+   "name": "ON 1",
+   "script": "(get '[Auxiliary1],main_mix' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 20",
+   "name": "METER 1 TOP",
+   "script": "(get '[Auxiliary1],peak_indicator' ? color 'red' : (get '[Auxiliary1],vu_meter' > 0.8 ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1C",
+   "name": "METER 1 MIDDLE",
+   "script": "(get '[Auxiliary1],vu_meter' > 0.5 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 18",
+   "name": "METER 1 BOTTOM",
+   "script": "(get '[Auxiliary1],vu_meter' > 0.1 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 35",
+   "name": "TRIM 2 / CLIP",
+   "script": "(get '[Auxiliary2],peak_indicator' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 31",
+   "name": "FX 2",
+   "script": "(get '[Auxiliary2],fx' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2D",
+   "name": "SOLO 2",
+   "script": "(get '[Auxiliary2],solo' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 29",
+   "name": "CUE 2",
+   "script": "(get '[Auxiliary2],pfl' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 25",
+   "name": "ON 2",
+   "script": "(get '[Auxiliary2],main_mix' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 21",
+   "name": "METER 2 TOP",
+   "script": "(get '[Auxiliary2],peak_indicator' ? color 'red' : (get '[Auxiliary2],vu_meter' > 0.8 ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1D",
+   "name": "METER 2 MIDDLE",
+   "script": "(get '[Auxiliary2],vu_meter' > 0.5 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 19",
+   "name": "METER 2 BOTTOM",
+   "script": "(get '[Auxiliary2],vu_meter' > 0.1 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 36",
+   "name": "TRIM 3 / CLIP",
+   "script": "(get '[Auxiliary3],peak_indicator' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 32",
+   "name": "FX 3",
+   "script": "(get '[Auxiliary3],fx' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2E",
+   "name": "SOLO 3",
+   "script": "(get '[Auxiliary3],solo' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2A",
+   "name": "CUE 3",
+   "script": "(get '[Auxiliary3],pfl' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 26",
+   "name": "ON 3",
+   "script": "(get '[Auxiliary3],main_mix' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 22",
+   "name": "METER 3 TOP",
+   "script": "(get '[Auxiliary3],peak_indicator' ? color 'red' : (get '[Auxiliary3],vu_meter' > 0.8 ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1E",
+   "name": "METER 3 MIDDLE",
+   "script": "(get '[Auxiliary3],vu_meter' > 0.5 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1A",
+   "name": "METER 3 BOTTOM",
+   "script": "(get '[Auxiliary3],vu_meter' > 0.1 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 37",
+   "name": "TRIM 4 / CLIP",
+   "script": "(get '[Auxiliary4],peak_indicator' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 33",
+   "name": "FX 4",
+   "script": "(get '[Auxiliary4],fx' ? color 'red' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2F",
+   "name": "SOLO 4",
+   "script": "(get '[Auxiliary4],solo' ? color 'amber' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 2B",
+   "name": "CUE 4",
+   "script": "(get '[Auxiliary4],pfl' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 27",
+   "name": "ON 4",
+   "script": "(get '[Auxiliary4],main_mix' ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 23",
+   "name": "METER 4 TOP",
+   "script": "(get '[Auxiliary4],peak_indicator' ? color 'red' : (get '[Auxiliary4],vu_meter' > 0.8 ? color 'amber' : off))",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1F",
+   "name": "METER 4 MIDDLE",
+   "script": "(get '[Auxiliary4],vu_meter' > 0.5 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  },
+  {
+   "midi": "9E 1B",
+   "name": "METER 4 BOTTOM",
+   "script": "(get '[Auxiliary4],vu_meter' > 0.1 ? color 'green' : off)",
+   "color_notes": true,
+   "colors": {
+    "red": 0,
+    "amber": 36,
+    "yellow": 36,
+    "green": 72
+   }
+  }
+ ]
+}

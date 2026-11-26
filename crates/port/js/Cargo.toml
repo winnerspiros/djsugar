@@ -1,0 +1,9 @@
+[package]
+name = "djsugar-js"
+description = "A JavaScript interpreter for controller mapping scripts"
+version.workspace = true
+edition = "2021"
+publish = false
+license.workspace = true
+
+[lints]

@@ -1,5 +1,6 @@
 mod bridge;
 mod classic;
+mod controllers;
 mod hub;
 mod library;
 mod lyrics;

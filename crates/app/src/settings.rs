@@ -409,12 +409,38 @@ pub enum Row {
     Opt(Opt),
     /// A label and a value, shown, not set.
     Info(&'static str, String),
+    /// A controller and what it runs.
+    Device(String, String),
     Rescan,
 }
 
-pub const PAGES: [&str; 8] = ["Audio", "Decks", "Mixer", "Keyboard", "Collection", "Analysis", "Appearance", "About"];
+pub const PAGES: [&str; 9] =
+    ["Audio", "Decks", "Mixer", "Keyboard", "Controllers", "Collection", "Analysis", "Appearance", "About"];
 
-pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> Vec<Row> {
+/// The controllers page: each device plugged in and the mapping it runs.
+fn controllers(ports: &[(String, String)], known: usize) -> Vec<Row> {
+    let mut rows = vec![Row::Heading("PLUGGED IN")];
+    if ports.is_empty() {
+        rows.push(Row::Info("No controller found", "Plug one in, or pair it over Bluetooth".into()));
+    }
+    rows.extend(ports.iter().map(|(name, runs)| Row::Device(name.clone(), runs.clone())));
+    rows.push(Row::Heading("MAPPINGS"));
+    rows.push(Row::Info("Known controllers", known.to_string()));
+    rows
+}
+
+pub fn page(
+    n: usize,
+    roots: &[std::path::PathBuf],
+    rate: u32,
+    device: &str,
+    desk: (&[(String, String)], usize),
+) -> Vec<Row> {
+    let n = match n {
+        4 => return controllers(desk.0, desk.1),
+        n if n > 4 => n - 1,
+        n => n,
+    };
     match n {
         0 => vec![
             Row::Heading("OUTPUT"),

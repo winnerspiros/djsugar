@@ -151,6 +151,14 @@ fn main() {
                 }
             }
             save(&r, &out.join(format!("{name}-{}.png", view.to_lowercase())));
+            // The pad aimed at a deck, where it has the room to offer that; then back at the master.
+            if view == "FX" && ui.tap("XyAim") {
+                ui.render(&mut r);
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-fx-deck.png")));
+                ui.tap("XyAim");
+                ui.tap("XyAim");
+            }
         }
         menu(&mut ui, &mut r, (name, scale), &mut faults);
         save(&r, &out.join(format!("{name}-menu.png")));
@@ -427,7 +435,7 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
 fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
     ui.key(Key::Escape, Mods::default());
     ui.render(r);
-    let steps: [(&str, &str); 8] = [
+    let steps: [(&str, &str); 9] = [
         ("AppMenu", ""),
         ("Submenu(1)", "appmenu"),
         ("Prefs(0)", "settings-audio"),
@@ -436,6 +444,7 @@ fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &
         ("PrefsClose", ""),
         ("Prefs(2)", "settings-mixer"),
         ("Prefs(3)", "settings-keyboard"),
+        ("Prefs(4)", "settings-controllers"),
     ];
     for (tap, shot) in steps {
         if !ui.tap(tap) {

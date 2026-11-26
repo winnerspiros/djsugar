@@ -1824,10 +1824,12 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
         p.rect(xr.x + 6.0, xr.y + xr.h * f, xr.w - 12.0, 1.0, 0.0, rgb(0x1a1c24));
     }
     let label = Style::new(11.0, Weight::Bold, DARK);
-    p.text(xr.x + 10.0, xr.y + xr.h - 10.0, label, "AMOUNT");
-    p.text(xr.x + 10.0, xr.y + 18.0, label, "DEPTH");
+    let aim = st.aim;
+    let (across, up) = if aim == 0 { ("AMOUNT", "DEPTH") } else { ("FILTER", "EFFECTS") };
+    p.text(xr.x + 10.0, xr.y + xr.h - 10.0, label, across);
+    p.text(xr.x + 10.0, xr.y + 18.0, label, up);
     let name = Style::new(20.0, Weight::Bold, if live { TEXT } else { fade(TEXT, 0x50) });
-    let sn = st.scene.name();
+    let sn = if aim == 0 { st.scene.name() } else { ["DECK A", "DECK B"][(aim - 1).min(1)] };
     p.text(xr.x + (xr.w - p.text_width(name, sn)) * 0.5, xr.y + xr.h * 0.5 + 7.0, name, sn);
     let (px, py) = (xr.x + st.xy.0 * xr.w, xr.y + (1.0 - st.xy.1) * xr.h);
     if live {
@@ -1842,6 +1844,16 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
     let hold = s.station.hold;
     let hb = Rect::new(xr.x + xr.w - 70.0, xr.y + 8.0, 62.0, 24.0);
     button(p, s, hb, if hold { "HOLD" } else { "SNAP" }, hold, ACCENT, Target::XyHold);
+    // Beside it where the pad is wide, under it where it is not.
+    let wide = xr.w >= 240.0;
+    let at = |n: f32| {
+        if wide { Rect::new(hb.x - n * 68.0, hb.y, 62.0, 24.0) } else { Rect::new(hb.x, hb.y + n * 30.0, 62.0, 24.0) }
+    };
+    if wide || xr.h >= 100.0 {
+        let to = ["MASTER", "DECK A", "DECK B"][aim.min(2)];
+        button(p, s, at(1.0), to, aim > 0, DECK[aim.saturating_sub(1).min(1)], Target::XyAim);
+        button(p, s, at(2.0), "RESET", false, ACCENT, Target::XyReset);
+    }
 }
 
 /// Sample picker over everything: tap a sound to hear it on the pad.
