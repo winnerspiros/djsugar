@@ -17,7 +17,7 @@ use crate::dsp::Svf;
 use crate::inputs::{input_group, MICROPHONE, NUM_INPUTS};
 
 /// The built-in effects, in `loaded_effect` order.
-pub const AVAILABLE_EFFECTS: [&str; 20] = [
+pub const AVAILABLE_EFFECTS: [&str; 23] = [
     "Echo",
     "Reverb",
     "Filter",
@@ -38,6 +38,9 @@ pub const AVAILABLE_EFFECTS: [&str; 20] = [
     "Filter Echo",
     "Tremolo",
     "Autopan",
+    "Compressor",
+    "Tape Echo",
+    "Glitch",
 ];
 
 /// Parameter knobs (`parameterK`) and buttons (`button_parameterK`) per slot.
@@ -246,9 +249,12 @@ enum Kind {
     FilterEcho,
     Tremolo,
     Autopan,
+    Compressor,
+    TapeEcho,
+    Glitch,
 }
 
-const KINDS: [Kind; 20] = [
+const KINDS: [Kind; 23] = [
     Kind::Echo,
     Kind::Reverb,
     Kind::Filter,
@@ -269,6 +275,9 @@ const KINDS: [Kind; 20] = [
     Kind::FilterEcho,
     Kind::Tremolo,
     Kind::Autopan,
+    Kind::Compressor,
+    Kind::TapeEcho,
+    Kind::Glitch,
 ];
 
 impl Kind {
@@ -287,7 +296,9 @@ impl Kind {
             | Kind::Spiral
             | Kind::Hall
             | Kind::RevRoll
-            | Kind::FilterEcho => Memory::Long,
+            | Kind::FilterEcho
+            | Kind::TapeEcho
+            | Kind::Glitch => Memory::Long,
             Kind::Reverb | Kind::Flanger | Kind::Chorus => Memory::Short,
             Kind::Filter
             | Kind::Bitcrusher
@@ -297,7 +308,8 @@ impl Kind {
             | Kind::Drive
             | Kind::Ladder
             | Kind::Tremolo
-            | Kind::Autopan => Memory::None,
+            | Kind::Autopan
+            | Kind::Compressor => Memory::None,
         }
     }
 }
@@ -308,7 +320,7 @@ struct Manifest {
     defaults: &'static [f64],
 }
 
-const MANIFESTS: [Manifest; 20] = [
+const MANIFESTS: [Manifest; 23] = [
     Manifest { names: &["Time", "Feedback", "Ping Pong", "Send"], defaults: &[0.5, 0.5, 0.0, 1.0] },
     Manifest { names: &["Decay", "Bandwidth", "Damping", "Send"], defaults: &[0.5, 0.75, 0.5, 1.0] },
     Manifest { names: &["Low Pass", "Resonance", "High Pass"], defaults: &[1.0, 0.25, 0.0] },
@@ -329,6 +341,9 @@ const MANIFESTS: [Manifest; 20] = [
     Manifest { names: &["Time", "Feedback", "Filter", "Send"], defaults: &[0.5, 0.6, 0.75, 1.0] },
     Manifest { names: &["Rate", "Depth", "Shape", "Width"], defaults: &[0.67, 0.8, 0.0, 0.5] },
     Manifest { names: &["Period", "Width", "Smoothing"], defaults: &[0.75, 0.8, 0.5] },
+    Manifest { names: &["Amount", "Attack", "Release", "Mix"], defaults: &[0.3, 0.667, 0.467, 1.0] },
+    Manifest { names: &["Time", "Feedback", "Age", "Send"], defaults: &[0.5, 0.55, 0.35, 1.0] },
+    Manifest { names: &["Step", "Chance", "Reverse", "Half Speed"], defaults: &[0.5, 0.5, 0.25, 0.15] },
 ];
 
 /// The beat switch's range: 1/16 to 4 beats, as powers of two.
@@ -342,7 +357,7 @@ const DEFAULT_BEATS: f64 = 0.25;
 /// how its `process` reads it with [`beats`].
 fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
     match kind {
-        Kind::Echo | Kind::FilterEcho => Some((0, -4, 2, false)),
+        Kind::Echo | Kind::FilterEcho | Kind::TapeEcho => Some((0, -4, 2, false)),
         Kind::Flanger | Kind::Phaser => Some((0, -1, 5, true)),
         Kind::Gate => Some((0, -4, 0, false)),
         Kind::Roll | Kind::RevRoll => Some((0, -4, 0, true)),
@@ -351,7 +366,15 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
         Kind::Chorus => Some((0, 0, 2, false)),
         Kind::Tremolo => Some((0, -4, 2, false)),
         Kind::Autopan => Some((0, -2, 2, false)),
-        Kind::Reverb | Kind::Filter | Kind::Bitcrusher | Kind::Noise | Kind::Drive | Kind::Ladder | Kind::Hall => None,
+        Kind::Glitch => Some((0, -4, 0, false)),
+        Kind::Reverb
+        | Kind::Filter
+        | Kind::Bitcrusher
+        | Kind::Noise
+        | Kind::Drive
+        | Kind::Ladder
+        | Kind::Hall
+        | Kind::Compressor => None,
     }
 }
 
@@ -360,9 +383,11 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
 /// at 0 and turning up sweeps its high-pass.
 fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
     match kind {
-        Kind::Echo | Kind::Reverb | Kind::Hall => [None, None, None, Some(meta)],
+        Kind::Echo | Kind::Reverb | Kind::Hall | Kind::TapeEcho => [None, None, None, Some(meta)],
         Kind::Filter => [Some(1.0), None, Some(meta), None],
-        Kind::Flanger | Kind::Phaser | Kind::Gate | Kind::Tremolo | Kind::Autopan => [None, Some(meta), None, None],
+        Kind::Flanger | Kind::Phaser | Kind::Gate | Kind::Tremolo | Kind::Autopan | Kind::Glitch => {
+            [None, Some(meta), None, None]
+        }
         // Bitcrusher and Noise leave their second control to the FX bar's
         // slider.
         Kind::Bitcrusher => [None, Some(1.0 - 0.95 * meta), None, None],
@@ -373,7 +398,7 @@ fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
         Kind::Noise => [Some(meta), None, None, None],
         Kind::Spiral => [None, None, Some(meta), None],
         // Drive leaves its tone to the FX bar's slider.
-        Kind::Drive => [Some(meta), None, None, None],
+        Kind::Drive | Kind::Compressor => [Some(meta), None, None, None],
         Kind::Chorus => [None, Some(meta), None, None],
         // Turning up closes the ladder, from fully open.
         Kind::Ladder => [Some(1.0 - 0.85 * meta), None, None, None],
@@ -733,6 +758,9 @@ struct Instance {
     ladder: extra::Ladder,
     tremolo: extra::Tremolo,
     autopan: extra::Autopan,
+    compressor: extra::Compressor,
+    tape_echo: extra::TapeEcho,
+    glitch: extra::Glitch,
     hall: extra::Hall,
     filter_echo: extra::FilterEcho,
 }
@@ -768,6 +796,9 @@ impl Instance {
             ladder: extra::Ladder::new(sample_rate),
             tremolo: extra::Tremolo::default(),
             autopan: extra::Autopan::default(),
+            compressor: extra::Compressor::default(),
+            tape_echo: extra::TapeEcho::new(sample_rate),
+            glitch: extra::Glitch::new(sample_rate),
             hall: extra::Hall::new(sample_rate),
             filter_echo: extra::FilterEcho::new(sample_rate),
         }
@@ -818,6 +849,9 @@ impl Instance {
             Some(Kind::Ladder) => self.ladder.reset(),
             Some(Kind::Tremolo) => self.tremolo = extra::Tremolo::default(),
             Some(Kind::Autopan) => self.autopan = extra::Autopan::default(),
+            Some(Kind::Compressor) => self.compressor = extra::Compressor::default(),
+            Some(Kind::TapeEcho) => self.tape_echo.reset(&mut self.mem),
+            Some(Kind::Glitch) => self.glitch.reset(&mut self.mem),
             Some(Kind::Hall) => self.hall.reset(&mut self.mem),
             Some(Kind::FilterEcho) => self.filter_echo.reset(&mut self.mem),
             None => {}
@@ -850,6 +884,9 @@ impl Instance {
             Some(Kind::Ladder) => self.ladder.prepare(p),
             Some(Kind::Tremolo) => self.tremolo.prepare(p, ctx),
             Some(Kind::Autopan) => self.autopan.prepare(p, ctx),
+            Some(Kind::Compressor) => self.compressor.prepare(p, ctx),
+            Some(Kind::TapeEcho) => self.tape_echo.prepare(p, ctx),
+            Some(Kind::Glitch) => self.glitch.prepare(p, ctx),
             Some(Kind::Hall) => self.hall.prepare(p),
             Some(Kind::FilterEcho) => self.filter_echo.prepare(p, ctx),
             None => {}
@@ -876,6 +913,9 @@ impl Instance {
             Some(Kind::Ladder) => self.ladder.process(x),
             Some(Kind::Tremolo) => self.tremolo.process(x),
             Some(Kind::Autopan) => self.autopan.process(x),
+            Some(Kind::Compressor) => self.compressor.process(x),
+            Some(Kind::TapeEcho) => self.tape_echo.process(&mut self.mem, x),
+            Some(Kind::Glitch) => self.glitch.process(&mut self.mem, x),
             Some(Kind::Hall) => self.hall.process(&mut self.mem, x),
             Some(Kind::FilterEcho) => self.filter_echo.process(&mut self.mem, x),
             None => x,

@@ -421,7 +421,7 @@ pub const PAGES: [&str; 9] =
 fn controllers(ports: &[(String, String)], known: usize) -> Vec<Row> {
     let mut rows = vec![Row::Heading("PLUGGED IN")];
     if ports.is_empty() {
-        rows.push(Row::Info("No controller found", "Plug one in, or pair it over Bluetooth".into()));
+        rows.push(Row::Info("No controller found", "Plug one in".into()));
     }
     rows.extend(ports.iter().map(|(name, runs)| Row::Device(name.clone(), runs.clone())));
     rows.push(Row::Heading("MAPPINGS"));

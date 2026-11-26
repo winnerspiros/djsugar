@@ -795,6 +795,333 @@ impl Autopan {
     }
 }
 
+/// An echo off a worn tape: its speed wanders slowly (wow) and shivers (flutter), so the repeats drift in pitch, and
+/// each one comes back duller and with less bass. Age is how worn: more wander, a lower top.
+pub(super) struct TapeEcho {
+    echo: Echo,
+    /// The delay asked for, before the tape's wander.
+    base: f32,
+    wow: f32,
+    flutter: f32,
+    age: f32,
+    age_target: f32,
+    /// What each side's top and bottom filters hold.
+    top: [f32; 2],
+    bottom: [f32; 2],
+    sample_rate: f32,
+}
+
+/// Cycles a second of the tape's slow wander and of its shiver.
+const WOW: f32 = 0.55;
+const FLUTTER: f32 = 6.8;
+
+impl TapeEcho {
+    pub(super) fn new(sample_rate: f32) -> Self {
+        Self {
+            echo: Echo::new(sample_rate),
+            base: 1.0,
+            wow: 0.0,
+            flutter: 0.0,
+            age: 0.0,
+            age_target: 0.0,
+            top: [0.0; 2],
+            bottom: [0.0; 2],
+            sample_rate,
+        }
+    }
+
+    pub(super) fn reset(&mut self, mem: &mut [f32]) {
+        self.echo.reset(mem);
+        self.top = [0.0; 2];
+        self.bottom = [0.0; 2];
+        self.age = self.age_target;
+    }
+
+    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+        self.echo.set_time(beats(p[0], -4, 2), ctx);
+        self.base = self.echo.target;
+        // A little over one, so a full knob builds up into the tape's saturation instead of dying away.
+        self.echo.feedback_target = p[1] * 1.05;
+        self.echo.pingpong_target = 0.0;
+        self.echo.send_target = p[3] * 0.75;
+        self.echo.settle();
+        self.age_target = p[2].clamp(0.0, 1.0);
+    }
+
+    #[inline]
+    pub(super) fn process(&mut self, mem: &mut [f32], x: [f32; 2]) -> [f32; 2] {
+        glide(&mut self.age, self.age_target);
+        self.wow = (self.wow + WOW / self.sample_rate).fract();
+        self.flutter = (self.flutter + FLUTTER / self.sample_rate).fract();
+        // Up to 4.4 ms of slow wander, always later than asked, and half a millisecond of shiver about it.
+        let wander = 2.2 * (1.0 + (self.wow * TAU).sin()) + 0.5 * (self.flutter * TAU).sin();
+        let late = self.age * wander * 0.001 * self.sample_rate;
+        self.echo.target = (self.base + late).clamp(1.0, (self.echo.len - 2) as f32);
+        // The top comes down from 14 kHz to 2.5 kHz as the tape ages; under 90 Hz goes either way.
+        let top = 1.0 - (-TAU * 14_000.0 * (2_500.0f32 / 14_000.0).powf(self.age) / self.sample_rate).exp();
+        let bottom = 1.0 - (-TAU * 90.0 / self.sample_rate).exp();
+        let (tops, bottoms) = (&mut self.top, &mut self.bottom);
+        self.echo.process_with(mem, x, |v| {
+            let mut y = v;
+            for c in 0..2 {
+                tops[c] += (v[c] - tops[c]) * top;
+                bottoms[c] += (tops[c] - bottoms[c]) * bottom;
+                y[c] = tops[c] - bottoms[c];
+            }
+            y
+        })
+    }
+}
+
+/// What a step of the glitch plays.
+#[derive(Clone, Copy, Default, PartialEq)]
+enum Cut {
+    /// The sound as it comes.
+    #[default]
+    Live,
+    Again,
+    Backwards,
+    HalfSpeed,
+}
+
+/// A stretch of what was heard, being played back.
+#[derive(Clone, Copy, Default)]
+struct Voice {
+    cut: Cut,
+    /// The frame, counted since the effect came on, the stretch starts at, and how far into it the voice is.
+    start: u64,
+    at: f32,
+}
+
+/// Seconds one step's sound takes to give way to the next's.
+const GLITCH_FADE: f32 = 0.003;
+
+/// On each step of the beat, by chance, the step before is played again instead of the music: as it was, backwards or
+/// at half speed. Step is 1/16 to 1 beat; Reverse and Half Speed are the share of glitches played those ways.
+pub(super) struct Glitch {
+    len: usize,
+    written: u64,
+    /// Where this step and the one before it started.
+    step: u64,
+    before: u64,
+    frames: usize,
+    now: Voice,
+    old: Voice,
+    fading: usize,
+    fade: usize,
+    sweep: Sweep,
+    last: f32,
+    chance: f32,
+    reverse: f32,
+    half: f32,
+    seed: u32,
+}
+
+impl Glitch {
+    pub(super) fn new(sample_rate: f32) -> Self {
+        Self {
+            len: Echo::new(sample_rate).len,
+            written: 0,
+            step: 0,
+            before: 0,
+            frames: 64,
+            now: Voice::default(),
+            old: Voice::default(),
+            fading: 0,
+            fade: ((GLITCH_FADE * sample_rate) as usize).max(1),
+            sweep: Sweep::default(),
+            last: 0.0,
+            chance: 0.0,
+            reverse: 0.0,
+            half: 0.0,
+            seed: 0x6117_C4A5,
+        }
+    }
+
+    pub(super) fn reset(&mut self, mem: &mut [f32]) {
+        mem[..2 * self.len].fill(0.0);
+        let (len, fade, seed) = (self.len, self.fade, self.seed);
+        *self = Self { len, fade, seed, ..Self::new(48_000.0) };
+    }
+
+    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+        let step = beats(p[0], -4, 0);
+        self.sweep.prepare(step, ctx);
+        self.frames = ((step * ctx.beat_seconds * ctx.sample_rate) as usize).clamp(64, self.len / 2);
+        self.chance = p[1];
+        self.reverse = p[2];
+        self.half = p[3];
+    }
+
+    /// A number from 0 up to 1, the same run of them every time.
+    fn roll(&mut self) -> f32 {
+        self.seed ^= self.seed << 13;
+        self.seed ^= self.seed >> 17;
+        self.seed ^= self.seed << 5;
+        (self.seed >> 8) as f32 / (1u32 << 24) as f32
+    }
+
+    /// What `voice` plays now, or `live` when it plays the music or its stretch is no longer kept.
+    fn read(&self, mem: &[f32], voice: Voice, live: [f32; 2]) -> [f32; 2] {
+        let last = (self.frames - 1) as f32;
+        let into = match voice.cut {
+            Cut::Live => return live,
+            Cut::Backwards => last - voice.at,
+            Cut::Again | Cut::HalfSpeed => voice.at,
+        }
+        .clamp(0.0, last);
+        let frame = voice.start + into as u64;
+        if frame >= self.written || frame + self.len as u64 <= self.written {
+            return live;
+        }
+        let next = (frame + 1).min(self.written - 1);
+        let t = into.fract();
+        let (a, b) = ((frame % self.len as u64) as usize, (next % self.len as u64) as usize);
+        [mem[a] + (mem[b] - mem[a]) * t, mem[self.len + a] + (mem[self.len + b] - mem[self.len + a]) * t]
+    }
+
+    /// A new step: what it plays is picked, and what was playing fades out under it.
+    fn pick(&mut self) {
+        self.before = self.step;
+        self.step = self.written - 1;
+        let mut next = Voice::default();
+        // A whole step has to have gone by to have one to play.
+        if (self.step - self.before) as usize >= self.frames / 2 && self.roll() < self.chance {
+            let way = self.roll();
+            next.cut = if way < self.reverse {
+                Cut::Backwards
+            } else if way < self.reverse + self.half {
+                Cut::HalfSpeed
+            } else {
+                Cut::Again
+            };
+            // Half the time a glitch keeps hold of the stretch the last one played, so it stutters.
+            let stay = self.now.cut != Cut::Live && self.roll() < 0.5;
+            next.start = if stay { self.now.start } else { self.before };
+        }
+        if next.cut != Cut::Live || self.now.cut != Cut::Live {
+            self.old = self.now;
+            self.fading = self.fade;
+        }
+        self.now = next;
+    }
+
+    #[inline]
+    pub(super) fn process(&mut self, mem: &mut [f32], x: [f32; 2]) -> [f32; 2] {
+        let slot = (self.written % self.len as u64) as usize;
+        mem[slot] = x[0];
+        mem[self.len + slot] = x[1];
+        self.written += 1;
+        let phase = self.sweep.tick();
+        if phase < self.last {
+            self.pick();
+        }
+        self.last = phase;
+        let mut y = self.read(mem, self.now, x);
+        if self.fading > 0 {
+            let t = self.fading as f32 / self.fade as f32 * PI * 0.5;
+            let old = self.read(mem, self.old, x);
+            y = [old[0] * t.sin() + y[0] * t.cos(), old[1] * t.sin() + y[1] * t.cos()];
+            self.old.at += if self.old.cut == Cut::HalfSpeed { 0.5 } else { 1.0 };
+            self.fading -= 1;
+        }
+        self.now.at += if self.now.cut == Cut::HalfSpeed { 0.5 } else { 1.0 };
+        y
+    }
+}
+
+/// Decibels the knee is wide.
+const KNEE: f32 = 6.0;
+
+/// How far a level is turned down, in decibels (never above 0): nothing below the knee, `1 - 1/ratio` of what is over
+/// the threshold above it, and a curve between the two across the knee.
+fn reduction(level: f32, threshold: f32, ratio: f32) -> f32 {
+    let over = level - threshold;
+    let slope = 1.0 / ratio - 1.0;
+    if 2.0 * over < -KNEE {
+        0.0
+    } else if 2.0 * over.abs() <= KNEE {
+        let x = over + KNEE * 0.5;
+        slope * x * x / (2.0 * KNEE)
+    } else {
+        slope * over
+    }
+}
+
+/// What a one-pole smoother keeps each frame to settle in `seconds`.
+fn pole(seconds: f32, sample_rate: f32) -> f32 {
+    (-1.0 / (seconds * sample_rate).max(1.0)).exp()
+}
+
+/// A glue compressor on one knob. Amount lowers the threshold from 0 to -30 dB and raises the ratio from 1.5 to 10
+/// together; the loudness lost is made up. Attack is 0.1 to 100 ms, Release 20 ms to 1.5 s, Mix blends the dry sound in.
+pub(super) struct Compressor {
+    amount: f32,
+    amount_target: f32,
+    mix: f32,
+    mix_target: f32,
+    attack: f32,
+    release: f32,
+    slow: f32,
+    /// The reduction now, and a slower follower of it that holds through loud stretches so they do not pump.
+    envelope: f32,
+    held: f32,
+    fresh: bool,
+}
+
+impl Default for Compressor {
+    fn default() -> Self {
+        Self {
+            amount: 0.0,
+            amount_target: 0.0,
+            mix: 1.0,
+            mix_target: 1.0,
+            attack: 0.0,
+            release: 0.0,
+            slow: 0.0,
+            envelope: 0.0,
+            held: 0.0,
+            fresh: true,
+        }
+    }
+}
+
+impl Compressor {
+    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+        self.amount_target = p[0].clamp(0.0, 1.0);
+        self.mix_target = p[3].clamp(0.0, 1.0);
+        if self.fresh {
+            self.fresh = false;
+            self.amount = self.amount_target;
+            self.mix = self.mix_target;
+        }
+        let attack = 0.0001 * 1000f32.powf(p[1].clamp(0.0, 1.0));
+        let release = 0.02 * 75f32.powf(p[2].clamp(0.0, 1.0));
+        self.attack = pole(attack, ctx.sample_rate);
+        self.release = pole(release, ctx.sample_rate);
+        self.slow = pole(release * 4.0, ctx.sample_rate);
+    }
+
+    #[inline]
+    pub(super) fn process(&mut self, x: [f32; 2]) -> [f32; 2] {
+        glide(&mut self.amount, self.amount_target);
+        glide(&mut self.mix, self.mix_target);
+        let threshold = -30.0 * self.amount;
+        let ratio = 1.5 + 8.5 * self.amount * self.amount;
+        let peak = x[0].abs().max(x[1].abs()).max(1e-6);
+        let want = reduction(20.0 * peak.log10(), threshold, ratio);
+        // More reduction comes on at the attack's pace, less at the release's.
+        let keep = if want < self.envelope { self.attack } else { self.release };
+        self.envelope = want + keep * (self.envelope - want);
+        self.held = self.envelope.min(self.envelope + self.slow * (self.held - self.envelope));
+        // Two fifths of what a full-scale peak loses is given back, which keeps the loudness without clipping.
+        let makeup = -0.4 * reduction(0.0, threshold, ratio);
+        let gain = 10f32.powf((0.5 * (self.envelope + self.held) + makeup) / 20.0);
+        let wet = 1.0 + (gain - 1.0) * self.mix;
+        [x[0] * wet, x[1] * wet]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -812,6 +1139,95 @@ mod tests {
         assert!(out.iter().all(|v| (0.0..=1.0).contains(v)));
         assert!(out[6_000] > 0.95, "open in the first half: {}", out[6_000]);
         assert!(out[20_000] < 0.05, "shut in the second: {}", out[20_000]);
+    }
+
+    /// Four seconds of a rising ramp through the glitch at a quarter-beat step, 6 000 frames: what went in and what
+    /// came out.
+    fn glitched(chance: f32, reverse: f32, half: f32) -> Vec<(f32, f32)> {
+        let mut g = Glitch::new(48_000.0);
+        let mut mem = vec![0.0; super::super::long_size(48_000.0)];
+        g.reset(&mut mem);
+        g.prepare(&[0.5, chance, reverse, half], ctx());
+        (0..192_000).map(|i| (i as f32, g.process(&mut mem, [i as f32, -(i as f32)])[0])).collect()
+    }
+
+    #[test]
+    fn glitch_plays_earlier_steps_again_and_nothing_else() {
+        assert!(glitched(0.0, 0.0, 0.0).iter().all(|(x, y)| x == y), "no chance, no change");
+        // Every step glitched, none backwards or slow: away from the joins each frame is the one a whole number of
+        // steps back.
+        let again = glitched(1.0, 0.0, 0.0);
+        for step in 2..32 {
+            let (x, y) = again[step * 6_000 + 3_000];
+            let back = (x - y) / 6_000.0;
+            // The steps are counted in a float, so one may start a frame early or late.
+            assert!(back > 0.99 && (back - back.round()).abs() < 0.001, "step {step}: {back} steps back");
+        }
+        // Backwards, the ramp falls; at half speed it climbs half as fast.
+        let rev = glitched(1.0, 1.0, 0.0);
+        assert_eq!(rev[15_001].1 - rev[15_000].1, -1.0);
+        let slow = glitched(1.0, 0.0, 1.0);
+        assert_eq!(slow[15_002].1 - slow[15_000].1, 1.0);
+        // Only ever sound that came in; where two steps cross over, both are heard.
+        assert!(rev.iter().chain(&slow).all(|(x, y)| (-0.01..=*x * 1.42).contains(y)));
+    }
+
+    /// What a click leaves behind it: `seconds` of the tape echo's repeats alone, at a beat's delay.
+    fn tape(feedback: f32, age: f32, seconds: usize) -> Vec<f32> {
+        let mut t = TapeEcho::new(48_000.0);
+        let mut mem = vec![0.0; super::super::long_size(48_000.0)];
+        t.reset(&mut mem);
+        (0..seconds * 48_000)
+            .map(|i| {
+                // Prepared each buffer, as the engine does.
+                if i % 512 == 0 {
+                    t.prepare(&[0.67, feedback, age, 1.0], ctx());
+                }
+                let x = if i < 48 { 1.0 } else { 0.0 };
+                t.process(&mut mem, [x, x])[0] - x
+            })
+            .collect()
+    }
+
+    #[test]
+    fn tape_echo_repeats_on_the_beat_duller_with_age_and_never_runs_off() {
+        // Time two thirds up is one beat, 24 000 frames: nothing before it, the click's echo at it.
+        let young = tape(0.5, 0.0, 2);
+        assert!(young[..23_900].iter().all(|v| v.abs() < 1e-4));
+        let loud = |s: &[f32]| s.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        assert!(loud(&young[23_900..24_200]) > 0.3, "{}", loud(&young[23_900..24_200]));
+        // The second time round it is quieter, and on an old tape duller.
+        assert!(loud(&young[47_800..]) < loud(&young[23_900..24_200]));
+        let old = tape(0.5, 1.0, 2);
+        // How much the sound moves from one frame to the next: its top.
+        let edge = |s: &[f32]| s.windows(2).map(|w| (w[1] - w[0]).powi(2)).sum::<f32>();
+        let (dull, bright) = (edge(&old[47_800..]), edge(&young[47_800..]));
+        assert!(dull < 0.6 * bright, "{dull} {bright}");
+        // Feedback all the way up builds, but the tape holds it.
+        let full = tape(1.0, 0.5, 20);
+        assert!(full.iter().all(|v| v.is_finite() && v.abs() < 3.0), "{}", loud(&full));
+        assert!(loud(&full[19 * 48_000..]) > 0.01, "still ringing after twenty seconds");
+    }
+
+    /// The level a steady tone of `level` comes out at once the compressor has settled.
+    fn settled(amount: f32, mix: f32, level: f32) -> f32 {
+        let mut c = Compressor::default();
+        c.prepare(&[amount, 0.667, 0.467, mix], ctx());
+        (0..96_000).map(|_| c.process([level, level])[0]).last().unwrap()
+    }
+
+    #[test]
+    fn compressor_evens_loud_and_quiet_out_and_stays_under_full_scale() {
+        let (loud, quiet) = (settled(1.0, 1.0, 1.0), settled(1.0, 1.0, 0.05));
+        assert!(loud <= 1.0, "a full-scale peak stays under full scale: {loud}");
+        assert!(quiet > 0.05, "quiet parts are lifted by the makeup: {quiet}");
+        assert!(loud / quiet < 8.0, "20:1 going in, {} coming out", loud / quiet);
+        // With no dry sound mixed away, nothing changes.
+        assert_eq!(settled(1.0, 0.0, 0.5), 0.5);
+        // The knee joins its two ends.
+        assert_eq!(reduction(-13.1, -10.0, 4.0), 0.0);
+        assert!((reduction(-7.0, -10.0, 4.0) - -2.25).abs() < 1e-4);
+        assert!((reduction(0.0, -10.0, 4.0) - -7.5).abs() < 1e-4);
     }
 
     #[test]
