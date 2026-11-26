@@ -81,6 +81,10 @@ mod linux {
             self.ui.quit()
         }
 
+        fn wanted_size(&mut self) -> Option<(u32, u32)> {
+            self.ui.wanted_size()
+        }
+
         fn draw(&mut self, present: &mut dyn FnMut(Frame<'_>)) {
             self.ui.render(&mut self.renderer);
             self.renderer

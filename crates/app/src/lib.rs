@@ -36,7 +36,12 @@ pub struct Ui {
     /// The window in pixels and the device's own scale, before the DJ's interface scale.
     pixels: (u32, u32),
     device: f32,
+    /// The window's size before the mini player shrank it.
+    full: Option<(u32, u32)>,
 }
+
+/// The mini player's window, in points.
+const MINI: (f32, f32) = (400.0, 150.0);
 
 impl Ui {
     pub fn new(read: Reader) -> Self {
@@ -59,7 +64,25 @@ impl Ui {
             scale: 1.0,
             pixels: (1, 1),
             device: 1.0,
+            full: None,
         }
+    }
+
+    /// The size the window should take, asked once as the mini player opens and once as it closes.
+    pub fn wanted_size(&mut self) -> Option<(u32, u32)> {
+        if self.state.mini == self.full.is_some() {
+            return None;
+        }
+        if self.state.mini {
+            self.full = Some(self.pixels);
+            return Some(((MINI.0 * self.device) as u32, (MINI.1 * self.device) as u32));
+        }
+        self.full.take()
+    }
+
+    /// Only the mini player is shown.
+    pub fn mini(&self) -> bool {
+        self.state.mini
     }
 
     pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
@@ -252,6 +275,18 @@ pub mod native {
             if typing != self.ime {
                 self.ime = typing;
                 gpu.window.set_ime_allowed(typing);
+            }
+            if let Some((w, h)) = self.ui.wanted_size() {
+                let mini = self.ui.mini();
+                // The mini player is smaller than the app may be made, and stays above other windows.
+                let least = if mini { 120.0 } else { 320.0 };
+                gpu.window.set_min_inner_size(Some(winit::dpi::LogicalSize::new(least, least)));
+                let _ = gpu.window.request_inner_size(winit::dpi::PhysicalSize::new(w, h));
+                gpu.window.set_window_level(if mini {
+                    winit::window::WindowLevel::AlwaysOnTop
+                } else {
+                    winit::window::WindowLevel::Normal
+                });
             }
             gpu.window.request_redraw();
         }

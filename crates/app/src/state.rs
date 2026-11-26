@@ -94,6 +94,8 @@ pub enum Target {
     Open(u8),
     /// Starts the first-mix tour, or ends it.
     Tour,
+    /// Shrinks the window to the mini player, or brings the whole app back.
+    Mini,
     /// Moves the tour on without doing its step.
     TourSkip,
     /// The tour's card: taps on it go no further.
@@ -705,6 +707,8 @@ pub struct State {
     pub status: Option<String>,
     /// The message on screen, and when it came.
     pub toast: Option<(String, std::time::Instant)>,
+    /// Only the mini player is shown.
+    pub mini: bool,
     /// The step the first-mix tour is on, while it runs.
     pub tour: Option<usize>,
     /// What is carried, the pointer carrying it and where that is.
@@ -897,6 +901,7 @@ impl State {
             status,
             toast: None,
             tour: None,
+            mini: false,
             last_msgs: Default::default(),
             out_rate,
             auto: None,
@@ -2771,6 +2776,11 @@ impl State {
                 self.app_menu = false;
                 self.submenu = None;
                 self.tour = if self.tour.is_some() { None } else { Some(0) };
+            }
+            Target::Mini => {
+                self.app_menu = false;
+                self.submenu = None;
+                self.mini = !self.mini;
             }
             Target::TourSkip => self.tour = self.tour.map(|at| (at + 1).min(crate::tour::STEPS.len() - 1)),
             Target::Open(n) => {

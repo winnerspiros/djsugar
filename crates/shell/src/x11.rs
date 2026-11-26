@@ -1,7 +1,8 @@
 use x11rb::connection::{Connection, RequestConnection};
 use x11rb::protocol::Event as XEvent;
 use x11rb::protocol::xproto::{
-    AtomEnum, ConnectionExt, CreateGCAux, CreateWindowAux, EventMask, ImageFormat, PropMode, WindowClass,
+    AtomEnum, ConfigureWindowAux, ConnectionExt, CreateGCAux, CreateWindowAux, EventMask, ImageFormat, PropMode,
+    WindowClass,
 };
 use x11rb::rust_connection::RustConnection;
 use x11rb::wrapper::ConnectionExt as _;
@@ -114,6 +115,10 @@ pub fn run(title: &str, width: u32, height: u32, app: &mut impl App) -> Result<(
                 return Ok(());
             }
             event = conn.poll_for_event().map_err(Error::from)?;
+        }
+        if let Some((w, h)) = app.wanted_size() {
+            conn.configure_window(window, &ConfigureWindowAux::new().width(w).height(h)).map_err(Error::from)?;
+            dirty = true;
         }
         let animating = app.animating();
         if dirty || animating {

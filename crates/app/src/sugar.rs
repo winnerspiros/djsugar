@@ -60,8 +60,51 @@ fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour
     hit(s, r, target);
 }
 
+/// The mini player: the playing deck's cover, names, time and its few buttons, with nothing else in the window.
+fn mini(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    p.rect(0.0, 0.0, w, h, 0.0, theme::BACKDROP);
+    let d = (0..s.decks.len()).find(|&d| s.telemetry.decks[d].playing).unwrap_or(0);
+    let b = Rect::new((w - w.min(420.0)) * 0.5, (h - h.min(160.0)) * 0.5, w.min(420.0), h.min(160.0));
+    let side = (b.h - 20.0).min(b.w * 0.36);
+    let c = Rect::new(b.x + 10.0, b.y + (b.h - side) * 0.5, side, side);
+    match s.decks[d].loaded.as_ref().and_then(|l| l.art.as_ref()) {
+        Some(art) => art.draw(p, c, 6.0),
+        None => p.gradient(c.x, c.y, c.w, c.h, 6.0, fade(DECK[d], 0xb0), rgb(0x101012), 1.0, theme::BORDER),
+    }
+    let (x, tw) = (c.x + c.w + 12.0, b.x + b.w - c.x - c.w - 22.0);
+    let (title, artist, total) = match &s.decks[d].loaded {
+        Some(l) => (
+            l.entry.title.to_string(),
+            l.entry.artist.to_string(),
+            l.track.frames.len() as f64 / f64::from(l.track.rate),
+        ),
+        None => ("Nothing loaded".to_string(), String::new(), 0.0),
+    };
+    let gone = s.decks[d].seconds(s.telemetry.decks[d].position).clamp(0.0, total);
+    p.text_in(x, c.y + 16.0, tw, Style::new(14.0, Weight::Bold, TEXT), &title);
+    p.text_in(x, c.y + 33.0, tw, Style { px: 11.0, ..ARTIST }, &artist);
+    let bar = Rect::new(x, c.y + 44.0, tw, 4.0);
+    p.rect(bar.x, bar.y, bar.w, bar.h, 2.0, theme::RAISED);
+    if total > 0.0 {
+        p.rect(bar.x, bar.y, bar.w * (gone / total) as f32, bar.h, 2.0, DECK[d]);
+    }
+    let times = format!("{} / {}", mmss(gone as f32), mmss(total as f32));
+    p.text(x, bar.y + 18.0, SMALL, &times);
+    let bw = ((tw - 12.0) / 3.0).min(84.0);
+    let at = |n: f32| Rect::new(x + n * (bw + 6.0), c.y + c.h - 26.0, bw, 26.0);
+    let playing = s.telemetry.decks[d].playing;
+    button(p, s, at(0.0), if playing { "PAUSE" } else { "PLAY" }, playing, DECK[d], Target::Play(d));
+    button(p, s, at(1.0), "MIX NEXT", false, theme::AUTOMIX, Target::MixNow);
+    button(p, s, at(2.0), "FULL", false, ACCENT, Target::Mini);
+}
+
 pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     s.hits.clear();
+    if s.mini {
+        mini(p, s, w, h);
+        toast(p, s, w, h);
+        return;
+    }
     p.rect(0.0, 0.0, w, h, 0.0, rgb(0x1e1e20));
     let tall = h > w * 1.1;
     let wide = w >= 1100.0;

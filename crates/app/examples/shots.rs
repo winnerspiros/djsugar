@@ -281,6 +281,22 @@ fn main() {
                 save(&r, &out.join(format!("{name}-stems.png")));
                 ui.tap("Mode(0, Cues)");
             }
+            // The mini player takes the whole window, and its FULL button gives it back.
+            ui.tap("AppMenu");
+            ui.render(&mut r);
+            ui.tap("Submenu(1)");
+            ui.render(&mut r);
+            if ui.tap("Mini") {
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-mini.png")));
+                if !ui.tap("Mini") {
+                    faults.push(format!("{name}: the mini player has no way back"));
+                }
+            } else {
+                faults.push(format!("{name}: View has no Mini Player"));
+                ui.back();
+            }
+            ui.render(&mut r);
             // The first-mix tour starts from the Help menu, shows its card and ends from it.
             ui.tap("AppMenu");
             ui.render(&mut r);

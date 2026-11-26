@@ -72,6 +72,11 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             v.push(Line::Rule);
             v.push(Line::item("Effects Bar", Target::ToggleFx).mark(Mark::Check(s.show_fx)).hint("Ctrl+5"));
             v.push(Line::item("Samplers Bar", Target::ToggleSamplers).mark(Mark::Check(s.show_samplers)));
+            // A phone has no window to shrink.
+            if !cfg!(target_os = "android") {
+                v.push(Line::Rule);
+                v.push(Line::item("Mini Player", Target::Mini));
+            }
             v
         }
         _ => vec![

@@ -41,6 +41,10 @@ pub trait App {
     fn closing(&self) -> bool {
         false
     }
+    /// A size the app wants its window to take, asked after each batch of events.
+    fn wanted_size(&mut self) -> Option<(u32, u32)> {
+        None
+    }
     fn draw(&mut self, present: &mut dyn FnMut(Frame<'_>));
 }
 
