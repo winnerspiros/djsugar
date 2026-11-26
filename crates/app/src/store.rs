@@ -148,6 +148,15 @@ pub fn load_playlists() -> Vec<(String, Vec<String>)> {
     load_lists("playlists.tsv")
 }
 
+/// Automix's list, a track per line: its key, then its title and artist.
+pub fn save_queue(queue: &[(String, Vec<String>)]) {
+    save_lists("automix.tsv", queue);
+}
+
+pub fn load_queue() -> Vec<(String, Vec<String>)> {
+    load_lists("automix.tsv")
+}
+
 /// Tags, kept as playlists are: each a name and the tracks it is on.
 pub fn save_tags(tags: &[(String, Vec<String>)]) {
     save_lists("tags.tsv", tags);

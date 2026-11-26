@@ -10,6 +10,7 @@ mod state;
 mod store;
 /// Where saved state lives, set before the app starts.
 pub use store::set_dir as set_data_dir;
+mod automix;
 mod sugar;
 mod sugardeck;
 mod theme;

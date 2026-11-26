@@ -37,6 +37,9 @@ pub enum Opt {
     LyricsOnline,
     HiddenColumns,
     SidePanel,
+    MixLength,
+    MixStyle,
+    MixRepeat,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -86,7 +89,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 32] = [
+pub const OPTIONS: [Spec; 35] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -340,6 +343,30 @@ pub const OPTIONS: [Spec; 32] = [
         key: "side_panel",
         title: "Side panel",
         detail: "The panel right of the library, and its open tab plus one.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
+        opt: Opt::MixLength,
+        key: "automix_length",
+        title: "Automix length",
+        detail: "How long Automix takes to mix from one track into the next.",
+        kind: Kind::Menu(&crate::automix::LENGTHS),
+        default: 4,
+    },
+    Spec {
+        opt: Opt::MixStyle,
+        key: "automix_style",
+        title: "Automix style",
+        detail: "How Automix moves the mixer through a mix.",
+        kind: Kind::Menu(&crate::automix::STYLES),
+        default: 0,
+    },
+    Spec {
+        opt: Opt::MixRepeat,
+        key: "automix_repeat",
+        title: "Automix repeat",
+        detail: "Played tracks go back to the end of the Automix list.",
         kind: Kind::Switch,
         default: 0,
     },

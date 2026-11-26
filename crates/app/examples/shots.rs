@@ -189,11 +189,26 @@ fn main() {
             // Wide windows: the side panel's tabs, each must open.
             if ui.tap("ToggleSide") {
                 ui.render(&mut r);
-                for (n, tab) in ["info", "cues", "lyrics"].iter().enumerate() {
+                for (n, tab) in ["automix", "info", "cues", "lyrics"].iter().enumerate() {
                     if !ui.tap(&format!("SideTab({n})")) {
                         faults.push(format!("{name}: no side panel {tab} tab"));
                     }
                     ui.render(&mut r);
+                    // A track's menu puts it on Automix's list, where it shows with a way off again.
+                    if n == 0
+                        && let Some((_, [x, y, w, _])) = ui.targets().into_iter().find(|(t, _)| t == "Library")
+                    {
+                        ui.context((x + w * 0.3) * scale, (y + 11.0) * scale);
+                        ui.render(&mut r);
+                        if !ui.tap("MenuQueue") {
+                            faults.push(format!("{name}: track menu has no Add to Automix"));
+                        }
+                        ui.tap("Cycle(MixStyle)");
+                        ui.render(&mut r);
+                        if !ui.targets().iter().any(|(t, _)| t == "QueueRemove(0)") {
+                            faults.push(format!("{name}: the added track is not on the Automix list"));
+                        }
+                    }
                     save(&r, &out.join(format!("{name}-side-{tab}.png")));
                 }
                 ui.tap("ToggleSide");

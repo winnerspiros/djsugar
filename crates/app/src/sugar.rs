@@ -213,7 +213,7 @@ fn perform(p: &mut Painter, s: &mut State, r: Rect) {
 }
 
 /// The side panel's tabs, in order.
-pub const SIDE_TABS: [&str; 3] = ["Info", "Cues", "Lyrics"];
+pub const SIDE_TABS: [&str; 4] = ["Automix", "Info", "Cues", "Lyrics"];
 
 /// The side panel right of the library: the selected track's details, the hot cues
 /// of the deck playing, or the lyrics.
@@ -234,9 +234,84 @@ fn side_panel(p: &mut Painter, s: &mut State, r: Rect) {
     }
     let body = Rect::new(r.x, r.y + th + 4.0, r.w, r.h - th - 4.0);
     match s.side_tab {
-        0 => side_info(p, s, body),
-        1 => side_cues(p, s, body),
+        0 => side_auto(p, s, body),
+        1 => side_info(p, s, body),
+        2 => side_cues(p, s, body),
         _ => lyrics(p, s, body),
+    }
+}
+
+/// Automix: its switch, how it mixes, and the tracks it has waiting.
+fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
+    use crate::settings::Opt;
+    let (x, w) = (r.x + 8.0, r.w - 16.0);
+    let on = s.auto.is_some();
+    let tw = p.text(x + 4.0, r.y + 21.0, Style { px: 15.0, ..TITLE }, "Automix");
+    let count = if s.queue.is_empty() { "The list on screen".to_string() } else { tracks(s.queue.len()) };
+    p.text_in(x + 12.0 + tw, r.y + 21.0, w - tw - 108.0, ARTIST, &count);
+    let label = if on { "STOP" } else { "START" };
+    button(p, s, Rect::new(x + w - 84.0, r.y + 3.0, 84.0, 26.0), label, on, GREEN, Target::AutoDj);
+    let half = (w - 6.0) * 0.5;
+    let picks =
+        [(Opt::MixLength, "LENGTH", &crate::automix::LENGTHS[..]), (Opt::MixStyle, "STYLE", &crate::automix::STYLES)];
+    for (n, (opt, name, choices)) in picks.into_iter().enumerate() {
+        let b = Rect::new(x + n as f32 * (half + 6.0), r.y + 36.0, half, 38.0);
+        let down = s.pressed(Target::Cycle(opt));
+        p.outlined(b.x, b.y, b.w, b.h, 6.0, if down { theme::PRESSED } else { SURFACE }, 1.0, EDGE);
+        p.text(b.x + 9.0, b.y + 14.0, SMALL, name);
+        let choice = choices[usize::from(s.settings.get(opt)).min(choices.len() - 1)];
+        p.text_in(b.x + 9.0, b.y + 30.0, b.w - 34.0, Style { px: 13.0, ..TITLE }, choice);
+        let (cx, cy) = (b.x + b.w - 15.0, b.y + b.h * 0.5);
+        p.line((cx - 4.0, cy - 2.0), (cx, cy + 2.0), 1.5, theme::DIM);
+        p.line((cx, cy + 2.0), (cx + 4.0, cy - 2.0), 1.5, theme::DIM);
+        hit(s, b, Target::Cycle(opt));
+    }
+    let quarter = (w - 18.0) * 0.25;
+    let repeat = s.settings.on(Opt::MixRepeat);
+    let acts = [
+        ("MIX NOW", false, Target::MixNow),
+        ("SKIP", false, Target::MixSkip),
+        ("REPEAT", repeat, Target::Cycle(Opt::MixRepeat)),
+        ("CLEAR", false, Target::QueueClear),
+    ];
+    for (n, (name, lit, target)) in acts.into_iter().enumerate() {
+        let b = Rect::new(x + n as f32 * (quarter + 6.0), r.y + 80.0, quarter, 28.0);
+        button(p, s, b, name, lit, GREEN, target);
+    }
+    p.rect(x, r.y + 115.0, w, 1.0, 0.0, EDGE);
+    let mut y = r.y + 120.0;
+    if s.queue.is_empty() {
+        for line in ["Add tracks from a track's menu.", "Until then Automix plays the list on screen."] {
+            p.text_in(x + 4.0, y + 14.0, w - 8.0, ARTIST, line);
+            y += 16.0;
+        }
+        return;
+    }
+    let rows = (((r.y + r.h - y - 18.0) / 38.0) as usize).min(s.queue.len());
+    for n in 0..rows {
+        let b = Rect::new(x, y, w, 34.0);
+        p.outlined(b.x, b.y, b.w, b.h, 6.0, SURFACE, 1.0, EDGE);
+        p.text(b.x + 9.0, b.y + 21.0, Style { colour: theme::FAINT, ..TAB }, &(n + 1).to_string());
+        let (title, artist) = (s.queue[n].1.first().cloned(), s.queue[n].1.get(1).cloned());
+        let (title, artist) = (title.unwrap_or_default(), artist.unwrap_or_default());
+        let tx = b.x + 32.0;
+        let base = if artist.is_empty() { b.y + 21.0 } else { b.y + 15.0 };
+        p.text_in(tx, base, b.w - 66.0, Style { px: 13.0, ..TITLE }, &title);
+        if !artist.is_empty() {
+            p.text_in(tx, b.y + 28.0, b.w - 66.0, ARTIST, &artist);
+        }
+        let close = Rect::new(b.x + b.w - 32.0, b.y + 3.0, 28.0, 28.0);
+        if s.pressed(Target::QueueRemove(n)) {
+            p.rect(close.x, close.y, close.w, close.h, 6.0, theme::PRESSED);
+        }
+        let (cx, cy) = (close.x + 14.0, close.y + 14.0);
+        p.line((cx - 4.0, cy - 4.0), (cx + 4.0, cy + 4.0), 1.5, theme::DIM);
+        p.line((cx - 4.0, cy + 4.0), (cx + 4.0, cy - 4.0), 1.5, theme::DIM);
+        hit(s, close, Target::QueueRemove(n));
+        y += 38.0;
+    }
+    if rows < s.queue.len() {
+        p.text(x + 9.0, y + 12.0, ARTIST, &format!("and {} more", s.queue.len() - rows));
     }
 }
 
@@ -1222,6 +1297,7 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             label: "Play on Deck",
             picks: (0..2).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuPlay(d))).collect(),
         },
+        Line::item("Add to Automix", Target::MenuQueue),
         Line::sub("Add to playlist", 0).hint(if held > 0 { format!("In {held}") } else { String::new() }),
         Line::sub("Tags", 4).hint(if worn > 0 { worn.to_string() } else { String::new() }),
     ];

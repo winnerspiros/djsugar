@@ -126,6 +126,14 @@ pub enum Target {
     ToggleExpand,
     ToggleSide,
     SideTab(u8),
+    /// Puts the menu's track on Automix's list.
+    MenuQueue,
+    QueueRemove(usize),
+    QueueClear,
+    MixNow,
+    MixSkip,
+    /// Steps a setting to its next choice, round to the first.
+    Cycle(crate::settings::Opt),
     /// Folds or opens a sidebar section.
     Fold(u8),
     /// A choice in a chip's editor: chip, then the value.
@@ -370,7 +378,7 @@ pub struct DeckUi {
     pub rate: f32,
     pub volume: f32,
     pub knobs: [f32; 4],
-    /// High, mid and low kills.
+    /// Low, mid and high kills.
     pub kills: [bool; 3],
     pub key_lock: bool,
     pub cue: f64,
@@ -621,6 +629,8 @@ pub struct State {
     /// Tags: each a name and the tracks wearing it.
     pub tags: Vec<(String, Vec<String>)>,
     pub history: Vec<u32>,
+    /// Automix's list: each track's key, then its title and artist.
+    pub queue: Vec<(String, Vec<String>)>,
     pub track_menu: Option<u32>,
     pub settings: crate::settings::Settings,
     /// The open settings page.
@@ -660,6 +670,12 @@ pub struct State {
 pub struct Auto {
     pub next: usize,
     pub fade: Option<(usize, f64, f64)>,
+    /// Started with tracks on its list, so it plays that and not the list on screen.
+    pub listed: bool,
+    /// Asked to mix now, without waiting for the track's end.
+    pub now: bool,
+    /// Which deck the bass is cut on through this mix: neither yet, the incoming, the outgoing.
+    bass: u8,
 }
 
 impl std::fmt::Debug for State {
@@ -754,6 +770,7 @@ impl State {
             playlists: crate::store::load_playlists(),
             tags: crate::store::load_tags(),
             history: Vec::new(),
+            queue: crate::store::load_queue(),
             track_menu: None,
             settings: crate::settings::Settings::load(),
             fx,
@@ -945,26 +962,63 @@ impl State {
     }
 
     fn toggle_auto(&mut self) {
-        if self.auto.take().is_some() {
+        if let Some(a) = self.auto.take() {
+            if let Some((from, ..)) = a.fade {
+                self.mix_done(from);
+            }
             return;
         }
-        let mut next = 0;
-        if self.decks[0].loaded.is_none()
-            && !self.decks[0].loading
-            && let Some(&i) = self.shown.first()
-        {
-            self.load_deck(0, i as usize);
-            next = 1;
+        let mut a = Auto { next: 0, fade: None, listed: !self.queue.is_empty(), now: false, bass: 0 };
+        for d in 0..2 {
+            if self.decks[d].loaded.is_none()
+                && !self.decks[d].loading
+                && let Some(i) = self.auto_next(&mut a)
+            {
+                self.load_deck(d, i);
+            }
         }
-        self.auto = Some(Auto { next, fade: None });
-        if let Some(&i) = self.shown.get(next)
-            && self.decks[1].loaded.is_none()
-        {
-            self.load_deck(1, i as usize);
+        self.auto = Some(a);
+    }
+
+    /// The track Automix loads next: the head of its list, or the next of the list on screen
+    /// when it was started with nothing on its own.
+    fn auto_next(&mut self, a: &mut Auto) -> Option<usize> {
+        if !a.listed {
+            let i = *self.shown.get(a.next % self.shown.len().max(1))?;
+            a.next += 1;
+            return Some(i as usize);
         }
-        if let Some(a) = &mut self.auto {
-            a.next = next + 1;
+        let mut found = None;
+        while found.is_none() && !self.queue.is_empty() {
+            let track = self.queue.remove(0);
+            found = self.entries.iter().position(|e| entry_key(e) == track.0);
+            if found.is_some() && self.settings.on(crate::settings::Opt::MixRepeat) {
+                self.queue.push(track);
+            }
         }
+        crate::store::save_queue(&self.queue);
+        found
+    }
+
+    /// Hands the mixer back as the DJ left it, once a mix is over or called off.
+    fn mix_done(&mut self, from: usize) {
+        for d in 0..2 {
+            self.send(Command::Kill(d, self.decks[d].kills));
+        }
+        self.send(Command::Filter(from, self.decks[from].knobs[3] * 2.0 - 1.0));
+    }
+
+    /// Loads the next track over the one Automix has waiting.
+    fn mix_skip(&mut self) {
+        let Some(mut a) = self.auto else { return };
+        if a.fade.is_some() {
+            return;
+        }
+        let waiting = (0..2).rev().find(|&d| !self.telemetry.decks[d].playing).unwrap_or(1);
+        if let Some(i) = self.auto_next(&mut a) {
+            self.load_deck(waiting, i);
+        }
+        self.auto = Some(a);
     }
 
     fn auto_step(&mut self) {
@@ -983,10 +1037,9 @@ impl State {
                 self.telemetry.decks[d].playing = true;
                 self.crossfade(if d == 0 { -1.0 } else { 1.0 });
             } else if let Some(d) = (0..2).find(|&d| self.decks[d].loaded.is_some() && !self.decks[d].loading)
-                && let Some(&i) = self.shown.get(a.next % self.shown.len().max(1))
+                && let Some(i) = self.auto_next(&mut a)
             {
-                self.load_deck(d, i as usize);
-                a.next += 1;
+                self.load_deck(d, i);
             }
             self.auto = Some(a);
             return;
@@ -994,16 +1047,30 @@ impl State {
         let other = 1 - live;
         if let Some((from, start, len)) = a.fade {
             let pos = self.telemetry.decks[1 - from].position;
-            let t = ((pos - start) / len).clamp(0.0, 1.0) as f32;
+            let t = if len > 0.0 { ((pos - start) / len).clamp(0.0, 1.0) as f32 } else { 1.0 };
             let dir = if from == 0 { 1.0 } else { -1.0 };
             self.crossfade(-dir + 2.0 * dir * t);
+            let moves = crate::automix::moves(self.settings.get(crate::settings::Opt::MixStyle), t);
+            let bass = moves.bass.iter().position(|&cut| cut).map_or(0, |n| 2 - n as u8);
+            if bass != a.bass {
+                a.bass = bass;
+                for (d, cut) in [from, 1 - from].into_iter().zip(moves.bass) {
+                    let mut kills = self.decks[d].kills;
+                    kills[0] |= cut;
+                    self.send(Command::Kill(d, kills));
+                }
+            }
+            if moves.filter > 0.0 {
+                self.send(Command::Filter(from, moves.filter));
+            }
             if t >= 1.0 {
                 self.send(Command::Play(from, false));
                 self.telemetry.decks[from].playing = false;
                 a.fade = None;
-                if let Some(&i) = self.shown.get(a.next % self.shown.len().max(1)) {
-                    self.load_deck(from, i as usize);
-                    a.next += 1;
+                a.bass = 0;
+                self.mix_done(from);
+                if let Some(i) = self.auto_next(&mut a) {
+                    self.load_deck(from, i);
                 }
             }
             self.auto = Some(a);
@@ -1013,10 +1080,16 @@ impl State {
         let len = l.track.frames.len() as f64;
         let rate = f64::from(l.track.rate);
         let beat = l.grid.map_or(0.5 * rate, |g| g.beat_frames(l.track.rate));
-        let mix = (beat * 16.0).min(len * 0.4);
-        if len - self.telemetry.decks[live].position > mix {
+        use crate::settings::Opt;
+        let (length, style) = (self.settings.get(Opt::MixLength), self.settings.get(Opt::MixStyle));
+        let left = len - self.telemetry.decks[live].position;
+        let mix = crate::automix::frames(length, style, beat, rate).min(len * 0.4);
+        // A mix of no length still has to start the next deck before this one runs out.
+        if !a.now && left > mix.max(rate * 0.05) {
             return;
         }
+        let mix = mix.min(left);
+        a.now = false;
         let other_mix = (mix * f64::from(o.track.rate) / rate).min(o.track.frames.len() as f64 * 0.5);
         self.sync(other);
         self.send(Command::Play(other, true));
@@ -1567,7 +1640,7 @@ impl State {
         let shift = m.shift || k != c;
         if let 'b' | 'n' = k {
             let d = usize::from(k == 'n');
-            self.decks[d].kills[2] = !self.decks[d].kills[2];
+            self.decks[d].kills[0] = !self.decks[d].kills[0];
             self.send(Command::Kill(d, self.decks[d].kills));
             return;
         }
@@ -2178,6 +2251,34 @@ impl State {
             }
             Target::PickerClose => self.picker = None,
             Target::AutoDj => self.toggle_auto(),
+            Target::MenuQueue => {
+                if let Some(i) = self.track_menu.take() {
+                    let e = &self.entries[i as usize];
+                    self.queue.push((entry_key(e), vec![e.title.to_string(), e.artist.to_string()]));
+                    crate::store::save_queue(&self.queue);
+                }
+            }
+            Target::QueueRemove(n) if n < self.queue.len() => {
+                self.queue.remove(n);
+                crate::store::save_queue(&self.queue);
+            }
+            Target::QueueClear => {
+                self.queue.clear();
+                crate::store::save_queue(&self.queue);
+            }
+            Target::MixNow => {
+                if let Some(a) = &mut self.auto {
+                    a.now = true;
+                }
+            }
+            Target::MixSkip => self.mix_skip(),
+            Target::Cycle(o) => {
+                let choices = match crate::settings::spec(o).kind {
+                    crate::settings::Kind::Switch => 2,
+                    crate::settings::Kind::Segmented(c) | crate::settings::Kind::Menu(c) => c.len() as u8,
+                };
+                self.settings.set(o, (self.settings.get(o) + 1) % choices);
+            }
             Target::Quit => self.quit = true,
             Target::Find => {
                 self.app_menu = false;
