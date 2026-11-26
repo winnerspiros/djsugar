@@ -2053,7 +2053,7 @@ fn minis(p: &mut Painter, s: &mut State, r: Rect) -> f32 {
 }
 
 /// Synced lyrics of the playing deck, the current line in the deck colour.
-fn lyrics(p: &mut Painter, s: &State, r: Rect) {
+fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
     section(p, r, INK);
     p.text(r.x + 12.0, r.y + 20.0, SMALL, "LYRICS");
     let has = |d: usize| s.decks[d].loaded.as_ref().is_some_and(|l| !l.lyrics.lines.is_empty());
@@ -2061,6 +2061,13 @@ fn lyrics(p: &mut Painter, s: &State, r: Rect) {
         p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, "No lyrics for the loaded tracks");
         return;
     };
+    if s.decks[d]
+        .loaded
+        .as_ref()
+        .is_some_and(|l| l.lyrics.untimed() && matches!(l.entry.source, crate::library::Source::File(_)))
+    {
+        button(p, s, Rect::new(r.x + r.w - 62.0, r.y + 6.0, 52.0, 22.0), "TIME", false, ACCENT, Target::TimeLyrics(d));
+    }
     let Some(l) = &s.decks[d].loaded else { return };
     let at = s.decks[d].seconds(s.telemetry.decks[d].position);
     let cur = l.lyrics.current(at);

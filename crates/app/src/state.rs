@@ -37,6 +37,8 @@ pub enum Target {
     Mode(usize, Mode),
     Sync(usize),
     AutoDj,
+    /// Times a deck's untimed lyrics from its vocals.
+    TimeLyrics(usize),
     Jog(usize),
     Overview(usize),
     Library,
@@ -88,6 +90,8 @@ pub enum Target {
     PrefsClose,
     HubService(crate::hub::Service),
     Quit,
+    /// Opens the guide (0), the problem report (1) or the folder the app keeps its files in (2).
+    Open(u8),
     Find,
     LoadPick(usize),
     /// The track menu's stars, 1 to 5; the lit one again clears them.
@@ -298,6 +302,8 @@ fn recordings_dir() -> Option<std::path::PathBuf> {
 }
 
 pub const LONG_PRESS_MS: u128 = 450;
+/// What the status line says once lyrics have their times.
+const TIMED: &str = "The lyrics follow the vocals now";
 /// How far a list at its top is pulled down, in pixels, for letting go to refresh it.
 pub const PULL: f32 = 72.0;
 /// The pointer a right click stands in for.
@@ -2576,6 +2582,22 @@ impl State {
             }
             Target::PickerClose => self.picker = None,
             Target::AutoDj => self.toggle_auto(),
+            Target::TimeLyrics(d) => {
+                let Some(l) = &mut self.decks[d].loaded else { return };
+                let Source::File(path) = l.entry.source.clone() else { return };
+                let lyrics = std::mem::take(&mut l.lyrics);
+                let tx = self.jobs.0.clone();
+                self.status = Some("Listening for the vocals to time the lyrics".into());
+                std::thread::spawn(move || {
+                    let back = crate::lyrics::Lyrics { lines: lyrics.lines.clone() };
+                    let (ly, said) = match crate::lyrics::time(&path, lyrics) {
+                        Ok(ly) => (ly, TIMED.to_string()),
+                        Err(why) => (back, why),
+                    };
+                    let _ = tx.send((Job::Lyrics(d, path, ly), None));
+                    let _ = tx.send((Job::Failed(said), None));
+                });
+            }
             Target::MenuQueue => {
                 if let Some(i) = self.track_menu.take() {
                     let e = &self.entries[i as usize];
@@ -2615,6 +2637,17 @@ impl State {
                 self.settings.set(o, (self.settings.get(o) + 1) % choices);
             }
             Target::Quit => self.quit = true,
+            Target::Open(n) => {
+                self.app_menu = false;
+                let what = match n {
+                    0 => Some(crate::open::HOME.to_string()),
+                    1 => Some(crate::open::ISSUES.to_string()),
+                    _ => crate::store::dir().map(|d| d.to_string_lossy().into_owned()),
+                };
+                if !what.is_some_and(|w| crate::open::open(&w)) {
+                    self.status = Some("Nothing on this system opens that".into());
+                }
+            }
             Target::Find => {
                 self.app_menu = false;
                 self.view = View::Lib;

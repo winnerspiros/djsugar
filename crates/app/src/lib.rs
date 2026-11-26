@@ -4,6 +4,7 @@ mod hub;
 mod library;
 mod lyrics;
 mod models;
+mod open;
 mod prefs;
 mod record;
 mod settings;

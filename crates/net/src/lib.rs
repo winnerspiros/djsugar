@@ -7,6 +7,7 @@ pub mod botguard;
 pub mod cipher;
 pub mod http;
 pub mod lrclib;
+pub mod netease;
 pub mod soundcloud;
 pub mod sponsorblock;
 pub mod youtube;
