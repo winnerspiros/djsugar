@@ -187,6 +187,10 @@ pub enum Target {
     FxPick(usize, usize, u8),
     FxMeta(usize, usize),
     FxMix(usize),
+    /// Opens a slot's parameters.
+    FxEdit(usize, usize),
+    /// One parameter of the open slot, as a slider.
+    FxParam(usize),
     /// Deletes a tag from every track.
     DeleteTag(usize),
     RenameTag(usize),
@@ -266,6 +270,8 @@ pub const FILTERS: [&str; 4] = ["Near BPM", "Mixes in key", "Rated", "Colored"];
 const NAME_MAX: usize = 48;
 /// An effect unit as the screen shows it: three slots (effect, on, knob), then the dry/wet mix.
 pub type FxUnit = ([(u8, bool, f32); 3], f32);
+/// The parameters of one effect, each 0 to 1.
+pub type FxParams = [f32; djsugar_engine::MAX_PARAMETERS];
 
 pub const NEAR_BPM: [u8; 5] = [2, 4, 6, 8, 10];
 
@@ -752,6 +758,9 @@ pub struct State {
     pub fx: [FxUnit; 2],
     /// The slot whose effect list is open.
     pub fx_menu: Option<(usize, usize)>,
+    /// The slot whose parameters are open, and where they stand.
+    pub fx_edit: Option<(usize, usize)>,
+    pub fx_params: FxParams,
     /// The held tag whose menu is open.
     pub tag_menu: Option<usize>,
     pub name_buf: String,
@@ -938,6 +947,8 @@ impl State {
             settings: crate::settings::Settings::load(),
             fx,
             fx_menu: None,
+            fx_edit: None,
+            fx_params: [0.5; djsugar_engine::MAX_PARAMETERS],
             hidden_cols: 0,
             side_panel: false,
             side_tab: 0,
@@ -1134,6 +1145,9 @@ impl State {
                 }
             }
             self.telemetry = c.poll();
+            if let Some((d, slot)) = self.fx_edit {
+                self.fx_params = c.fx_params(d, slot);
+            }
         }
         if let Some(at) = self.tour {
             self.tour = Some(crate::tour::advance(self, at));
@@ -1823,6 +1837,7 @@ impl State {
             || self.chip_menu.is_some()
             || self.tag_menu.is_some()
             || self.fx_menu.is_some()
+            || self.fx_edit.is_some()
             || self.list_menu.is_some()
             || self.cue_menu.is_some()
             || self.grid_menu.is_some()
@@ -1833,6 +1848,7 @@ impl State {
         self.chip_menu = None;
         self.tag_menu = None;
         self.fx_menu = None;
+        self.fx_edit = None;
         self.list_menu = None;
         self.cue_menu = None;
         self.grid_menu = None;
@@ -2586,6 +2602,19 @@ impl State {
         self.telemetry.decks[d].position = to;
     }
 
+    /// Where the open slot's parameters start.
+    fn fx_defaults(&self) -> FxParams {
+        let kind = self.fx_edit.map_or(0, |(d, slot)| self.fx[d].0[slot].0);
+        let start = djsugar_engine::parameter_defaults(f64::from(kind));
+        std::array::from_fn(|k| start.get(k).copied().unwrap_or(0.5) as f32)
+    }
+
+    fn fx_param(&mut self, k: usize, v: f32) {
+        let Some((d, slot)) = self.fx_edit else { return };
+        self.fx_params[k] = v;
+        self.send(Command::Fx(d, FxSet::Param(slot, k, v)));
+    }
+
     pub fn pressed(&self, t: Target) -> bool {
         self.drags.iter().any(|d| d.target == Some(t))
     }
@@ -2645,6 +2674,10 @@ impl State {
             Target::FxMix(d) => {
                 self.fx[d].1 = 1.0;
                 self.send(Command::Fx(d, FxSet::Mix(1.0)));
+            }
+            Target::FxParam(k) => {
+                let v = self.fx_defaults()[k];
+                self.fx_param(k, v);
             }
             Target::StationTime => {
                 self.station.time = 0.5;
@@ -2929,8 +2962,16 @@ impl State {
                 self.fx_menu = Some((d, slot));
                 self.menu_at = (x, y);
             }
+            Target::FxEdit(d, slot) => {
+                self.fx_menu = None;
+                self.submenu = None;
+                self.fx_edit = Some((d, slot));
+                self.fx_params = self.fx_defaults();
+                self.menu_at = (x, y);
+            }
             Target::FxPick(d, slot, k) => {
                 self.fx_menu = None;
+                self.submenu = None;
                 self.fx[d].0[slot].0 = k;
                 self.send(Command::Fx(d, FxSet::Kind(slot, k)));
                 if !self.fx[d].0[slot].1 && k > 0 {
@@ -3052,6 +3093,7 @@ impl State {
                 self.chip_menu = None;
                 self.tag_menu = None;
                 self.fx_menu = None;
+                self.fx_edit = None;
                 self.list_menu = None;
                 self.track_menu = None;
                 self.submenu = None;
@@ -3451,6 +3493,7 @@ impl State {
                 self.fx[d].0[slot].2 = v;
                 self.send(Command::Fx(d, FxSet::Meta(slot, v)));
             }
+            Target::FxParam(k) => self.fx_param(k, ((x - r.x) / r.w).clamp(0.0, 1.0)),
             Target::FxMix(d) => {
                 let v = (self.fx[d].1 - delta.1 / 160.0).clamp(0.0, 1.0);
                 self.fx[d].1 = v;

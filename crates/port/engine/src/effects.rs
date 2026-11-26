@@ -17,7 +17,7 @@ use crate::dsp::Svf;
 use crate::inputs::{input_group, MICROPHONE, NUM_INPUTS};
 
 /// The built-in effects, in `loaded_effect` order.
-pub const AVAILABLE_EFFECTS: [&str; 25] = [
+pub const AVAILABLE_EFFECTS: [&str; 31] = [
     "Echo",
     "Reverb",
     "Filter",
@@ -43,10 +43,18 @@ pub const AVAILABLE_EFFECTS: [&str; 25] = [
     "Glitch",
     "Backspin",
     "Pitch Shift",
+    "Metronome",
+    "Loudness",
+    "Balance",
+    "Graphic EQ",
+    "Param EQ",
+    "Auto Gain",
 ];
 
 /// Parameter knobs (`parameterK`) and buttons (`button_parameterK`) per slot.
-pub const MAX_PARAMETERS: usize = 4;
+pub const MAX_PARAMETERS: usize = 8;
+/// How many of them the first effects use; the equalizers and the automatic gain take more.
+const KNOBS: usize = 4;
 pub const MAX_BUTTON_PARAMETERS: usize = 2;
 
 /// The effects each slot starts with, as `loaded_effect` values.
@@ -96,6 +104,11 @@ pub fn effect_name(loaded_effect: f64) -> &'static str {
 /// Names of the loaded effect's parameters, in `parameterK` order.
 pub fn parameter_names(loaded_effect: f64) -> &'static [&'static str] {
     Kind::from_loaded(loaded_effect).map_or(&[], |k| MANIFESTS[k as usize].names)
+}
+
+/// Where those parameters start, each 0..1.
+pub fn parameter_defaults(loaded_effect: f64) -> &'static [f64] {
+    Kind::from_loaded(loaded_effect).map_or(&[], |k| MANIFESTS[k as usize].defaults)
 }
 
 /// Signal paths an effect unit can be routed to: the decks, the main mix,
@@ -256,9 +269,15 @@ enum Kind {
     Glitch,
     Backspin,
     PitchShift,
+    Metronome,
+    Loudness,
+    Balance,
+    GraphicEq,
+    ParamEq,
+    AutoGain,
 }
 
-const KINDS: [Kind; 25] = [
+const KINDS: [Kind; 31] = [
     Kind::Echo,
     Kind::Reverb,
     Kind::Filter,
@@ -284,6 +303,12 @@ const KINDS: [Kind; 25] = [
     Kind::Glitch,
     Kind::Backspin,
     Kind::PitchShift,
+    Kind::Metronome,
+    Kind::Loudness,
+    Kind::Balance,
+    Kind::GraphicEq,
+    Kind::ParamEq,
+    Kind::AutoGain,
 ];
 
 impl Kind {
@@ -317,7 +342,13 @@ impl Kind {
             | Kind::Ladder
             | Kind::Tremolo
             | Kind::Autopan
-            | Kind::Compressor => Memory::None,
+            | Kind::Compressor
+            | Kind::Metronome
+            | Kind::Loudness
+            | Kind::Balance
+            | Kind::GraphicEq
+            | Kind::ParamEq
+            | Kind::AutoGain => Memory::None,
         }
     }
 }
@@ -328,7 +359,7 @@ struct Manifest {
     defaults: &'static [f64],
 }
 
-const MANIFESTS: [Manifest; 25] = [
+const MANIFESTS: [Manifest; 31] = [
     Manifest { names: &["Time", "Feedback", "Ping Pong", "Send"], defaults: &[0.5, 0.5, 0.0, 1.0] },
     Manifest { names: &["Decay", "Bandwidth", "Damping", "Send"], defaults: &[0.5, 0.75, 0.5, 1.0] },
     Manifest { names: &["Low Pass", "Resonance", "High Pass"], defaults: &[1.0, 0.25, 0.0] },
@@ -354,6 +385,21 @@ const MANIFESTS: [Manifest; 25] = [
     Manifest { names: &["Step", "Chance", "Reverse", "Half Speed"], defaults: &[0.5, 0.5, 0.25, 0.15] },
     Manifest { names: &["Time", "Mix"], defaults: &[0.4, 1.0] },
     Manifest { names: &["Pitch", "Mix", "Grain"], defaults: &[0.5, 1.0, 0.5] },
+    Manifest { names: &["BPM", "Sync", "Level"], defaults: &[0.666, 1.0, 0.889] },
+    Manifest { names: &["Loudness"], defaults: &[0.5] },
+    Manifest { names: &["Balance", "Mid/Side", "Bypass"], defaults: &[0.5, 0.5, 0.0] },
+    Manifest {
+        names: &["81 Hz", "100 Hz", "222 Hz", "494 Hz", "1.1 kHz", "2.4 kHz", "5.4 kHz", "9.8 kHz"],
+        defaults: &[0.5; 8],
+    },
+    Manifest {
+        names: &["Gain 1", "Q 1", "Center 1", "Gain 2", "Q 2", "Center 2"],
+        defaults: &[0.5, 0.5, 0.466, 0.5, 0.5, 0.688],
+    },
+    Manifest {
+        names: &["Threshold", "Target", "Gain", "Knee", "Attack", "Release"],
+        defaults: &[0.4286, 0.5, 0.487, 0.4167, 0.2943, 0.3329],
+    },
 ];
 
 /// The beat switch's range: 1/16 to 4 beats, as powers of two.
@@ -386,7 +432,13 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
         | Kind::Ladder
         | Kind::Hall
         | Kind::Compressor
-        | Kind::PitchShift => None,
+        | Kind::PitchShift
+        | Kind::Metronome
+        | Kind::Loudness
+        | Kind::Balance
+        | Kind::GraphicEq
+        | Kind::ParamEq
+        | Kind::AutoGain => None,
     }
 }
 
@@ -394,7 +446,18 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
 /// meta 0 is subtle and 1 strong. The knob is unipolar, so Filter is neutral
 /// at 0 and turning up sweeps its high-pass.
 fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
-    match kind {
+    let first: [Option<f64>; KNOBS] = match kind {
+        // The click's level; how much contour; towards the right.
+        Kind::Metronome => [None, None, Some(meta), None],
+        Kind::Loudness => [Some(1.0 - meta), None, None, None],
+        Kind::Balance | Kind::ParamEq => [Some(0.5 + 0.5 * meta), None, None, None],
+        // A smile: both ends up together.
+        Kind::GraphicEq => {
+            let up = Some(0.5 + 0.5 * meta);
+            return [up, None, None, None, None, None, None, up];
+        }
+        // How much gain it may add.
+        Kind::AutoGain => [None, None, Some(meta), None],
         Kind::Echo | Kind::Reverb | Kind::Hall | Kind::TapeEcho => [None, None, None, Some(meta)],
         Kind::Filter => [Some(1.0), None, Some(meta), None],
         Kind::Flanger | Kind::Phaser | Kind::Gate | Kind::Tremolo | Kind::Autopan | Kind::Glitch => {
@@ -405,7 +468,7 @@ fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
         Kind::Bitcrusher => [None, Some(1.0 - 0.95 * meta), None, None],
         // Turning up rolls shorter slices; brakes and echo-outs get longer.
         // Their length is the slot's beat switch.
-        Kind::Roll | Kind::RevRoll | Kind::Brake => [None; MAX_PARAMETERS],
+        Kind::Roll | Kind::RevRoll | Kind::Brake => [None; KNOBS],
         Kind::EchoOut => [None, Some(meta), None, None],
         Kind::Noise => [Some(meta), None, None, None],
         Kind::Spiral => [None, None, Some(meta), None],
@@ -417,7 +480,13 @@ fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
         Kind::Ladder => [Some(1.0 - 0.85 * meta), None, None, None],
         // Opens the send and sweeps the high-pass in the repeats up.
         Kind::FilterEcho => [None, None, Some(0.5 + 0.5 * meta), Some(meta)],
-    }
+    };
+    std::array::from_fn(|k| first.get(k).copied().flatten())
+}
+
+/// Four knobs as the first of a full set.
+fn wide(p: [f32; KNOBS]) -> [f32; MAX_PARAMETERS] {
+    std::array::from_fn(|k| p.get(k).copied().unwrap_or(0.0))
 }
 
 struct SlotControls {
@@ -776,6 +845,12 @@ struct Instance {
     glitch: extra::Glitch,
     backspin: extra::Backspin,
     pitch_shift: extra::PitchShift,
+    metronome: utility::Metronome,
+    loudness: utility::Loudness,
+    balance: utility::Balance,
+    graphic_eq: utility::GraphicEq,
+    param_eq: utility::ParamEq,
+    auto_gain: utility::AutoGain,
     hall: extra::Hall,
     filter_echo: extra::FilterEcho,
 }
@@ -812,6 +887,12 @@ impl Instance {
             tremolo: extra::Tremolo::default(),
             autopan: extra::Autopan::default(),
             compressor: extra::Compressor::default(),
+            metronome: utility::Metronome::default(),
+            loudness: utility::Loudness::default(),
+            balance: utility::Balance::default(),
+            graphic_eq: utility::GraphicEq::default(),
+            param_eq: utility::ParamEq::default(),
+            auto_gain: utility::AutoGain::default(),
             tape_echo: extra::TapeEcho::new(sample_rate),
             glitch: extra::Glitch::new(sample_rate),
             backspin: extra::Backspin::new(sample_rate),
@@ -867,6 +948,12 @@ impl Instance {
             Some(Kind::Tremolo) => self.tremolo = extra::Tremolo::default(),
             Some(Kind::Autopan) => self.autopan = extra::Autopan::default(),
             Some(Kind::Compressor) => self.compressor = extra::Compressor::default(),
+            Some(Kind::Metronome) => self.metronome = utility::Metronome::default(),
+            Some(Kind::Loudness) => self.loudness = utility::Loudness::default(),
+            Some(Kind::Balance) => self.balance = utility::Balance::default(),
+            Some(Kind::GraphicEq) => self.graphic_eq = utility::GraphicEq::default(),
+            Some(Kind::ParamEq) => self.param_eq = utility::ParamEq::default(),
+            Some(Kind::AutoGain) => self.auto_gain = utility::AutoGain::default(),
             Some(Kind::TapeEcho) => self.tape_echo.reset(&mut self.mem),
             Some(Kind::Glitch) => self.glitch.reset(&mut self.mem),
             Some(Kind::Backspin) => self.backspin.reset(&mut self.mem),
@@ -877,7 +964,9 @@ impl Instance {
         }
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, all: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+        let [a, b, c, d, ..] = *all;
+        let p = &[a, b, c, d];
         match self.kind {
             Some(Kind::Echo) => self.echo.prepare(p, ctx),
             Some(Kind::Reverb) => self.reverb.prepare(p),
@@ -904,6 +993,12 @@ impl Instance {
             Some(Kind::Tremolo) => self.tremolo.prepare(p, ctx),
             Some(Kind::Autopan) => self.autopan.prepare(p, ctx),
             Some(Kind::Compressor) => self.compressor.prepare(p, ctx),
+            Some(Kind::Metronome) => self.metronome.prepare(all, ctx),
+            Some(Kind::Loudness) => self.loudness.prepare(all, ctx),
+            Some(Kind::Balance) => self.balance.prepare(all, ctx),
+            Some(Kind::GraphicEq) => self.graphic_eq.prepare(all, ctx),
+            Some(Kind::ParamEq) => self.param_eq.prepare(all, ctx),
+            Some(Kind::AutoGain) => self.auto_gain.prepare(all, ctx),
             Some(Kind::TapeEcho) => self.tape_echo.prepare(p, ctx),
             Some(Kind::Glitch) => self.glitch.prepare(p, ctx),
             Some(Kind::Backspin) => self.backspin.prepare(p, ctx),
@@ -935,6 +1030,12 @@ impl Instance {
             Some(Kind::Tremolo) => self.tremolo.process(x),
             Some(Kind::Autopan) => self.autopan.process(x),
             Some(Kind::Compressor) => self.compressor.process(x),
+            Some(Kind::Metronome) => self.metronome.process(x),
+            Some(Kind::Loudness) => self.loudness.process(x),
+            Some(Kind::Balance) => self.balance.process(x),
+            Some(Kind::GraphicEq) => self.graphic_eq.process(x),
+            Some(Kind::ParamEq) => self.param_eq.process(x),
+            Some(Kind::AutoGain) => self.auto_gain.process(x),
             Some(Kind::TapeEcho) => self.tape_echo.process(&mut self.mem, x),
             Some(Kind::Glitch) => self.glitch.process(&mut self.mem, x),
             Some(Kind::Backspin) => self.backspin.process(&mut self.mem, x),
@@ -1960,7 +2061,7 @@ impl Echo {
         }
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Time: 1/16 to 4 beats (as long as the buffer allows at slow tempos).
         self.set_time(beats(p[0], -4, 2), ctx);
         self.feedback_target = p[1] * 0.9;
@@ -2132,7 +2233,7 @@ impl Reverb {
         self.fresh = true;
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS]) {
+    fn prepare(&mut self, p: &[f32; KNOBS]) {
         // Decay: a short room to a long hall.
         self.targets = [0.2 + 0.77 * p[0], 0.1 + 0.8995 * p[1], 0.8 * p[2], p[3]];
         if self.fresh {
@@ -2211,7 +2312,7 @@ impl Filter {
         self.hp = Svf::default();
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS]) {
+    fn prepare(&mut self, p: &[f32; KNOBS]) {
         let [lp, res, hp] = [p[0], p[1], p[2]];
         // Low-pass 20 Hz..20 kHz, high-pass 20 Hz..10 kHz.
         let lp_hz = 20.0 * 1000f32.powf(lp);
@@ -2275,7 +2376,7 @@ impl Flanger {
         self.unlocked = true;
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Speed: one sweep every 32 beats down to every half beat, in time
         // with the track and starting on a beat of it. Manual: 0.5..8 ms
         // centre delay.
@@ -2341,7 +2442,7 @@ impl Default for Bitcrusher {
 }
 
 impl Bitcrusher {
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS]) {
+    fn prepare(&mut self, p: &[f32; KNOBS]) {
         // Bit depth: 2..16 bits. Downsampling: 1 keeps every sample, 0 keeps one in 50.
         let bits = 2.0 + 14.0 * p[0];
         self.step = 2.0 / 2f32.powf(bits);
@@ -2391,7 +2492,7 @@ struct Phaser {
 }
 
 impl Phaser {
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Speed: one sweep every 32 beats down to every half beat, in time
         // with the track and starting on a beat of it. Stages: 2..12.
         let cycle = beats(1.0 - p[0], -1, 5);
@@ -2495,7 +2596,7 @@ impl Default for Gate {
 }
 
 impl Gate {
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Length: 1/16 to 1 beat per open-and-close.
         let cycle = beats(p[0], -4, 0);
         self.step = 1.0 / (cycle * ctx.beat_seconds * ctx.sample_rate);
@@ -2547,7 +2648,7 @@ impl Roll {
         self.waiting_set = false;
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Rate: 0 rolls whole beats, 1 rolls 1/16 beats.
         let b = beats(1.0 - p[0], -4, 0);
         self.slice = ((b * ctx.beat_seconds * ctx.sample_rate) as usize).clamp(64, self.len - 1);
@@ -2609,7 +2710,7 @@ impl EchoOut {
         self.t = 0.0;
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Time: 1/4 to 1 beat. Length: the original fades out over 1/2 to 4 beats.
         self.echo.set_time(beats(p[0], -2, 0), ctx);
         self.echo.feedback_target = 0.5 + 0.45 * p[1];
@@ -2655,7 +2756,7 @@ impl Brake {
         self.speed = 1.0;
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Playback falls behind by half the stop time, which the buffer
         // (2 s) has to hold.
         let seconds = (beats(p[0], 0, 3) * ctx.beat_seconds).min(2.0 * ECHO_MAX_SECONDS - 0.2);
@@ -2703,7 +2804,7 @@ impl Noise {
         }
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         self.level = 0.3 * p[0];
         // Sweep: the noise band from 300 Hz to 12 kHz. Resonance narrows it.
         self.filter.set(ctx.sample_rate, 300.0 * 40f32.powf(p[1]), 0.6 + 4.0 * p[2]);
@@ -2749,7 +2850,7 @@ impl Spiral {
         self.t = 0.0;
     }
 
-    fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Time: 1/4 to 1 beat to start from; it halves every 4 beats.
         self.echo.set_time(beats(p[0], -2, 0), ctx);
         self.base = self.echo.target;
@@ -2865,10 +2966,10 @@ impl ColorFx {
             4 => [a, (0.5 + side as f32).clamp(0.0, 1.0), 0.3, 0.0],
             // Bit depth, downsampling.
             5 => [1.0 - 0.75 * a, 1.0 - 0.92 * a, 0.0, 0.0],
-            _ => [0.0; MAX_PARAMETERS],
+            _ => [0.0; KNOBS],
         };
         if self.inst.kind.is_some() {
-            self.inst.prepare(&p, ctx);
+            self.inst.prepare(&wide(p), ctx);
         }
     }
 
@@ -2967,7 +3068,7 @@ impl StemFx {
             // ping-pong, full send.
             _ => [beats_parameter(STEM_ECHO_BEATS, -4, 2), 0.72, 0.25, 1.0],
         };
-        self.inst.prepare(&p, ctx);
+        self.inst.prepare(&wide(p), ctx);
     }
 
     /// How long a stem must have been sent before muting it is heard, in
@@ -3008,6 +3109,7 @@ impl StemFx {
 }
 
 mod extra;
+mod utility;
 
 #[cfg(test)]
 mod bench;

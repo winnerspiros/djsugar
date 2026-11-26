@@ -148,6 +148,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     chip_menu(p, s, w, h);
     tag_menu(p, s, w, h);
     fx_menu(p, s, w, h);
+    fx_edit(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
     crate::prefs::overlay(p, s, w, h);
 }
@@ -784,14 +785,68 @@ fn fx_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let screen = Rect::new(0.0, 0.0, w, h);
     hit(s, screen, Target::MenuClose);
     let now = s.fx[d].0[slot].0;
-    let mut lines = vec![Line::item("Empty", Target::FxPick(d, slot, 0)).mark(Mark::Check(now == 0)), Line::Rule];
-    lines.extend(
-        djsugar_engine::AVAILABLE_EFFECTS
-            .iter()
-            .zip(1u8..)
-            .map(|(name, k)| Line::item(*name, Target::FxPick(d, slot, k)).mark(Mark::Check(now == k))),
+    let name = |k: u8| djsugar_engine::effect_name(f64::from(k));
+    let mut lines = vec![Line::item("Empty", Target::FxPick(d, slot, 0)).mark(Mark::Check(now == 0))];
+    if now > 0 {
+        lines.push(Line::item("Parameters", Target::FxEdit(d, slot)).hint(name(now).to_string()));
+    }
+    lines.push(Line::Rule);
+    for ((group, kinds), id) in FX_GROUPS.iter().zip(0u8..) {
+        let hint = if kinds.contains(&now) { name(now) } else { "" };
+        lines.push(Line::sub(*group, id).hint(hint.to_string()));
+    }
+    let (open, r) = theme::menu(p, s, s.menu_at, screen, &lines);
+    let (Some(top), Some((_, kinds))) = (open, s.submenu.and_then(|id| FX_GROUPS.get(usize::from(id)))) else { return };
+    let sub: Vec<Line> =
+        kinds.iter().map(|&k| Line::item(name(k), Target::FxPick(d, slot, k)).mark(Mark::Check(now == k))).collect();
+    theme::submenu(p, s, r, top, screen, &sub);
+}
+
+/// The effects by what they do, as their places in the engine's list.
+const FX_GROUPS: [(&str, &[u8]); 6] = [
+    ("Echo", &[1, 9, 22, 18, 12, 8, 17, 23]),
+    ("Space", &[2, 16]),
+    ("Filter", &[3, 15, 6, 4, 14]),
+    ("Rhythm", &[7, 19, 20, 10, 24]),
+    ("Tone", &[5, 13, 11, 21, 25]),
+    ("Utility", &[26, 27, 28, 29, 30, 31]),
+];
+
+/// The open slot's own parameters, each a slider: drag to set, double-click for where it starts.
+fn fx_edit(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some((d, slot)) = s.fx_edit else { return };
+    let kind = f64::from(s.fx[d].0[slot].0);
+    let names = djsugar_engine::parameter_names(kind);
+    p.layer();
+    hit(s, Rect::new(0.0, 0.0, w, h), Target::MenuClose);
+    let (row, pad, head) = (30.0, 12.0, 34.0);
+    let cw = 340.0_f32.min(w - 8.0);
+    let ch = head + row * names.len() as f32 + pad;
+    let r = Rect::new(
+        (s.menu_at.0 - cw * 0.5).clamp(4.0, (w - cw - 4.0).max(4.0)),
+        (s.menu_at.1 - ch - 8.0).clamp(4.0, (h - ch - 4.0).max(4.0)),
+        cw,
+        ch,
     );
-    theme::menu(p, s, s.menu_at, screen, &lines);
+    p.glow(r.x, r.y + 4.0, r.w, r.h, 6.0, 12.0, fade(rgb(0x000000), 0xa0));
+    p.outlined(r.x, r.y, r.w, r.h, 6.0, theme::MENU, 1.0, theme::MENU_BORDER);
+    hit(s, r, Target::MenuBody);
+    let title = Style::new(13.0, Weight::Bold, TEXT);
+    p.text(r.x + pad, r.y + 22.0, title, djsugar_engine::effect_name(kind));
+    let label = Style::new(12.0, Weight::Regular, theme::DIM);
+    let name_w = 84.0;
+    for (k, name) in names.iter().enumerate() {
+        let y = r.y + head + row * k as f32;
+        p.text_in(r.x + pad, y + row * 0.5 + 4.0, name_w - 6.0, label, name);
+        let bar = Rect::new(r.x + pad + name_w, y + 4.0, r.w - 2.0 * pad - name_w - 36.0, row - 8.0);
+        let v = s.fx_params[k].clamp(0.0, 1.0);
+        p.rect(bar.x, bar.y + bar.h * 0.5 - 2.0, bar.w, 4.0, 2.0, theme::WELL);
+        p.rect(bar.x, bar.y + bar.h * 0.5 - 2.0, bar.w * v, 4.0, 2.0, DECK[d]);
+        p.rect(bar.x + bar.w * v - 5.0, bar.y + bar.h * 0.5 - 7.0, 10.0, 14.0, 3.0, TEXT);
+        let shown = format!("{:.0}", v * 100.0);
+        p.text(r.x + r.w - pad - p.text_width(label, &shown), y + row * 0.5 + 4.0, label, &shown);
+        hit(s, bar, Target::FxParam(k));
+    }
 }
 
 fn samplers(p: &mut Painter, s: &mut State, r: Rect) {

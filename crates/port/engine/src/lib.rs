@@ -78,9 +78,9 @@ pub use controls::{
     KEYBOARD_SEMITONES, MIC_FX_UNIT, NUM_DECKS, NUM_EFFECT_UNITS, NUM_HOTCUES, XFADER_CUT_IN,
 };
 pub use effects::{
-    color_fx_name, effect_name, parameter_names, plugin_index, InstrumentView, NoteInput, PluginLink,
-    AVAILABLE_EFFECTS, COLOR_FX, DEFAULT_EFFECTS, MAX_BUTTON_PARAMETERS, MAX_PARAMETERS, MAX_PLUGINS, PLUGIN_BASE,
-    SCOPE_BINS,
+    color_fx_name, effect_name, parameter_defaults, parameter_names, plugin_index, InstrumentView, NoteInput,
+    PluginLink, AVAILABLE_EFFECTS, COLOR_FX, DEFAULT_EFFECTS, MAX_BUTTON_PARAMETERS, MAX_PARAMETERS, MAX_PLUGINS,
+    PLUGIN_BASE, SCOPE_BINS,
 };
 pub use output::{
     channel_names, controller_routes, deck_outputs_split, default_output_device, input_devices, output_devices,

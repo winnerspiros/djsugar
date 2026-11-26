@@ -51,6 +51,36 @@ impl Biquad {
         self.set(1.0 + alpha * a, -2.0 * cos, 1.0 - alpha * a, 1.0 + alpha / a, -2.0 * cos, 1.0 - alpha / a);
     }
 
+    /// Everything under `freq` lifted or cut by `db`.
+    pub fn set_low_shelf(&mut self, sample_rate: f64, freq: f64, q: f64, db: f64) {
+        let (cos, alpha) = Self::prewarp(sample_rate, freq, q);
+        let a = 10f64.powf(db / 40.0);
+        let (up, down, s) = (a + 1.0, a - 1.0, 2.0 * a.sqrt() * alpha);
+        self.set(
+            a * (up - down * cos + s),
+            2.0 * a * (down - up * cos),
+            a * (up - down * cos - s),
+            up + down * cos + s,
+            -2.0 * (down + up * cos),
+            up + down * cos - s,
+        );
+    }
+
+    /// Everything over `freq` lifted or cut by `db`.
+    pub fn set_high_shelf(&mut self, sample_rate: f64, freq: f64, q: f64, db: f64) {
+        let (cos, alpha) = Self::prewarp(sample_rate, freq, q);
+        let a = 10f64.powf(db / 40.0);
+        let (up, down, s) = (a + 1.0, a - 1.0, 2.0 * a.sqrt() * alpha);
+        self.set(
+            a * (up + down * cos + s),
+            -2.0 * a * (down + up * cos),
+            a * (up + down * cos - s),
+            up - down * cos + s,
+            2.0 * (down - up * cos),
+            up - down * cos - s,
+        );
+    }
+
     fn prewarp(sample_rate: f64, freq: f64, q: f64) -> (f64, f64) {
         let w = 2.0 * PI * freq.clamp(10.0, sample_rate * 0.45) / sample_rate;
         (w.cos(), w.sin() / (2.0 * q))

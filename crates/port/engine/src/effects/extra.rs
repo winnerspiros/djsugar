@@ -4,7 +4,7 @@
 
 use std::f32::consts::{PI, TAU};
 
-use super::{beats, glide, soft, tap, Ctx, Echo, Line, MAX_PARAMETERS};
+use super::{beats, glide, soft, tap, Ctx, Echo, Line, KNOBS};
 use crate::dsp::Svf;
 
 // ---------------------------------------------------------------------------
@@ -225,7 +225,7 @@ impl Drive {
         self.fresh = true;
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Drive: 0 to 24 dB into the saturator (more turns a sine into a
         // square whose highest harmonics alias however it is done). Tone: a
         // 1.5 to 20 kHz low-pass.
@@ -318,7 +318,7 @@ impl Chorus {
         self.unlocked = true;
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Time: one sweep every 1 to 4 beats. Depth: how far the voices
         // swing and how loud they are. Spread: mono to wide.
         let cycle = beats(p[0], 0, 2);
@@ -408,7 +408,7 @@ impl Ladder {
         self.fresh = true;
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS]) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS]) {
         // Cutoff: 60 Hz to 20 kHz. Resonance: up to just short of
         // self-oscillation. Drive: 0 to 18 dB into the ladder.
         let hz = (60.0 * (20_000.0f32 / 60.0).powf(p[0])).min(0.45 * self.sample_rate);
@@ -548,7 +548,7 @@ impl Hall {
         self.fresh = true;
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS]) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS]) {
         // Decay: 1 to 12 seconds. Pre-delay: 0 to 120 ms. Damping: how
         // fast the highs die (a 16 kHz to 2 kHz low-pass in the lines).
         let hz = 16_000.0 * (2_000.0f32 / 16_000.0).powf(p[2]);
@@ -661,7 +661,7 @@ impl FilterEcho {
         self.mix = self.mix_target;
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         // Time and feedback as Echo; Filter: 0.5 is none, left a low-pass
         // down to 300 Hz, right a high-pass up to 3 kHz; send.
         let side = p[2] - 0.5;
@@ -735,7 +735,7 @@ pub(super) struct Tremolo {
 }
 
 impl Tremolo {
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         if !self.sweep.locked {
             self.depth = p[1];
             self.gain = 1.0;
@@ -775,7 +775,7 @@ pub(super) struct Autopan {
 }
 
 impl Autopan {
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         if !self.sweep.locked {
             self.width = p[1];
         }
@@ -837,7 +837,7 @@ impl TapeEcho {
         self.age = self.age_target;
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         self.echo.set_time(beats(p[0], -4, 2), ctx);
         self.base = self.echo.target;
         // A little over one, so a full knob builds up into the tape's saturation instead of dying away.
@@ -944,7 +944,7 @@ impl Glitch {
         *self = Self { len, fade, seed, ..Self::new(48_000.0) };
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         let step = beats(p[0], -4, 0);
         self.sweep.prepare(step, ctx);
         self.frames = ((step * ctx.beat_seconds * ctx.sample_rate) as usize).clamp(64, self.len / 2);
@@ -1092,7 +1092,7 @@ impl Backspin {
         *self = Self { len, mix, mix_target: mix, ..Self::new(48_000.0) };
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         self.sweep.prepare(1.0, ctx);
         self.beat = ctx.beat_seconds * ctx.sample_rate;
         self.frames = (beats(p[0], -2, 3) * self.beat).clamp(256.0, self.len as f32);
@@ -1185,7 +1185,7 @@ impl PitchShift {
         *self = Self::new(self.sample_rate);
     }
 
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS]) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS]) {
         self.semitones_target = (p[0].clamp(0.0, 1.0) * 2.0 - 1.0) * SHIFT;
         self.mix_target = p[1].clamp(0.0, 1.0);
         self.window = ((0.025 + 0.075 * p[2].clamp(0.0, 1.0)) * self.sample_rate).clamp(64.0, (self.len - 4) as f32);
@@ -1288,7 +1288,7 @@ impl Default for Compressor {
 }
 
 impl Compressor {
-    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+    pub(super) fn prepare(&mut self, p: &[f32; KNOBS], ctx: Ctx) {
         self.amount_target = p[0].clamp(0.0, 1.0);
         self.mix_target = p[3].clamp(0.0, 1.0);
         if self.fresh {

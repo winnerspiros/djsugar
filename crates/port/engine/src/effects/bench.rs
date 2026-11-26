@@ -160,7 +160,8 @@ fn an_empty_pool_leaves_the_effect_off_until_memory_comes_back() {
 #[test]
 fn every_effect_is_silent_on_silence() {
     for kind in KINDS {
-        if kind == Kind::Noise {
+        // These two add a sound of their own.
+        if matches!(kind, Kind::Noise | Kind::Metronome) {
             continue;
         }
         let mut inst = instance(kind, defaults(kind));
@@ -186,7 +187,10 @@ fn every_effect_stays_finite_and_bounded_at_its_extremes() {
                 assert!(y[0].is_finite() && y[1].is_finite(), "{kind:?} {p:?} blew up");
                 peak = peak.max(y[0].abs()).max(y[1].abs());
             }
-            assert!(peak < 8.0, "{kind:?} {p:?} peaked at {peak}");
+            // These are asked for their lift: two bells of 18 dB on one spot, or 40 dB of gain.
+            let lifts = matches!(kind, Kind::GraphicEq | Kind::ParamEq | Kind::AutoGain);
+            let most = if lifts { 200.0 } else { 8.0 };
+            assert!(peak < most, "{kind:?} {p:?} peaked at {peak}");
         }
     }
 }

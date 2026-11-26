@@ -325,11 +325,32 @@ fn main() {
             if ui.tap("FxName(0, 0)") {
                 ui.render(&mut r);
                 save(&r, &out.join(format!("{name}-fx.png")));
-                if !ui.tap("FxPick(0, 0, 4)") {
+                // The effects are grouped: the last group holds the equalizers.
+                if ui.tap("Submenu(5)") {
+                    ui.render(&mut r);
+                    save(&r, &out.join(format!("{name}-fx-group.png")));
+                }
+                if !ui.tap("FxPick(0, 0, 29)") {
                     faults.push(format!("{name}: no effect list"));
                 }
                 ui.render(&mut r);
                 save(&r, &out.join(format!("{name}-fx-on.png")));
+                // Its own parameters open from the same list, one slider each.
+                if ui.tap("FxName(0, 0)") {
+                    ui.render(&mut r);
+                    if ui.tap("FxEdit(0, 0)") {
+                        ui.render(&mut r);
+                        let sliders = ui.targets().iter().filter(|(t, _)| t.starts_with("FxParam(")).count();
+                        if sliders != 8 {
+                            faults.push(format!("{name}: the graphic equalizer shows {sliders} sliders, not 8"));
+                        }
+                        save(&r, &out.join(format!("{name}-fx-edit.png")));
+                    } else {
+                        faults.push(format!("{name}: no way to an effect's parameters"));
+                    }
+                    ui.key(Key::Escape, Mods::default());
+                    ui.render(&mut r);
+                }
             } else {
                 faults.push(format!("{name}: no effects bar"));
             }

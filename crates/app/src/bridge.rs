@@ -30,6 +30,7 @@ fn fx(reg: &ControlRegistry, d: usize, set: FxSet) {
         FxSet::Kind(slot, k) => put(&effect_group(d, slot), "loaded_effect", f64::from(k)),
         FxSet::On(slot, on) => put(&effect_group(d, slot), "enabled", f64::from(u8::from(on))),
         FxSet::Meta(slot, v) => put(&effect_group(d, slot), "meta", f64::from(v)),
+        FxSet::Param(slot, k, v) => put(&effect_group(d, slot), &format!("parameter{}", k + 1), f64::from(v)),
         FxSet::Mix(v) => put(&effect_unit_group(d), "mix", f64::from(v)),
         FxSet::Pad(kind, beats, on) => {
             let u = djsugar_engine::pad_fx_unit(d);
@@ -110,6 +111,12 @@ impl Bridge {
             (self.get(&g, "loaded_effect") as u8, self.get(&g, "enabled") != 0.0, self.get(&g, "meta") as f32)
         });
         (slots, self.get(&effect_unit_group(d), "mix") as f32)
+    }
+
+    /// The parameters of a slot's effect as the engine holds them, each 0 to 1.
+    pub fn fx_params(&self, d: usize, slot: usize) -> crate::state::FxParams {
+        let g = effect_group(d, slot);
+        std::array::from_fn(|k| self.get(&g, &format!("parameter{}", k + 1)) as f32)
     }
 
     pub fn status(&self) -> String {
