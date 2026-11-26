@@ -692,9 +692,140 @@ impl FilterEcho {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Tremolo and Autopan
+
+/// A beat-locked sweep from 0 to 1, shared by the two effects below.
+#[derive(Default)]
+struct Sweep {
+    phase: f32,
+    step: f32,
+    locked: bool,
+}
+
+impl Sweep {
+    fn prepare(&mut self, cycle: f32, ctx: Ctx) {
+        self.step = 1.0 / (cycle * ctx.beat_seconds * ctx.sample_rate);
+        let mut fresh = !self.locked;
+        super::lock_to_beat(&mut self.phase, &mut self.step, &mut fresh, ctx.beat, cycle);
+        self.locked = true;
+    }
+
+    #[inline]
+    fn tick(&mut self) -> f32 {
+        let at = self.phase;
+        self.phase += self.step;
+        if self.phase >= 1.0 {
+            self.phase -= 1.0;
+        }
+        at
+    }
+}
+
+/// The level pulsing in time: a sine, a pump that ducks on the beat and recovers, or a gate. Rate is 1/16 to 4 beats,
+/// Width how much of the cycle the pump takes to recover or the gate stays open.
+#[derive(Default)]
+pub(super) struct Tremolo {
+    sweep: Sweep,
+    depth: f32,
+    depth_target: f32,
+    shape: u8,
+    width: f32,
+    gain: f32,
+}
+
+impl Tremolo {
+    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+        if !self.sweep.locked {
+            self.depth = p[1];
+            self.gain = 1.0;
+        }
+        self.sweep.prepare(beats(p[0], -4, 2), ctx);
+        self.depth_target = p[1];
+        self.shape = (p[2] * 2.0).round() as u8;
+        self.width = p[3].clamp(0.05, 0.95);
+    }
+
+    #[inline]
+    pub(super) fn process(&mut self, x: [f32; 2]) -> [f32; 2] {
+        let phase = self.sweep.tick();
+        let open = match self.shape {
+            0 => 0.5 + 0.5 * (phase * TAU).cos(),
+            1 => {
+                let t = (phase / self.width).min(1.0);
+                1.0 - (1.0 - t) * (1.0 - t)
+            }
+            _ => f32::from(u8::from(phase < self.width)),
+        };
+        glide(&mut self.depth, self.depth_target);
+        glide(&mut self.gain, 1.0 - self.depth * (1.0 - open));
+        [x[0] * self.gain, x[1] * self.gain]
+    }
+}
+
+/// The sound swung from side to side in time. Period is 1/4 to 4 beats, Width how far it goes, Smoothing how round the
+/// swing is: none jumps from one side to the other.
+#[derive(Default)]
+pub(super) struct Autopan {
+    sweep: Sweep,
+    width: f32,
+    width_target: f32,
+    smoothing: f32,
+    pan: f32,
+}
+
+impl Autopan {
+    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+        if !self.sweep.locked {
+            self.width = p[1];
+        }
+        self.sweep.prepare(beats(p[0], -2, 2), ctx);
+        self.width_target = p[1];
+        self.smoothing = p[2].clamp(0.0, 1.0);
+    }
+
+    #[inline]
+    pub(super) fn process(&mut self, x: [f32; 2]) -> [f32; 2] {
+        let sine = (self.sweep.tick() * TAU).sin();
+        // Less smoothing squares the swing off, towards a hard left and right.
+        let sharp = 1.0 + 24.0 * (1.0 - self.smoothing) * (1.0 - self.smoothing);
+        glide(&mut self.width, self.width_target);
+        glide(&mut self.pan, (sine * sharp).clamp(-1.0, 1.0) * self.width);
+        [x[0] * (1.0 - self.pan.max(0.0)), x[1] * (1.0 + self.pan.min(0.0))]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn ctx() -> Ctx {
+        Ctx { sample_rate: 48_000.0, beat_seconds: 0.5, beat: Some(0.0) }
+    }
+
+    #[test]
+    fn tremolo_pulses_once_a_cycle_and_never_adds_level() {
+        let mut t = Tremolo::default();
+        // One beat a cycle, full depth, gate shape, half open.
+        t.prepare(&[0.67, 1.0, 1.0, 0.5], ctx());
+        let out: Vec<f32> = (0..24_000).map(|_| t.process([1.0, 1.0])[0]).collect();
+        assert!(out.iter().all(|v| (0.0..=1.0).contains(v)));
+        assert!(out[6_000] > 0.95, "open in the first half: {}", out[6_000]);
+        assert!(out[20_000] < 0.05, "shut in the second: {}", out[20_000]);
+    }
+
+    #[test]
+    fn autopan_swings_to_each_side_and_does_nothing_at_no_width() {
+        let mut a = Autopan::default();
+        a.prepare(&[0.5, 1.0, 1.0, 0.0], ctx());
+        let out: Vec<[f32; 2]> = (0..24_000).map(|_| a.process([1.0, 1.0])).collect();
+        // A beat is 24 000 frames: a quarter in it is hard one way, three quarters in the other.
+        assert!(out[6_000][0] < 0.05 && out[6_000][1] > 0.95, "{:?}", out[6_000]);
+        assert!(out[18_000][1] < 0.05 && out[18_000][0] > 0.95, "{:?}", out[18_000]);
+        let mut a = Autopan::default();
+        a.prepare(&[0.5, 0.0, 1.0, 0.0], ctx());
+        assert!((0..24_000).all(|_| a.process([1.0, 1.0]) == [1.0, 1.0]));
+    }
 
     #[test]
     fn the_oversampler_passes_the_audio_band_flat() {

@@ -17,7 +17,7 @@ use crate::dsp::Svf;
 use crate::inputs::{input_group, MICROPHONE, NUM_INPUTS};
 
 /// The built-in effects, in `loaded_effect` order.
-pub const AVAILABLE_EFFECTS: [&str; 18] = [
+pub const AVAILABLE_EFFECTS: [&str; 20] = [
     "Echo",
     "Reverb",
     "Filter",
@@ -36,6 +36,8 @@ pub const AVAILABLE_EFFECTS: [&str; 18] = [
     "Hall",
     "Rev Roll",
     "Filter Echo",
+    "Tremolo",
+    "Autopan",
 ];
 
 /// Parameter knobs (`parameterK`) and buttons (`button_parameterK`) per slot.
@@ -242,9 +244,11 @@ enum Kind {
     Hall,
     RevRoll,
     FilterEcho,
+    Tremolo,
+    Autopan,
 }
 
-const KINDS: [Kind; 18] = [
+const KINDS: [Kind; 20] = [
     Kind::Echo,
     Kind::Reverb,
     Kind::Filter,
@@ -263,6 +267,8 @@ const KINDS: [Kind; 18] = [
     Kind::Hall,
     Kind::RevRoll,
     Kind::FilterEcho,
+    Kind::Tremolo,
+    Kind::Autopan,
 ];
 
 impl Kind {
@@ -283,9 +289,15 @@ impl Kind {
             | Kind::RevRoll
             | Kind::FilterEcho => Memory::Long,
             Kind::Reverb | Kind::Flanger | Kind::Chorus => Memory::Short,
-            Kind::Filter | Kind::Bitcrusher | Kind::Phaser | Kind::Gate | Kind::Noise | Kind::Drive | Kind::Ladder => {
-                Memory::None
-            }
+            Kind::Filter
+            | Kind::Bitcrusher
+            | Kind::Phaser
+            | Kind::Gate
+            | Kind::Noise
+            | Kind::Drive
+            | Kind::Ladder
+            | Kind::Tremolo
+            | Kind::Autopan => Memory::None,
         }
     }
 }
@@ -296,7 +308,7 @@ struct Manifest {
     defaults: &'static [f64],
 }
 
-const MANIFESTS: [Manifest; 18] = [
+const MANIFESTS: [Manifest; 20] = [
     Manifest { names: &["Time", "Feedback", "Ping Pong", "Send"], defaults: &[0.5, 0.5, 0.0, 1.0] },
     Manifest { names: &["Decay", "Bandwidth", "Damping", "Send"], defaults: &[0.5, 0.75, 0.5, 1.0] },
     Manifest { names: &["Low Pass", "Resonance", "High Pass"], defaults: &[1.0, 0.25, 0.0] },
@@ -315,6 +327,8 @@ const MANIFESTS: [Manifest; 18] = [
     Manifest { names: &["Decay", "Pre-delay", "Damping", "Send"], defaults: &[0.5, 0.3, 0.4, 1.0] },
     Manifest { names: &["Rate"], defaults: &[0.25] },
     Manifest { names: &["Time", "Feedback", "Filter", "Send"], defaults: &[0.5, 0.6, 0.75, 1.0] },
+    Manifest { names: &["Rate", "Depth", "Shape", "Width"], defaults: &[0.67, 0.8, 0.0, 0.5] },
+    Manifest { names: &["Period", "Width", "Smoothing"], defaults: &[0.75, 0.8, 0.5] },
 ];
 
 /// The beat switch's range: 1/16 to 4 beats, as powers of two.
@@ -335,6 +349,8 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
         Kind::EchoOut | Kind::Spiral => Some((0, -2, 0, false)),
         Kind::Brake => Some((0, 0, 3, false)),
         Kind::Chorus => Some((0, 0, 2, false)),
+        Kind::Tremolo => Some((0, -4, 2, false)),
+        Kind::Autopan => Some((0, -2, 2, false)),
         Kind::Reverb | Kind::Filter | Kind::Bitcrusher | Kind::Noise | Kind::Drive | Kind::Ladder | Kind::Hall => None,
     }
 }
@@ -346,7 +362,7 @@ fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
     match kind {
         Kind::Echo | Kind::Reverb | Kind::Hall => [None, None, None, Some(meta)],
         Kind::Filter => [Some(1.0), None, Some(meta), None],
-        Kind::Flanger | Kind::Phaser | Kind::Gate => [None, Some(meta), None, None],
+        Kind::Flanger | Kind::Phaser | Kind::Gate | Kind::Tremolo | Kind::Autopan => [None, Some(meta), None, None],
         // Bitcrusher and Noise leave their second control to the FX bar's
         // slider.
         Kind::Bitcrusher => [None, Some(1.0 - 0.95 * meta), None, None],
@@ -715,6 +731,8 @@ struct Instance {
     drive: extra::Drive,
     chorus: extra::Chorus,
     ladder: extra::Ladder,
+    tremolo: extra::Tremolo,
+    autopan: extra::Autopan,
     hall: extra::Hall,
     filter_echo: extra::FilterEcho,
 }
@@ -748,6 +766,8 @@ impl Instance {
             drive: extra::Drive::new(sample_rate),
             chorus: extra::Chorus::new(sample_rate),
             ladder: extra::Ladder::new(sample_rate),
+            tremolo: extra::Tremolo::default(),
+            autopan: extra::Autopan::default(),
             hall: extra::Hall::new(sample_rate),
             filter_echo: extra::FilterEcho::new(sample_rate),
         }
@@ -796,6 +816,8 @@ impl Instance {
             Some(Kind::Drive) => self.drive.reset(),
             Some(Kind::Chorus) => self.chorus.reset(&mut self.mem),
             Some(Kind::Ladder) => self.ladder.reset(),
+            Some(Kind::Tremolo) => self.tremolo = extra::Tremolo::default(),
+            Some(Kind::Autopan) => self.autopan = extra::Autopan::default(),
             Some(Kind::Hall) => self.hall.reset(&mut self.mem),
             Some(Kind::FilterEcho) => self.filter_echo.reset(&mut self.mem),
             None => {}
@@ -826,6 +848,8 @@ impl Instance {
             Some(Kind::Drive) => self.drive.prepare(p, ctx),
             Some(Kind::Chorus) => self.chorus.prepare(p, ctx),
             Some(Kind::Ladder) => self.ladder.prepare(p),
+            Some(Kind::Tremolo) => self.tremolo.prepare(p, ctx),
+            Some(Kind::Autopan) => self.autopan.prepare(p, ctx),
             Some(Kind::Hall) => self.hall.prepare(p),
             Some(Kind::FilterEcho) => self.filter_echo.prepare(p, ctx),
             None => {}
@@ -850,6 +874,8 @@ impl Instance {
             Some(Kind::Drive) => self.drive.process(x),
             Some(Kind::Chorus) => self.chorus.process(&mut self.mem, x),
             Some(Kind::Ladder) => self.ladder.process(x),
+            Some(Kind::Tremolo) => self.tremolo.process(x),
+            Some(Kind::Autopan) => self.autopan.process(x),
             Some(Kind::Hall) => self.hall.process(&mut self.mem, x),
             Some(Kind::FilterEcho) => self.filter_echo.process(&mut self.mem, x),
             None => x,

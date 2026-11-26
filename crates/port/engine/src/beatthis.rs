@@ -160,11 +160,12 @@ mod tests {
         assert_eq!(beats.len(), 99);
     }
 
-    /// Runs only where the models are in `DJSUGAR_MODELS` (they aren't
-    /// downloaded in tests).
+    /// Runs only where `DJSUGAR_MODELS` names a folder with the models: ones the app downloaded for the user are left
+    /// alone, since loading them here would change the grids the other tests expect.
     #[test]
     fn puts_bar_one_on_a_downbeat() {
-        if MODELS.iter().any(|(n, _)| crate::separation::model(n).is_none()) {
+        let named = std::env::var_os("DJSUGAR_MODELS").is_some();
+        if !named || MODELS.iter().any(|(n, _)| crate::separation::model(n).is_none()) {
             eprintln!("skipped: no Beat This! models in DJSUGAR_MODELS");
             return;
         }
