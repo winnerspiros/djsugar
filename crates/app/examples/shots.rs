@@ -92,6 +92,9 @@ fn main() {
     // Saved state goes to a fresh folder, so runs neither read nor change the DJ's own.
     let data = out.join("data");
     let _ = std::fs::remove_dir_all(&data);
+    // A sound of the DJ's own for the pads.
+    std::fs::create_dir_all(data.join("samples")).expect("samples dir");
+    tone(&data.join("samples").join("My Horn.wav"));
     djsugar::set_data_dir(data);
     if std::env::var_os("DJSUGAR_MUSIC").is_none() {
         let music = out.join("music");
@@ -256,11 +259,47 @@ fn main() {
                     faults.push(format!("{name}: new playlist has no name field"));
                 }
             }
+            // A long press on a sample pad lists the samples, the DJ's own sound last; a pick lands on the pad.
+            if ui.tap("Mode(0, Samples)")
+                && let Some((_, [x, y, w, h])) = ui.targets().into_iter().find(|(t, _)| t == "Pad(0, 0)")
+            {
+                ui.context((x + w * 0.5) * scale, (y + h * 0.5) * scale);
+                ui.render(&mut r);
+                if ui.targets().iter().any(|(t, _)| t == "Picker") {
+                    ui.wheel(100.0, 100.0, -1e5);
+                    ui.render(&mut r);
+                    save(&r, &out.join(format!("{name}-picker.png")));
+                    ui.tap("PickerClose");
+                    ui.render(&mut r);
+                } else {
+                    faults.push(format!("{name}: a held sample pad lists nothing"));
+                }
+            }
             // The pads' stems layer.
             if ui.tap("Mode(0, Stems)") {
                 ui.render(&mut r);
                 save(&r, &out.join(format!("{name}-stems.png")));
                 ui.tap("Mode(0, Cues)");
+            }
+            // The first-mix tour starts from the Help menu, shows its card and ends from it.
+            ui.tap("AppMenu");
+            ui.render(&mut r);
+            ui.tap("Submenu(2)");
+            ui.render(&mut r);
+            if ui.tap("Tour") {
+                ui.render(&mut r);
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-tour.png")));
+                if !ui.tap("TourSkip") || !ui.tap("Tour") {
+                    faults.push(format!("{name}: the tour's card has no buttons"));
+                }
+            } else {
+                faults.push(format!("{name}: Help has no tour"));
+                ui.back();
+            }
+            ui.render(&mut r);
+            if ui.targets().iter().any(|(t, _)| t == "TourCard") {
+                faults.push(format!("{name}: the tour did not end"));
             }
             // The effects bar: a slot's list opens, a pick loads it and turns it on.
             if !ui.targets().iter().any(|(t, _)| t == "FxName(0, 0)") {

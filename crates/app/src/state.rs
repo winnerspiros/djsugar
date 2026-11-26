@@ -92,6 +92,12 @@ pub enum Target {
     Quit,
     /// Opens the guide (0), the problem report (1) or the folder the app keeps its files in (2).
     Open(u8),
+    /// Starts the first-mix tour, or ends it.
+    Tour,
+    /// Moves the tour on without doing its step.
+    TourSkip,
+    /// The tour's card: taps on it go no further.
+    TourCard,
     Find,
     LoadPick(usize),
     /// The track menu's stars, 1 to 5; the lit one again clears them.
@@ -223,6 +229,8 @@ pub enum ListOp {
     Delete,
     /// Starts typing a new name in the sidebar.
     Rename,
+    /// Writes the list as a file other players read.
+    Export,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -345,7 +353,10 @@ fn short(name: &str) -> &str {
 }
 
 pub fn sample_name(s: &State, i: usize) -> String {
-    s.entries.get(i).map_or_else(String::new, |e| short(&e.title).to_string())
+    match i.checked_sub(SAMPLES.len()) {
+        Some(n) => s.sounds.get(n).map_or_else(String::new, |(name, _)| name.clone()),
+        None => s.entries.get(i).map_or_else(String::new, |e| short(&e.title).to_string()),
+    }
 }
 
 pub const BANKS: usize = 4;
@@ -669,6 +680,8 @@ pub struct State {
     pub crossfader: f32,
     pub samples: Vec<Option<Arc<Track>>>,
     pub pads: [[usize; 8 * BANKS]; 2],
+    /// The user's own sounds, which the pads count on from where the built-in samples end.
+    pub sounds: Vec<(String, std::path::PathBuf)>,
     pub bank: [usize; 2],
     /// Sample picker open for (deck, pad), its scroll and grid geometry.
     pub picker: Option<(usize, usize)>,
@@ -692,6 +705,8 @@ pub struct State {
     pub status: Option<String>,
     /// The message on screen, and when it came.
     pub toast: Option<(String, std::time::Instant)>,
+    /// The step the first-mix tour is on, while it runs.
+    pub tour: Option<usize>,
     /// What is carried, the pointer carrying it and where that is.
     pub carry: Option<(Carried, u64, (f32, f32))>,
     /// How far the list under the finger is pulled down past its top.
@@ -849,6 +864,7 @@ impl State {
             *p = i.min(SAMPLES.len().saturating_sub(1));
         }
         let desk = control.as_ref().map(Control::desk);
+        let sounds = crate::store::sounds();
         let mut s = Self {
             desk,
             control,
@@ -856,7 +872,8 @@ impl State {
             decks: std::array::from_fn(|_| DeckUi::new()),
             crossfader: 0.0,
             samples: vec![None; SAMPLES.len()],
-            pads: crate::store::load_pads().unwrap_or(pads),
+            pads: crate::store::load_pads(SAMPLES.len(), &sounds).unwrap_or(pads),
+            sounds,
             bank: [0; 2],
             picker: None,
             picker_scroll: 0.0,
@@ -879,6 +896,7 @@ impl State {
             jobs: channel(),
             status,
             toast: None,
+            tour: None,
             last_msgs: Default::default(),
             out_rate,
             auto: None,
@@ -1104,6 +1122,9 @@ impl State {
                 }
             }
             self.telemetry = c.poll();
+        }
+        if let Some(at) = self.tour {
+            self.tour = Some(crate::tour::advance(self, at));
         }
         for ask in self.desk.as_ref().map(|d| d.poll()).unwrap_or_default() {
             match ask {
@@ -1557,6 +1578,27 @@ impl State {
                     Some(i) => self.load_deck(d, i),
                     None => self.status = Some("That playlist is empty".into()),
                 }
+                return;
+            }
+            ListOp::Export => {
+                let (name, keys) = &self.playlists[n];
+                let tracks: Vec<_> = keys
+                    .iter()
+                    .filter_map(|k| self.entries.iter().find(|e| entry_key(e) == *k))
+                    .filter_map(|e| match &e.source {
+                        Source::File(p) => Some((e.artist.as_ref(), e.title.as_ref(), p.as_ref())),
+                        Source::Sample(_) => None,
+                    })
+                    .collect();
+                self.status = Some(match crate::store::export(name, &tracks) {
+                    Some(file) => {
+                        if let Some(folder) = file.parent() {
+                            crate::open::open(&folder.to_string_lossy());
+                        }
+                        format!("Written to {}", file.display())
+                    }
+                    None => "The playlist could not be written".into(),
+                });
                 return;
             }
             ListOp::Up if n > 0 => self.playlists.swap(n, n - 1),
@@ -2165,6 +2207,7 @@ impl State {
             && self.decks[d].mode == Mode::Samples
         {
             self.picker = Some((d, p));
+            self.find_sounds();
             let at = self.pads[d][self.bank[d] * 8 + p];
             self.picker_scroll = (at / self.picker_grid.cols.max(1)) as f32 * self.picker_grid.cell.1;
         }
@@ -2321,11 +2364,32 @@ impl State {
         if self.settings.on(crate::settings::Opt::TempoUp) { up } else { -up }
     }
 
+    /// Looks in the folder again, keeping each pad on its sound though the list has moved under it.
+    fn find_sounds(&mut self) {
+        let found = crate::store::sounds();
+        if found == self.sounds {
+            return;
+        }
+        let built = SAMPLES.len();
+        for pad in self.pads.iter_mut().flatten() {
+            if let Some(old) = pad.checked_sub(built).and_then(|n| self.sounds.get(n)) {
+                *pad = found.iter().position(|new| new.1 == old.1).map_or(0, |n| built + n);
+            }
+        }
+        self.sounds = found;
+    }
+
     fn pad(&mut self, deck: usize, pad: usize) {
         self.sample(self.pads[deck % 2][self.bank[deck % 2] * 8 + pad]);
     }
 
     fn sample(&mut self, i: usize) {
+        if let Some((name, path)) = i.checked_sub(SAMPLES.len()).and_then(|n| self.sounds.get(n)).cloned() {
+            if let Some(c) = &mut self.control {
+                c.sample(&name, path, 0.9);
+            }
+            return;
+        }
         match self.samples.get(i).cloned().flatten() {
             Some(_) => self.play_sample(i),
             None => self.load(Job::Sample(i, true), i),
@@ -2703,11 +2767,22 @@ impl State {
                 self.settings.set(o, (self.settings.get(o) + 1) % choices);
             }
             Target::Quit => self.quit = true,
+            Target::Tour => {
+                self.app_menu = false;
+                self.submenu = None;
+                self.tour = if self.tour.is_some() { None } else { Some(0) };
+            }
+            Target::TourSkip => self.tour = self.tour.map(|at| (at + 1).min(crate::tour::STEPS.len() - 1)),
             Target::Open(n) => {
                 self.app_menu = false;
                 let what = match n {
                     0 => Some(crate::open::HOME.to_string()),
                     1 => Some(crate::open::ISSUES.to_string()),
+                    // The folder the user's own pad sounds go in, made on first asking.
+                    3 => crate::store::dir().map(|d| d.join("samples")).and_then(|d| {
+                        std::fs::create_dir_all(&d).ok()?;
+                        Some(d.to_string_lossy().into_owned())
+                    }),
                     _ => crate::store::dir().map(|d| d.to_string_lossy().into_owned()),
                 };
                 if !what.is_some_and(|w| crate::open::open(&w)) {
@@ -3213,10 +3288,10 @@ impl State {
                     let col = ((d.last.0 - r.x) / g.cell.0) as usize;
                     let row = ((y - r.y + self.picker_scroll) / g.cell.1) as usize;
                     let i = row * g.cols + col;
-                    if col < g.cols && i < SAMPLES.len() {
+                    if col < g.cols && i < SAMPLES.len() + self.sounds.len() {
                         self.pads[deck][self.bank[deck] * 8 + pad] = i;
                         self.sample(i);
-                        crate::store::save_pads(&self.pads);
+                        crate::store::save_pads(&self.pads, SAMPLES.len(), &self.sounds);
                     }
                 }
             }
@@ -3401,8 +3476,10 @@ impl State {
             Target::HubList => self.hub_scroll(-delta.1),
             Target::Picker => {
                 let g = self.picker_grid;
-                let rows = SAMPLES.len().div_ceil(g.cols.max(1)) as f32;
-                let max = (rows * g.cell.1 - r.h).max(0.0);
+                let rows = (SAMPLES.len() + self.sounds.len()).div_ceil(g.cols.max(1)) as f32;
+                // The list is the last of the picker's areas; the first is the card around it.
+                let list = self.hits.iter().rev().find(|h| h.target == t).map_or(r.h, |h| h.rect.h);
+                let max = (rows * g.cell.1 - list).max(0.0);
                 self.picker_scroll = (self.picker_scroll - delta.1).clamp(0.0, max);
             }
             Target::Xy => {

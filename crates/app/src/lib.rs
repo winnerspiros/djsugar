@@ -18,6 +18,7 @@ mod automix;
 mod sugar;
 mod sugardeck;
 mod theme;
+mod tour;
 
 use sugar_ui::{Fonts, Painter};
 

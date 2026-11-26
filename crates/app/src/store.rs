@@ -119,21 +119,62 @@ impl Store {
     }
 }
 
+/// The user's own pad sounds: every audio file in the `samples` folder of the app's files, by name.
+pub fn sounds() -> Vec<(String, PathBuf)> {
+    let Some(d) = dir() else { return Vec::new() };
+    let mut found: Vec<_> = std::fs::read_dir(d.join("samples"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file() && djsugar_engine::scan::is_audio(p))
+        .filter_map(|p| Some((p.file_stem()?.to_str()?.to_string(), p)))
+        .collect();
+    found.sort();
+    found
+}
+
+/// What a pad's sample is written as: a built-in one its number, one of the user's (`built` and up) its file's name
+/// after a `/`, which no number and no file name starts with.
+fn pad_word(i: usize, built: usize, sounds: &[(String, PathBuf)]) -> String {
+    let file = i.checked_sub(built).and_then(|n| sounds.get(n)).and_then(|(_, p)| p.file_name()?.to_str());
+    match file {
+        Some(f) if !f.contains([',', '\n']) => format!("/{f}"),
+        Some(_) => "0".into(),
+        None => i.min(built.saturating_sub(1)).to_string(),
+    }
+}
+
+fn pad_of(word: &str, built: usize, sounds: &[(String, PathBuf)]) -> Option<usize> {
+    match word.strip_prefix('/') {
+        // A sound since taken away leaves the pad on the first sample.
+        Some(file) => Some(
+            sounds
+                .iter()
+                .position(|(_, p)| p.file_name().and_then(|f| f.to_str()) == Some(file))
+                .map_or(0, |n| built + n),
+        ),
+        None => word.parse().ok().filter(|i| *i < built),
+    }
+}
+
 /// Sample assigned to every pad of both decks, one line per deck.
-pub fn save_pads<const N: usize>(pads: &[[usize; N]; 2]) {
+pub fn save_pads<const N: usize>(pads: &[[usize; N]; 2], built: usize, sounds: &[(String, PathBuf)]) {
     let Some(d) = dir() else { return };
-    let text: String =
-        pads.iter().map(|row| row.iter().map(usize::to_string).collect::<Vec<_>>().join(",") + "\n").collect();
+    let text: String = pads
+        .iter()
+        .map(|row| row.iter().map(|i| pad_word(*i, built, sounds)).collect::<Vec<_>>().join(",") + "\n")
+        .collect();
     let _ = std::fs::create_dir_all(&d);
     let _ = std::fs::write(d.join("pads.txt"), text);
 }
 
-pub fn load_pads<const N: usize>() -> Option<[[usize; N]; 2]> {
+pub fn load_pads<const N: usize>(built: usize, sounds: &[(String, PathBuf)]) -> Option<[[usize; N]; 2]> {
     let text = std::fs::read_to_string(dir()?.join("pads.txt")).ok()?;
     let mut out = [[0; N]; 2];
     for (row, line) in out.iter_mut().zip(text.lines()) {
         for (slot, v) in row.iter_mut().zip(line.split(',')) {
-            *slot = v.parse().ok()?;
+            *slot = pad_of(v, built, sounds)?;
         }
     }
     Some(out)
@@ -175,6 +216,27 @@ pub fn load_streamed() -> Vec<(String, Vec<String>)> {
     load_lists("streamed.tsv")
 }
 
+/// A playlist as M3U text: each track's artist and title, then where its file is.
+fn m3u(tracks: &[(&str, &str, &Path)]) -> String {
+    let mut text = String::from("#EXTM3U\n");
+    for (artist, title, path) in tracks {
+        let by = if artist.is_empty() { String::new() } else { format!("{artist} - ") };
+        text += &format!("#EXTINF:-1,{by}{title}\n{}\n", path.display());
+    }
+    text
+}
+
+/// Writes a playlist into the `exports` folder of the app's files, named after it; the file written.
+pub fn export(name: &str, tracks: &[(&str, &str, &Path)]) -> Option<PathBuf> {
+    let d = dir()?.join("exports");
+    std::fs::create_dir_all(&d).ok()?;
+    let safe: String =
+        name.chars().map(|c| if c.is_control() || "/\\:*?\"<>|".contains(c) { '_' } else { c }).collect();
+    let file = d.join(format!("{}.m3u8", safe.trim()));
+    std::fs::write(&file, m3u(tracks)).ok()?;
+    Some(file)
+}
+
 fn save_lists(file: &str, lists: &[(String, Vec<String>)]) {
     let Some(d) = dir() else { return };
     let text: String = lists
@@ -200,6 +262,27 @@ fn load_lists(file: &str) -> Vec<(String, Vec<String>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_playlist_exports_as_m3u() {
+        let tracks = [("Daft", "Around", Path::new("/m/a.flac")), ("", "Untitled", Path::new("/m/b c.mp3"))];
+        assert_eq!(m3u(&tracks), "#EXTM3U\n#EXTINF:-1,Daft - Around\n/m/a.flac\n#EXTINF:-1,Untitled\n/m/b c.mp3\n");
+    }
+
+    #[test]
+    fn pads_keep_their_sounds_by_name() {
+        let sounds = |names: &[&str]| -> Vec<(String, PathBuf)> {
+            names.iter().map(|n| (n.to_string(), PathBuf::from(format!("/s/{n}.wav")))).collect()
+        };
+        let had = sounds(&["horn", "siren"]);
+        assert_eq!(pad_word(7, 10, &had), "7");
+        assert_eq!(pad_word(11, 10, &had), "/siren.wav");
+        // Another sound sorted in before it moves it one along; taken away, the pad falls back to the first sample.
+        assert_eq!(pad_of("/siren.wav", 10, &sounds(&["air", "horn", "siren"])), Some(12));
+        assert_eq!(pad_of("/siren.wav", 10, &sounds(&["horn"])), Some(0));
+        assert_eq!(pad_of("7", 10, &had), Some(7));
+        assert_eq!(pad_of("12", 10, &had), None);
+    }
 
     #[test]
     fn round_trips() {

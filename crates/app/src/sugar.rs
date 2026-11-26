@@ -94,6 +94,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     cue_menu(p, s, w, h);
     grid_menu(p, s, w, h);
     picker(p, s, w, h);
+    tour(p, s, w, h);
     toast(p, s, w, h);
     pulled(p, s);
     carried(p, s);
@@ -1198,6 +1199,34 @@ fn carried(p: &mut Painter, s: &State) {
     p.text_in(r.x + 14.0, r.y + 21.0, tw, st, &label);
 }
 
+/// The first-mix tour: a ring round the control its step asks for, and a card saying what to do.
+fn tour(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some(at) = s.tour else { return };
+    let steps = &crate::tour::STEPS;
+    let step = &steps[at.min(steps.len() - 1)];
+    p.layer();
+    if let Some(m) = step.mark.and_then(|t| s.rect_of(t)) {
+        p.glow(m.x - 3.0, m.y - 3.0, m.w + 6.0, m.h + 6.0, 9.0, 10.0, fade(ACCENT, 0x90));
+        p.outlined(m.x - 3.0, m.y - 3.0, m.w + 6.0, m.h + 6.0, 9.0, fade(ACCENT, 0x18), 2.0, ACCENT);
+    }
+    let cw = (w - 24.0).min(400.0);
+    let r = Rect::new((w - cw) * 0.5, h - 176.0, cw, 104.0);
+    theme::card(p, r, ACCENT);
+    hit(s, r, Target::TourCard);
+    let last = at + 1 >= steps.len();
+    let count = format!("{} OF {}", at + 1, steps.len());
+    p.text(r.x + 14.0, r.y + 22.0, Style { colour: ACCENT, ..SMALL }, &count);
+    p.text_in(r.x + 14.0, r.y + 44.0, r.w - 28.0, Style::new(14.0, Weight::Bold, TEXT), step.title);
+    for (n, line) in step.body.iter().enumerate() {
+        p.text_in(r.x + 14.0, r.y + 64.0 + n as f32 * 15.0, r.w - 28.0, Style { colour: GREY, ..ARTIST }, line);
+    }
+    let end = Rect::new(r.x + r.w - 70.0, r.y + 8.0, 60.0, 22.0);
+    button(p, s, end, if last { "DONE" } else { "END" }, last, ACCENT, Target::Tour);
+    if !last {
+        button(p, s, Rect::new(end.x - 66.0, end.y, 60.0, end.h), "SKIP", false, ACCENT, Target::TourSkip);
+    }
+}
+
 fn toast(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some((msg, at)) = &s.toast else { return };
     let age = at.elapsed();
@@ -1325,6 +1354,8 @@ fn list_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Line::item("Move down", Target::ListOp(n, L::Down)).enabled(n < last),
         Line::Rule,
         Line::item("Rename", Target::ListOp(n, L::Rename)),
+        // A phone keeps the app's files out of reach, so there is nowhere to hand the list over.
+        Line::item("Export as M3U", Target::ListOp(n, L::Export)).enabled(count > 0 && !cfg!(target_os = "android")),
         Line::item("Clear", Target::ListOp(n, L::Clear)).enabled(count > 0),
         Line::item("Delete playlist", Target::ListOp(n, L::Delete)),
     ];
@@ -1874,6 +1905,11 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     p.text(r.x + 24.0 + p.text_width(TAB, &head), r.y + 22.0, cs, &name);
     let done = Rect::new(r.x + r.w - 82.0, r.y + 6.0, 72.0, 24.0);
     button(p, s, done, "DONE", true, DECK[d], Target::PickerClose);
+    // Where sounds of the user's own are put to appear here; a phone has no folder to show.
+    if !cfg!(target_os = "android") {
+        let own = Rect::new(done.x - 118.0, done.y, 110.0, done.h);
+        button(p, s, own, "YOUR SOUNDS", false, DECK[d], Target::Open(3));
+    }
     let list = Rect::new(r.x + 8.0, r.y + 38.0, r.w - 16.0, r.h - 46.0);
     let cols = ((list.w / 150.0) as usize).max(2);
     let cell = (list.w / cols as f32, 30.0);
@@ -1881,7 +1917,8 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     hit(s, list, Target::Picker);
     let first = (s.picker_scroll / cell.1) as usize * cols;
     let rows = (list.h / cell.1) as usize + 2;
-    for i in first..(first + rows * cols).min(crate::state::SAMPLES.len()) {
+    let built = crate::state::SAMPLES.len();
+    for i in first..(first + rows * cols).min(built + s.sounds.len()) {
         let (c, row) = (i % cols, i / cols);
         let b = Rect::new(
             list.x + c as f32 * cell.0,
@@ -1904,6 +1941,10 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             1.0,
             if on { DECK[d] } else { theme::BORDER },
         );
+        // The user's own sounds wear a stripe.
+        if i >= built {
+            p.rect(b.x + 3.0, b.y + 5.0, 2.0, b.h - 10.0, 1.0, ACCENT);
+        }
         let label = crate::state::sample_name(s, i);
         p.text_in(
             b.x + 8.0,

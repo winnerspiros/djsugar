@@ -77,6 +77,7 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         _ => vec![
             Line::item("User Guide", Target::Open(0)),
             Line::item("Keyboard Shortcuts", Target::Prefs(3)),
+            Line::item("Your First Mix", Target::Tour).mark(Mark::Check(s.tour.is_some())),
             Line::Rule,
             Line::item("Report a Problem", Target::Open(1)),
             Line::item("Show the App's Files", Target::Open(2)),
