@@ -29,6 +29,40 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
+# Code that talks to servers or reads a script once is built small: it waits on the network or runs at load, so its
+# speed is not heard, and it is a large share of the binary. Sound, drawing and ciphers keep the full optimization.
+[profile.release.package]
+djsugar-spotify.opt-level = "s"
+librespot-core.opt-level = "s"
+librespot-audio.opt-level = "s"
+librespot-metadata.opt-level = "s"
+librespot-protocol.opt-level = "s"
+protobuf.opt-level = "s"
+protobuf-json-mapping.opt-level = "s"
+protobuf-support.opt-level = "s"
+quick-xml.opt-level = "s"
+governor.opt-level = "s"
+sysinfo.opt-level = "s"
+futures-timer.opt-level = "s"
+h2.opt-level = "s"
+http-body.opt-level = "s"
+http-body-util.opt-level = "s"
+hyper.opt-level = "s"
+hyper-rustls.opt-level = "s"
+hyper-util.opt-level = "s"
+tokio.opt-level = "s"
+tokio-rustls.opt-level = "s"
+tokio-stream.opt-level = "s"
+tokio-tungstenite.opt-level = "s"
+tokio-util.opt-level = "s"
+tungstenite.opt-level = "s"
+rustls.opt-level = "s"
+rustls-webpki.opt-level = "s"
+webpki-roots.opt-level = "s"
+boa_parser.opt-level = "s"
+boa_ast.opt-level = "s"
+boa_interner.opt-level = "s"
+
 # librespot-core 0.8.0 with changes marked "DJ Sugar": TLS in pure Rust, Android reports as Linux, audio key refusals
 # keep their code, an account without Premium no longer ends the app, and the build reads no git or clock.
 [patch.crates-io]

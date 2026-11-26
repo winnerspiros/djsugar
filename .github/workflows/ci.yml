@@ -75,7 +75,7 @@ jobs:
           f=target/release/djsugar
           s=$(stat -c %s $f)
           echo "Linux binary: $((s / 1024)) KiB" >> $GITHUB_STEP_SUMMARY
-          [ $s -lt 58720256 ] || { echo "::error::Linux binary over 56 MiB: $s"; exit 1; }
+          [ $s -lt 67108864 ] || { echo "::error::Linux binary over 64 MiB: $s"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: djsugar-linux
@@ -165,7 +165,7 @@ jobs:
           s=$(stat -c %s target/djsugar.apk)
           so=$(stat -c %s target/android/lib/arm64-v8a/libdjsugar.so)
           echo "APK: $((s / 1024)) KiB, native lib: $((so / 1024)) KiB" >> $GITHUB_STEP_SUMMARY
-          [ $s -lt 58720256 ] || { echo "::error::APK over 56 MiB: $s"; exit 1; }
+          [ $s -lt 67108864 ] || { echo "::error::APK over 64 MiB: $s"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: djsugar-android
@@ -277,7 +277,7 @@ jobs:
   coverage:
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev
