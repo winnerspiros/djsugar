@@ -95,6 +95,8 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     grid_menu(p, s, w, h);
     picker(p, s, w, h);
     toast(p, s, w, h);
+    pulled(p, s);
+    carried(p, s);
     track_menu(p, s, w, h);
     list_menu(p, s, w, h);
     column_menu(p, s, w, h);
@@ -1154,6 +1156,48 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect, railed: bool) {
 }
 
 /// The latest message, over every page near the bottom, fading out.
+/// A list pulled down past its top: what letting go will do, sliding in from under its header.
+fn pulled(p: &mut Painter, s: &State) {
+    if s.pull <= 0.0 {
+        return;
+    }
+    let (area, top) = if s.view == View::Stream { (s.hub_area, 0.0) } else { (s.library, 30.0) };
+    let ready = s.pull >= crate::state::PULL;
+    let msg = if ready { "Let go to refresh" } else { "Pull to refresh" };
+    let st = Style::new(12.0, Weight::Semibold, if ready { TEXT } else { GREY });
+    let tw = p.text_width(st, msg);
+    let y = area.y + top + (s.pull.min(crate::state::PULL) * 0.6 - 30.0).max(4.0);
+    let r = Rect::new(area.x + (area.w - tw) * 0.5 - 14.0, y, tw + 28.0, 28.0);
+    p.layer();
+    p.outlined(r.x, r.y, r.w, r.h, 14.0, theme::MENU, 1.0, if ready { ACCENT } else { theme::MENU_BORDER });
+    p.text(r.x + 14.0, r.y + 18.5, st, msg);
+}
+
+/// A track picked up from a list: its name under the finger, and the decks it can be dropped on outlined.
+fn carried(p: &mut Painter, s: &State) {
+    let Some((what, _, (x, y))) = s.carry else { return };
+    let name = match what {
+        crate::state::Carried::Track(i) => s.entries.get(i as usize).map(|e| (&*e.artist, &*e.title)),
+        crate::state::Carried::Hit(i) => s.hub.hits.get(i).map(|h| (h.artist.as_str(), h.title.as_str())),
+    };
+    let Some((artist, title)) = name else { return };
+    let label = if artist.is_empty() { title.to_string() } else { format!("{artist} - {title}") };
+    p.layer();
+    let over = s.deck_at(x, y);
+    for (d, zone) in s.deck_zones().into_iter().enumerate() {
+        if let Some(z) = zone {
+            let on = over == Some(d);
+            p.outlined(z.x, z.y, z.w, z.h, 8.0, fade(DECK[d], if on { 0x30 } else { 0x10 }), 2.0, DECK[d]);
+        }
+    }
+    let st = Style::new(12.5, Weight::Semibold, TEXT);
+    let tw = p.text_width(st, &label).min(280.0);
+    let r = Rect::new(x - tw * 0.5 - 14.0, y - 52.0, tw + 28.0, 32.0);
+    p.glow(r.x, r.y + 4.0, r.w, r.h, 16.0, 12.0, fade(rgb(0x000000), 0xa0));
+    p.outlined(r.x, r.y, r.w, r.h, 16.0, theme::MENU, 1.0, ACCENT);
+    p.text_in(r.x + 14.0, r.y + 21.0, tw, st, &label);
+}
+
 fn toast(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let Some((msg, at)) = &s.toast else { return };
     let age = at.elapsed();
@@ -1769,7 +1813,7 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
     }
     // XY pad in between
     let xr = Rect::new(r.x + gw + 10.0, r.y, cx - (r.x + gw) - 20.0, r.h);
-    let live = s.pressed(Target::Xy);
+    let live = s.pressed(Target::Xy) || s.station.on;
     if live {
         p.glow(xr.x, xr.y, xr.w, xr.h, 10.0, 12.0, fade(ACCENT, 0x60));
     }
@@ -1795,6 +1839,9 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
         p.outlined(px - 10.0, py - 10.0, 20.0, 20.0, 10.0, 0, 1.5, fade(ACCENT, 0x80));
     }
     hit(s, xr, Target::Xy);
+    let hold = s.station.hold;
+    let hb = Rect::new(xr.x + xr.w - 70.0, xr.y + 8.0, 62.0, 24.0);
+    button(p, s, hb, if hold { "HOLD" } else { "SNAP" }, hold, ACCENT, Target::XyHold);
 }
 
 /// Sample picker over everything: tap a sound to hear it on the pad.
@@ -1942,9 +1989,15 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
         }
         let h = &s.hub.hits[i];
         let (title, artist, secs) = (h.title.clone(), h.artist.clone(), h.seconds);
-        let tw = list.w - 2.0 * (bw + 6.0) - 90.0;
-        p.text_in(list.x + 12.0, y + 18.0, tw, Style::new(12.5, Weight::Semibold, TEXT), &title);
-        p.text_in(list.x + 12.0, y + 34.0, tw, ARTIST, &artist);
+        let pic = Rect::new(list.x + 8.0, y + 4.0, HUB_ROW - 8.0, HUB_ROW - 8.0);
+        match s.hub.thumbs.get(&h.id) {
+            Some(art) => art.draw(p, pic, 3.0),
+            None => p.rect(pic.x, pic.y, pic.w, pic.h, 3.0, RAISED),
+        }
+        let left = pic.x + pic.w + 10.0;
+        let tw = list.x + list.w - 2.0 * (bw + 6.0) - 90.0 - left;
+        p.text_in(left, y + 18.0, tw, Style::new(12.5, Weight::Semibold, TEXT), &title);
+        p.text_in(left, y + 34.0, tw, ARTIST, &artist);
         let t = mmss(secs as f32);
         p.text(list.x + list.w - 2.0 * (bw + 6.0) - 12.0 - p.text_width(ARTIST, &t), y + 26.0, ARTIST, &t);
         for (d, &colour) in DECK.iter().enumerate() {

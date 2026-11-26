@@ -227,6 +227,8 @@ pub(crate) struct DeckControls {
     /// keeps a silent playhead running, and the track carries on from it
     /// when the trick ends.
     pub(crate) slip_enabled: ControlHandle,
+    /// A deck paused while playing slows to a stop as a record does, instead of stopping dead.
+    pub(crate) vinyl_stop: ControlHandle,
     /// Where the silent playhead is while slipping, in seconds; -1 when not
     /// slipping (DJ Sugar's own, for the ghost playhead on the waveforms).
     pub(crate) slip_position: ControlHandle,
@@ -478,6 +480,7 @@ impl DeckControls {
             reverse: reg.toggle(g, "reverse"),
             reverseroll: reg.push(g, "reverseroll"),
             slip_enabled: reg.toggle(g, "slip_enabled"),
+            vinyl_stop: reg.toggle(g, "vinyl_stop"),
             slip_position: reg.create(g, "slip_position", -1.0, -1.0, f64::MAX, Behavior::Indicator),
             mute: reg.toggle(g, "mute"),
             play_indicator: reg.indicator(g, "play_indicator", 1.0),

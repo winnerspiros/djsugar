@@ -17,6 +17,12 @@ pub const DETAIL_FRAMES: usize = 256;
 /// The view switch fade, as long as the reference's reflow transition.
 pub const VIEW_FADE: std::time::Duration = std::time::Duration::from_millis(150);
 const TAP: f32 = 8.0;
+/// Seconds of track one turn of a platter is: a record at 33 1/3.
+const TURN_SECONDS: f64 = 1.8;
+/// A finger on a platter that has not moved for this long, in seconds, holds the record still.
+const JOG_STILL: f64 = 0.04;
+/// Two presses of a knob or fader within this are a double tap.
+const DOUBLE_TAP: std::time::Duration = std::time::Duration::from_millis(350);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Target {
@@ -101,6 +107,7 @@ pub enum Target {
     PickerClose,
     Scene(usize),
     Xy,
+    XyHold,
     StationTime,
     Iso(usize),
     Release(usize),
@@ -259,6 +266,8 @@ pub struct Station {
     pub scene: Scene,
     pub on: bool,
     pub xy: (f32, f32),
+    /// The pad keeps the effect on after the finger lifts.
+    pub hold: bool,
     pub time: f32,
     pub iso: [f32; 3],
     pub release: Release,
@@ -271,6 +280,7 @@ impl Default for Station {
             scene: Scene::Echo,
             on: false,
             xy: (0.5, 0.5),
+            hold: false,
             time: 0.5,
             iso: [0.0; 3],
             release: Release::Brake,
@@ -288,6 +298,17 @@ fn recordings_dir() -> Option<std::path::PathBuf> {
 }
 
 pub const LONG_PRESS_MS: u128 = 450;
+/// How far a list at its top is pulled down, in pixels, for letting go to refresh it.
+pub const PULL: f32 = 72.0;
+/// The pointer a right click stands in for.
+const CONTEXT: u64 = u64::MAX - 1;
+
+/// What a finger held on a list has picked up: a track of the library or a hit of a streaming search.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Carried {
+    Track(u32),
+    Hit(usize),
+}
 /// How long a message stays on screen.
 pub const TOAST: std::time::Duration = std::time::Duration::from_secs(6);
 
@@ -338,6 +359,14 @@ pub struct Hit {
     pub target: Target,
 }
 
+/// A hand on a platter: how far it turned since the last frame, when it last moved, and the speed it gave.
+#[derive(Clone, Copy, Debug, Default)]
+struct Jog {
+    turn: f32,
+    moved: Option<std::time::Instant>,
+    speed: f64,
+}
+
 #[derive(Debug)]
 pub struct Loaded {
     pub entry: Entry,
@@ -347,42 +376,75 @@ pub struct Loaded {
     pub grid: Option<sugar_analysis::Grid>,
     pub key: Option<sugar_analysis::Key>,
     pub lyrics: crate::lyrics::Lyrics,
-    /// The album art, `ART` by `ART` colours row by row, if the file or its folder has any.
-    pub art: Option<Box<[u32]>>,
+    /// The album art, if the file or its folder has any.
+    pub art: Option<Art>,
     /// The parts that are not music, in seconds.
     pub skips: Vec<(f64, f64)>,
 }
 
-/// Cells on a side of the deck's album art.
-pub const ART: usize = 32;
+/// A square picture ready to draw: a cover or a thumbnail.
+#[derive(Clone)]
+pub struct Art {
+    /// What the painter keeps it as.
+    pub key: u64,
+    pub side: usize,
+    pub rgba: Arc<[u8]>,
+}
 
-/// The album art for `path`, averaged down to `ART` by `ART` colours.
-fn art(path: &std::path::Path) -> Option<Box<[u32]>> {
-    let c = djsugar_engine::cover::find_sized(path, "", ART as u32 * 4)?;
-    let (w, h) = (c.width as usize, c.height as usize);
-    if w == 0 || h == 0 {
-        return None;
+impl std::fmt::Debug for Art {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Art({:x}, {})", self.key, self.side)
     }
-    let side = w.min(h);
-    let (ox, oy) = ((w - side) / 2, (h - side) / 2);
-    let mut out = vec![0u32; ART * ART];
-    for (i, cell) in out.iter_mut().enumerate() {
-        let (x0, y0) = (ox + i % ART * side / ART, oy + i / ART * side / ART);
-        let (x1, y1) = (ox + (i % ART + 1) * side / ART, oy + (i / ART + 1) * side / ART);
-        let mut sum = [0u32; 3];
-        let mut n = 0;
-        for y in y0..y1.max(y0 + 1) {
-            for x in x0..x1.max(x0 + 1) {
-                let p = &c.rgba[(y * w + x) * 4..][..3];
-                for k in 0..3 {
-                    sum[k] += u32::from(p[k]);
+}
+
+impl Art {
+    /// The middle square of `c`, averaged down to at most `side` pixels, kept under a key made from `name`.
+    pub fn square(name: &str, c: &djsugar_engine::cover::Cover, side: usize) -> Option<Self> {
+        use std::hash::{Hash, Hasher};
+        let (w, h) = (c.width as usize, c.height as usize);
+        let from = w.min(h);
+        if from == 0 || c.rgba.len() < w * h * 4 {
+            return None;
+        }
+        let side = side.min(from).min(sugar_ui::CELL);
+        let (ox, oy) = ((w - from) / 2, (h - from) / 2);
+        let mut rgba = vec![255u8; side * side * 4];
+        for (i, cell) in rgba.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+            let (x0, y0) = (ox + i % side * from / side, oy + i / side * from / side);
+            let (x1, y1) = (ox + (i % side + 1) * from / side, oy + (i / side + 1) * from / side);
+            let mut sum = [0u32; 3];
+            let mut n = 0;
+            for y in y0..y1.max(y0 + 1) {
+                for x in x0..x1.max(x0 + 1) {
+                    let p = &c.rgba[(y * w + x) * 4..][..3];
+                    for k in 0..3 {
+                        sum[k] += u32::from(p[k]);
+                    }
+                    n += 1;
                 }
-                n += 1;
+            }
+            for k in 0..3 {
+                cell[k] = (sum[k] / n) as u8;
             }
         }
-        *cell = ((sum[0] / n) << 16) | ((sum[1] / n) << 8) | (sum[2] / n);
+        let mut hash = std::collections::hash_map::DefaultHasher::new();
+        (name, side).hash(&mut hash);
+        Some(Self { key: hash.finish() | 1, side, rgba: rgba.into() })
     }
-    Some(out.into())
+
+    /// Draws it over the rectangle, handing it to the painter first if it has let go of it.
+    pub fn draw(&self, p: &mut sugar_ui::Painter, r: sugar_layout::Rect, radius: f32) {
+        if !p.pictures.has(self.key) {
+            p.pictures.set(self.key, self.side, self.side, &self.rgba);
+        }
+        p.picture(self.key, r.x, r.y, r.w, r.h, radius, sugar_ui::rgb(0xffffff));
+    }
+}
+
+/// The album art of the file at `path`.
+fn art(path: &std::path::Path) -> Option<Art> {
+    let c = djsugar_engine::cover::find_sized(path, "", 2 * sugar_ui::CELL as u32)?;
+    Art::square(&path.to_string_lossy(), &c, sugar_ui::CELL)
 }
 
 #[derive(Debug, Default)]
@@ -563,7 +625,6 @@ struct Drag {
     start: (f32, f32),
     last: (f32, f32),
     moved: bool,
-    resume: bool,
     at: std::time::Instant,
 }
 
@@ -589,11 +650,18 @@ pub struct State {
     pub library: Rect,
     pub hits: Vec<Hit>,
     drags: Vec<Drag>,
+    jog: [Jog; DECKS],
+    /// The last control pressed and when, to tell a double tap.
+    last_press: Option<(Target, std::time::Instant)>,
     read: Reader,
     jobs: (Sender<Done>, Receiver<Done>),
     pub status: Option<String>,
     /// The message on screen, and when it came.
     pub toast: Option<(String, std::time::Instant)>,
+    /// What is carried, the pointer carrying it and where that is.
+    pub carry: Option<(Carried, u64, (f32, f32))>,
+    /// How far the list under the finger is pulled down past its top.
+    pub pull: f32,
     /// The app's and the streaming page's last messages, to show each new one once.
     last_msgs: [String; 2],
     pub out_rate: u32,
@@ -767,6 +835,10 @@ impl State {
             library: Rect::new(0.0, 0.0, 0.0, 0.0),
             hits: Vec::with_capacity(128),
             drags: Vec::new(),
+            carry: None,
+            pull: 0.0,
+            jog: [Jog::default(); DECKS],
+            last_press: None,
             read,
             jobs: channel(),
             status,
@@ -837,6 +909,7 @@ impl State {
         s.side_tab = panel.saturating_sub(1).min(crate::sugar::SIDE_TABS.len() as u8 - 1);
         s.send_curve();
         s.send_phones();
+        s.send(Command::VinylStop(s.settings.on(crate::settings::Opt::VinylStop)));
         s
     }
 
@@ -994,8 +1067,41 @@ impl State {
             }
             self.telemetry = c.poll();
         }
+        self.jog_step();
         self.skip_step();
         self.auto_step();
+    }
+
+    /// Scratching: a platter under a finger turns its record as the finger turned since the last frame, and is
+    /// held still when the finger is. Letting go gives the record back to the deck.
+    fn jog_step(&mut self) {
+        for d in 0..DECKS {
+            let held = self.drags.iter().any(|g| g.target == Some(Target::Jog(d)));
+            let mut j = self.jog[d];
+            let now = std::time::Instant::now();
+            let since = j.moved.map_or(0.0, |at| (now - at).as_secs_f64());
+            if !held {
+                if j.moved.is_some() {
+                    self.send(Command::Scratch(d, None));
+                    self.jog[d] = Jog::default();
+                }
+                continue;
+            }
+            if j.moved.is_none() {
+                j = Jog { turn: 0.0, moved: Some(now), speed: 0.0 };
+                self.send(Command::Scratch(d, Some(0.0)));
+            } else if j.turn != 0.0 {
+                // Over the time since the finger last moved, so touches slower than frames do not stutter.
+                j.speed = f64::from(j.turn / std::f32::consts::TAU) * TURN_SECONDS / since.clamp(0.002, 0.05);
+                j.turn = 0.0;
+                j.moved = Some(now);
+                self.send(Command::Scratch(d, Some(j.speed)));
+            } else if j.speed != 0.0 && since > JOG_STILL {
+                j.speed = 0.0;
+                self.send(Command::Scratch(d, Some(0.0)));
+            }
+            self.jog[d] = j;
+        }
     }
 
     fn toggle_auto(&mut self) {
@@ -1645,13 +1751,16 @@ impl State {
 
     /// A right click: what holding there would open.
     pub fn context(&mut self, x: f32, y: f32) {
-        const CONTEXT: u64 = u64::MAX - 1;
         let target = self.hit(x, y);
         let now = std::time::Instant::now();
         let at = now.checked_sub(std::time::Duration::from_millis(LONG_PRESS_MS as u64)).unwrap_or(now);
-        self.drags.push(Drag { id: CONTEXT, target, start: (x, y), last: (x, y), moved: false, resume: false, at });
+        self.drags.push(Drag { id: CONTEXT, target, start: (x, y), last: (x, y), moved: false, at });
         self.holds();
         self.drags.retain(|d| d.id != CONTEXT);
+        if let Some((what, CONTEXT, at)) = self.carry {
+            self.carry = None;
+            self.put_down(what, false, at);
+        }
     }
 
     /// Ends typing a playlist's name, keeping it unless cancelled or left empty.
@@ -1913,17 +2022,22 @@ impl State {
             let c = if t.sync_lock { Command::SyncLeader(d, t.sync_leader < 2) } else { Command::SyncLock(d, true) };
             self.send(c);
         }
-        if self.track_menu.is_none()
-            && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
-            && g.target == Some(Target::Library)
+        if self.carry.is_none()
+            && self.track_menu.is_none()
+            && let Some(g) = self.drags.iter().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
         {
-            g.moved = true;
-            let row = ((g.start.1 - self.library.y - 30.0 + self.scroll) / self.row_h).floor();
-            if row >= 0.0 && g.start.1 > self.library.y + 30.0 {
-                self.track_menu = self.shown.get(row as usize).copied();
-                self.menu_at = g.start;
-                self.submenu = None;
-            }
+            let what = match g.target {
+                Some(Target::Library) if g.start.1 > self.library.y + 30.0 => {
+                    let row = (g.start.1 - self.library.y - 30.0 + self.scroll) / self.row_h;
+                    self.shown.get(row as usize).copied().map(Carried::Track)
+                }
+                Some(Target::HubList) => {
+                    let row = ((g.start.1 - self.hub_area.y + self.hub.scroll) / crate::sugar::HUB_ROW) as usize;
+                    (row < self.hub.hits.len()).then_some(Carried::Hit(row))
+                }
+                _ => None,
+            };
+            self.carry = what.map(|w| (w, g.id, g.start));
         }
         if self.fx_menu.is_none()
             && let Some(g) = self.drags.iter_mut().find(|g| !g.moved && g.at.elapsed().as_millis() >= LONG_PRESS_MS)
@@ -2100,6 +2214,7 @@ impl State {
             }
             Opt::FaderOn | Opt::FaderCurve | Opt::CutIn => self.send_curve(),
             Opt::CueMix | Opt::SplitCue | Opt::Ducking | Opt::DuckDepth => self.send_phones(),
+            Opt::VinylStop => self.send(Command::VinylStop(v != 0)),
             Opt::AutoGain | Opt::GainTarget => {
                 for d in 0..self.decks.len() {
                     let target = self.settings.gain_target();
@@ -2310,23 +2425,64 @@ impl State {
     pub fn pointer_down(&mut self, id: u64, x: f32, y: f32) {
         let target = self.hit(x, y);
         self.drags.retain(|d| d.id != id);
-        let resume = matches!(target, Some(Target::Jog(d)) if self.telemetry.decks[d].playing);
-        self.drags.push(Drag {
-            id,
-            target,
-            start: (x, y),
-            last: (x, y),
-            moved: false,
-            resume,
-            at: std::time::Instant::now(),
-        });
+        self.drags.push(Drag { id, target, start: (x, y), last: (x, y), moved: false, at: std::time::Instant::now() });
         if self.naming.is_some() && !matches!(target, Some(Target::NameField)) {
             self.end_naming(true);
         }
         self.search_focus = target == Some(Target::SearchFocus);
         self.hub.focus = target == Some(Target::HubFocus);
         if let Some(t) = target {
+            let again = self.last_press.is_some_and(|(last, at)| last == t && at.elapsed() < DOUBLE_TAP);
+            self.last_press = (!again).then(|| (t, std::time::Instant::now()));
+            if again {
+                self.reset(t);
+            }
             self.press(t, x, y);
+        }
+    }
+
+    /// Puts a knob or fader back where it starts out, as a double tap on it asks.
+    fn reset(&mut self, t: Target) {
+        match t {
+            Target::Knob(d, k) => {
+                self.decks[d].knobs[k] = 0.5;
+                if k == 3 {
+                    self.send(Command::Filter(d, 0.0));
+                } else {
+                    let eq = std::array::from_fn(|b| knob_gain(self.decks[d].knobs[2 - b]));
+                    self.send(Command::Eq(d, eq));
+                }
+            }
+            Target::Gain(d) => {
+                self.decks[d].gain = 0.5;
+                self.send_gain(d);
+            }
+            Target::Rate(d) => {
+                self.decks[d].rate = 0.0;
+                self.send(Command::Rate(d, 0.0));
+            }
+            Target::Crossfader if !self.crossfader_held() => {
+                self.crossfader = 0.0;
+                let x = self.crossfader_out();
+                self.send(Command::Crossfader(x));
+            }
+            Target::FxMeta(d, slot) => {
+                self.fx[d].0[slot].2 = 0.5;
+                self.send(Command::Fx(d, FxSet::Meta(slot, 0.5)));
+            }
+            Target::FxMix(d) => {
+                self.fx[d].1 = 1.0;
+                self.send(Command::Fx(d, FxSet::Mix(1.0)));
+            }
+            Target::StationTime => {
+                self.station.time = 0.5;
+                self.send(Command::Station(Set::Params(0.5, self.station.xy.1)));
+            }
+            Target::Iso(k) => {
+                self.station.iso[k] = 0.0;
+                self.send(Command::Station(Set::Isolate(self.station.iso)));
+            }
+            _ => {}
         }
     }
 
@@ -2443,10 +2599,7 @@ impl State {
                 self.app_menu = false;
                 self.load_pick(d);
             }
-            Target::Jog(d) => {
-                self.focus = d;
-                self.send(Command::Play(d, false));
-            }
+            Target::Jog(d) => self.focus = d,
             Target::Browse(d) => {
                 self.focus = d;
                 self.scroll = 0.0;
@@ -2476,6 +2629,13 @@ impl State {
             }
             // Settings rows act on release, so a drag over them scrolls instead.
             Target::Pref(_) | Target::PrefPick(..) | Target::PrefsScroll => {}
+            Target::XyHold => {
+                self.station.hold = !self.station.hold;
+                if !self.station.hold && self.station.on {
+                    self.station.on = false;
+                    self.send(Command::Station(Set::On(false)));
+                }
+            }
             Target::Rescan => {
                 self.app_menu = false;
                 self.scan();
@@ -2849,6 +3009,12 @@ impl State {
         let delta = (x - d.last.0, y - d.last.1);
         d.last = (x, y);
         d.moved |= (x - d.start.0).hypot(y - d.start.1) > TAP;
+        if let Some(c) = &mut self.carry
+            && c.1 == id
+        {
+            c.2 = (x, y);
+            return;
+        }
         if let Some(t) = d.target {
             self.drag(t, x, y, delta);
         }
@@ -2862,6 +3028,20 @@ impl State {
     fn release(&mut self, id: u64, y: f32) {
         let Some(i) = self.drags.iter().position(|d| d.id == id) else { return };
         let d = self.drags.swap_remove(i);
+        if let Some((what, by, _)) = self.carry
+            && by == id
+        {
+            self.carry = None;
+            self.put_down(what, d.moved, if d.moved { d.last } else { d.start });
+            return;
+        }
+        if std::mem::take(&mut self.pull) >= PULL {
+            match d.target {
+                Some(Target::Library) => self.press(Target::Rescan, 0.0, 0.0),
+                Some(Target::HubList) => self.hub.search(),
+                _ => {}
+            }
+        }
         if let Some(Target::Cue(deck)) = d.target {
             self.end_preview(deck);
         }
@@ -2904,7 +3084,7 @@ impl State {
                     }
                 }
             }
-            Some(Target::Xy) => {
+            Some(Target::Xy) if !self.station.hold => {
                 self.station.on = false;
                 self.send(Command::Station(Set::On(false)));
             }
@@ -2917,10 +3097,6 @@ impl State {
                     Command::BeatSync(deck)
                 };
                 self.send(c);
-            }
-            Some(Target::Jog(deck)) if d.resume => {
-                self.send(Command::Play(deck, true));
-                self.telemetry.decks[deck].playing = true;
             }
             _ => {}
         }
@@ -2951,6 +3127,67 @@ impl State {
     fn scroll_by(&mut self, dy: f32) {
         let max = (self.shown.len() as f32 * self.row_h - (self.library.h - 30.0)).max(0.0);
         self.scroll = (self.scroll + dy).clamp(0.0, max);
+    }
+
+    /// The deck whose controls are around a point, for dropping a track on it.
+    pub(crate) fn deck_at(&self, x: f32, y: f32) -> Option<usize> {
+        self.deck_zones().into_iter().enumerate().find_map(|(d, r)| r.filter(|r| r.hit(x, y)).map(|_| d))
+    }
+
+    /// The box around each deck's controls on screen now.
+    pub(crate) fn deck_zones(&self) -> [Option<Rect>; 2] {
+        let mut zones = [None; 2];
+        for h in &self.hits {
+            let d = match h.target {
+                Target::Jog(d)
+                | Target::Overview(d)
+                | Target::Play(d)
+                | Target::Cue(d)
+                | Target::Sync(d)
+                | Target::Browse(d)
+                | Target::Pad(d, _) => d,
+                _ => continue,
+            };
+            let Some(zone) = zones.get_mut(d) else { continue };
+            let r = h.rect;
+            *zone = Some(zone.map_or(r, |z: Rect| {
+                let (x, y) = (z.x.min(r.x), z.y.min(r.y));
+                Rect::new(x, y, (z.x + z.w).max(r.x + r.w) - x, (z.y + z.h).max(r.y + r.h) - y)
+            }));
+        }
+        zones
+    }
+
+    /// Lets go of what was carried: on a deck it loads there, on a playlist a track joins it. Never having
+    /// moved, a held track opens its menu instead.
+    fn put_down(&mut self, what: Carried, moved: bool, (x, y): (f32, f32)) {
+        let deck = self.deck_at(x, y);
+        match (what, deck) {
+            (Carried::Track(i), _) if !moved => {
+                self.track_menu = Some(i);
+                self.menu_at = (x, y);
+                self.submenu = None;
+            }
+            (Carried::Track(i), Some(d)) => self.load_deck(d, i as usize),
+            (Carried::Hit(i), Some(d)) if moved => self.hub.fetch(i, d),
+            (Carried::Track(i), None) => {
+                let list = self.hits.iter().rev().find_map(|h| match h.target {
+                    Target::Shelf(Shelf::Playlist(n)) if h.rect.hit(x, y) => Some(n),
+                    _ => None,
+                });
+                if let Some(n) = list
+                    && let Some((name, keys)) = self.playlists.get_mut(n)
+                {
+                    let k = entry_key(&self.entries[i as usize]);
+                    if !keys.contains(&k) {
+                        keys.push(k);
+                    }
+                    self.toast = Some((format!("Added to {name}"), std::time::Instant::now()));
+                    crate::store::save_playlists(&self.playlists);
+                }
+            }
+            (Carried::Hit(_), _) => {}
+        }
     }
 
     pub(crate) fn rect_of(&self, t: Target) -> Option<Rect> {
@@ -3011,12 +3248,7 @@ impl State {
                 let (cx, cy) = (r.x + r.w * 0.5, r.y + r.h * 0.5);
                 let (px, py) = (x - delta.0 - cx, y - delta.1 - cy);
                 let turn = (px * (y - cy) - py * (x - cx)).atan2(px * (x - cx) + py * (y - cy));
-                if let Some(l) = &self.decks[d].loaded {
-                    let frames = f64::from(turn / std::f32::consts::TAU) * 1.8 * f64::from(l.track.rate);
-                    let pos = (self.telemetry.decks[d].position + frames).clamp(0.0, self.decks[d].length());
-                    self.telemetry.decks[d].position = pos;
-                    self.send(Command::Seek(d, pos));
-                }
+                self.jog[d].turn += turn;
             }
             Target::Gain(d) => {
                 let v = (self.decks[d].gain - delta.1 / 160.0).clamp(0.0, 1.0);
@@ -3024,9 +3256,15 @@ impl State {
                 self.decks[d].gain = v;
                 self.send_gain(d);
             }
+            Target::Library if self.scroll <= 0.0 && (delta.1 > 0.0 || self.pull > 0.0) => {
+                self.pull = (self.pull + delta.1).max(0.0);
+            }
             Target::Library => self.scroll_by(-delta.1),
             Target::Pref(_) | Target::PrefsScroll => self.prefs_scroll_by(-delta.1),
             Target::PrefPick(..) if self.pref_menu.is_none() => self.prefs_scroll_by(-delta.1),
+            Target::HubList if self.hub.scroll <= 0.0 && (delta.1 > 0.0 || self.pull > 0.0) => {
+                self.pull = (self.pull + delta.1).max(0.0);
+            }
             Target::HubList => self.hub_scroll(-delta.1),
             Target::Picker => {
                 let g = self.picker_grid;

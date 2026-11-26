@@ -11,6 +11,13 @@ use sugar_net::soundcloud::SoundCloud;
 use sugar_net::youtube::YouTube;
 use sugar_net::{Hit, Result};
 
+use crate::state::Art;
+
+/// Pixels on a side of a hit's picture in the list.
+const THUMB: usize = 96;
+/// Pictures fetched at once.
+const FETCHERS: usize = 4;
+
 /// A service tab, in DJ Sugar's order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Service {
@@ -108,6 +115,8 @@ pub enum Reply {
     Page(Page, bool),
     Progress(String, f32),
     Ready(String, PathBuf, usize, Service),
+    /// A hit's picture, for the search it was asked in.
+    Thumb(String, Art, u64),
     Failed(Option<String>, String),
 }
 
@@ -123,6 +132,10 @@ pub struct Hub {
     /// Downloads under way: video, deck, done 0..1.
     pub fetching: Vec<(String, usize, f32)>,
     pub scroll: f32,
+    /// The hits' pictures by ID, fetched as soon as a search answers.
+    pub thumbs: std::collections::HashMap<String, Art>,
+    /// Counts searches, so pictures for an old one are dropped.
+    round: Arc<std::sync::atomic::AtomicU64>,
     clients: Arc<Clients>,
     cache: PathBuf,
     tx: Sender<Reply>,
@@ -142,6 +155,8 @@ impl Hub {
             status: String::new(),
             fetching: Vec::new(),
             scroll: 0.0,
+            thumbs: std::collections::HashMap::new(),
+            round: Arc::default(),
             clients: Arc::new(Clients {
                 youtube: YouTube::new("US", ""),
                 soundcloud: SoundCloud::new(),
@@ -211,7 +226,10 @@ impl Hub {
             };
             let r = c.fetch(sv, &id, &dir, &progress);
             if let Ok(path) = &r {
-                let _ = sugar_net::http::save_art(&art, path);
+                // The largest picture there is; YouTube has not got the large ones for every video.
+                let large = ["maxresdefault", "hq720"].map(|size| sugar_net::youtube::art(&id, size));
+                let wanted = if sv == Service::YouTube { &large[..] } else { &[] };
+                let _ = wanted.iter().chain([&art]).find(|url| sugar_net::http::save_art(url, path).is_ok());
                 // Asked once a track; a failed ask is made again the next time it is got.
                 if sv == Service::YouTube
                     && !crate::skips::file(path).is_file()
@@ -225,6 +243,38 @@ impl Hub {
                 Err(e) => Reply::Failed(Some(id), e.to_string()),
             });
         });
+    }
+
+    /// Fetches the pictures of the hits that have none yet, top of the list first, a few at a time.
+    fn prefetch(&self) {
+        use std::sync::atomic::Ordering;
+        let want: Vec<(String, String)> = self
+            .hits
+            .iter()
+            .filter(|h| !h.art.is_empty() && !self.thumbs.contains_key(&h.id))
+            .map(|h| (h.id.clone(), h.art.clone()))
+            .collect();
+        let (want, next) = (Arc::new(want), Arc::new(std::sync::atomic::AtomicUsize::new(0)));
+        let round = self.round.load(Ordering::Acquire);
+        for _ in 0..FETCHERS.min(want.len()) {
+            let (want, next, now, tx) = (want.clone(), next.clone(), self.round.clone(), self.tx.clone());
+            std::thread::spawn(move || {
+                while let Some((id, url)) = want.get(next.fetch_add(1, Ordering::AcqRel)) {
+                    if now.load(Ordering::Acquire) != round {
+                        return;
+                    }
+                    let art = sugar_net::http::picture(url)
+                        .ok()
+                        .and_then(|bytes| djsugar_engine::cover::decode(&bytes, 4 * THUMB as u32))
+                        .and_then(|c| Art::square(url, &c, THUMB));
+                    if let Some(art) = art
+                        && tx.send(Reply::Thumb(id.clone(), art, round)).is_err()
+                    {
+                        return;
+                    }
+                }
+            });
+        }
     }
 
     /// Switches service; the query stays and is searched there.
@@ -252,8 +302,11 @@ impl Hub {
                         self.hits.extend(p.hits.into_iter().filter(|h| !seen.contains(&h.id)));
                     } else {
                         self.hits = p.hits;
+                        self.thumbs.clear();
+                        self.round.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
                     }
                     self.more = p.more;
+                    self.prefetch();
                 }
                 Reply::Progress(id, f) => {
                     if let Some(x) = self.fetching.iter_mut().find(|x| x.0 == id) {
@@ -267,6 +320,11 @@ impl Hub {
                         h.map_or_else(|| (id.clone(), String::new()), |h| (h.title.clone(), h.artist.clone()));
                     self.status = format!("Loaded \"{title}\" to deck {}", ["A", "B"][deck.min(1)]);
                     ready.push((path, title, artist, deck, sv.title()));
+                }
+                Reply::Thumb(id, art, round) => {
+                    if round == self.round.load(std::sync::atomic::Ordering::Acquire) {
+                        self.thumbs.insert(id, art);
+                    }
                 }
                 Reply::Failed(id, why) => {
                     self.searching = id.is_some() && self.searching;

@@ -536,13 +536,7 @@ pub fn parse_search(v: &Value, cap: usize) -> Vec<Hit> {
                         && !title.is_empty()
                         && seen.insert(id.to_string())
                     {
-                        out.push(Hit {
-                            id: id.to_string(),
-                            title,
-                            artist,
-                            seconds,
-                            art: format!("https://i.ytimg.com/vi/{id}/hqdefault.jpg"),
-                        });
+                        out.push(Hit { id: id.to_string(), title, artist, seconds, art: art(id, "mqdefault") });
                     }
                     return;
                 }
@@ -685,6 +679,12 @@ pub fn piped_formats(v: &Value) -> Vec<Format> {
         })
         .unwrap_or_default();
     rank(f)
+}
+
+/// A video's picture in one of YouTube's sizes: `mqdefault` is small and there for every video,
+/// `hq720` and `maxresdefault` are large and there for most; none of the three is boxed in black bars.
+pub fn art(id: &str, size: &str) -> String {
+    format!("https://i.ytimg.com/vi/{id}/{size}.jpg")
 }
 
 #[cfg(test)]

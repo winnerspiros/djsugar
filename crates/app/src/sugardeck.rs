@@ -6,7 +6,7 @@ use sugar_layout::Rect;
 use sugar_ui::{Painter, Style, Weight, rgb};
 
 use crate::classic::{bold, fader, knob, mmss, overview, vu_meter};
-use crate::state::{ART, FX_PADS, LOOP_BEATS, Mode, State, Target, beats_label, pad_name};
+use crate::state::{FX_PADS, LOOP_BEATS, Mode, State, Target, beats_label, pad_name};
 use crate::sugar::{DECK, cue_colour, fade, hit};
 use crate::theme::{BORDER, CONTROL, DIM, PANEL, PRESSED, RAISED, SEPARATOR, TEXT, WELL, centred};
 
@@ -370,18 +370,11 @@ fn platter(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         );
     }
     let lr = rad * 0.5;
-    match deck.loaded.as_ref().and_then(|l| l.art.as_deref()) {
-        Some(cells) => {
+    match deck.loaded.as_ref().and_then(|l| l.art.as_ref()) {
+        Some(art) => {
             // The cover, cut to the label's circle.
-            let cell = lr * 2.0 / ART as f32;
-            let reach = ART as f32 * 0.5;
-            for (i, &c) in cells.iter().enumerate() {
-                let (col, line) = ((i % ART) as f32 + 0.5 - reach, (i / ART) as f32 + 0.5 - reach);
-                if col * col + line * line <= reach * reach {
-                    p.rect(cx + (col - 0.5) * cell, cy + (line - 0.5) * cell, cell + 0.5, cell + 0.5, 0.0, rgb(c));
-                }
-            }
-            p.arc(cx, cy, lr, 2.0, 0.0, 1.0, fade(BLACK, 0x80));
+            p.disc(cx, cy, lr, BLACK, BLACK);
+            art.draw(p, Rect::new(cx - lr + 1.0, cy - lr + 1.0, lr * 2.0 - 2.0, lr * 2.0 - 2.0), lr);
         }
         None if loaded => {
             p.disc(cx, cy, lr, tint, tint);

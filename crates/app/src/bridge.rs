@@ -149,7 +149,9 @@ impl Bridge {
         let slot = &mut self.slots[at];
         let generation = slot.ready.fetch_add(1, Ordering::AcqRel) + 1;
         if slot.name == name {
+            // A press and its release, so the next press is a new one and the sample starts over each time.
             self.set(&group, "cue_gotoandplay", 1.0);
+            self.set(&group, "cue_gotoandplay", 0.0);
             return;
         }
         slot.name = name.to_owned();
@@ -160,6 +162,7 @@ impl Bridge {
                 && let Some(c) = reg.get(&group, "cue_gotoandplay")
             {
                 c.set(1.0);
+                c.set(0.0);
             }
         });
     }
@@ -210,6 +213,15 @@ impl Bridge {
             }
             Command::Reverse(d, on) => self.deck(d, "reverse", f64::from(u8::from(on))),
             Command::Slip(d, on) => self.deck(d, "slip_enabled", f64::from(u8::from(on))),
+            Command::Scratch(d, speed) => {
+                self.deck(d, "scratch2", speed.unwrap_or(0.0));
+                self.deck(d, "scratch2_enable", f64::from(u8::from(speed.is_some())));
+            }
+            Command::VinylStop(on) => {
+                for d in 0..DECKS {
+                    self.deck(d, "vinyl_stop", f64::from(u8::from(on)));
+                }
+            }
             Command::Key(d, st) => self.deck(d, "pitch", f64::from(st)),
             Command::Gain(d, g) => self.deck(d, "pregain", f64::from(g)),
             Command::Volume(d, v) => self.deck(d, "volume", f64::from(v)),

@@ -231,6 +231,8 @@ impl Mixer {
             Command::Station(s) => self.station.set(s),
             Command::Fx(..) => {}
             Command::Pfl(..)
+            | Command::VinylStop(_)
+            | Command::Scratch(..)
             | Command::Phones(..)
             | Command::Ducking(..)
             | Command::Quantize(..)

@@ -1,7 +1,8 @@
 use std::fmt;
 
+use crate::pictures::{CELL, SIDE};
 use crate::text::ATLAS;
-use crate::{Glyph, Painter, Quad};
+use crate::{Glyph, Painter, Pic, Quad};
 
 #[derive(Debug)]
 pub enum RendererError {
@@ -26,6 +27,8 @@ impl std::error::Error for RendererError {}
 
 const GLYPH_ATTRIBUTES: [wgpu::VertexAttribute; 3] =
     wgpu::vertex_attr_array![0 => Float32x2, 1 => Uint16x4, 2 => Uint32];
+const PIC_ATTRIBUTES: [wgpu::VertexAttribute; 4] =
+    wgpu::vertex_attr_array![0 => Float32x4, 1 => Uint16x4, 2 => Float32, 3 => Uint32];
 const QUAD_ATTRIBUTES: [wgpu::VertexAttribute; 6] =
     wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Uint32, 3 => Uint32, 4 => Uint32, 5 => Uint32];
 const OFFSCREEN_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
@@ -44,11 +47,14 @@ pub struct Renderer<'w> {
     queue: wgpu::Queue,
     pipeline: wgpu::RenderPipeline,
     glyph_pipeline: wgpu::RenderPipeline,
+    pic_pipeline: wgpu::RenderPipeline,
     viewport: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     instances: wgpu::Buffer,
     glyphs: wgpu::Buffer,
+    pics: wgpu::Buffer,
     atlas: wgpu::Texture,
+    pictures: wgpu::Texture,
     fresh: bool,
 }
 
@@ -128,8 +134,30 @@ impl<'w> Renderer<'w> {
                     },
                     count: None,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
             ],
         });
+        let side = (SIDE * CELL) as u32;
+        let pictures = device.create_texture(&wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d { width: side, height: side, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let pictures_view = pictures.create_view(&Default::default());
         let atlas = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d { width: ATLAS as u32, height: ATLAS as u32, depth_or_array_layers: 1 },
@@ -147,6 +175,7 @@ impl<'w> Renderer<'w> {
             entries: &[
                 wgpu::BindGroupEntry { binding: 0, resource: viewport.as_entire_binding() },
                 wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(&atlas_view) },
+                wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::TextureView(&pictures_view) },
             ],
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -195,6 +224,9 @@ impl<'w> Renderer<'w> {
             size_of::<Glyph>(),
             &GLYPH_ATTRIBUTES,
         );
+        let pic_pipeline =
+            make(&device.create_shader_module(wgpu::include_wgsl!("pic.wgsl")), size_of::<Pic>(), &PIC_ATTRIBUTES);
+        let pics = instance_buffer(&device, 64 * size_of::<Pic>());
         let instances = instance_buffer(&device, 256 * size_of::<Quad>());
         let glyphs = instance_buffer(&device, 1024 * size_of::<Glyph>());
         let r = Self {
@@ -203,11 +235,14 @@ impl<'w> Renderer<'w> {
             queue,
             pipeline,
             glyph_pipeline,
+            pic_pipeline,
             viewport,
             bind_group,
             instances,
             glyphs,
+            pics,
             atlas,
+            pictures,
             fresh: true,
         };
         r.write_viewport();
@@ -308,7 +343,21 @@ impl<'w> Renderer<'w> {
         painter: &mut Painter,
         clear: u32,
     ) {
-        if let Some((row, pixels)) = painter.atlas_update(std::mem::take(&mut self.fresh)) {
+        let fresh = std::mem::take(&mut self.fresh);
+        painter.pictures.pending(fresh, |[x, y, width, height], pixels| {
+            self.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &self.pictures,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d { x, y, z: 0 },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                pixels,
+                wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(width * 4), rows_per_image: None },
+                wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            );
+        });
+        if let Some((row, pixels)) = painter.atlas_update(fresh) {
             self.queue.write_texture(
                 wgpu::TexelCopyTextureInfo {
                     texture: &self.atlas,
@@ -325,6 +374,7 @@ impl<'w> Renderer<'w> {
         let glyphs = painter.glyphs();
         let quad_bytes = upload(&self.device, &self.queue, &mut self.instances, bytemuck::cast_slice(quads));
         let glyph_bytes = upload(&self.device, &self.queue, &mut self.glyphs, bytemuck::cast_slice(glyphs));
+        let pic_bytes = upload(&self.device, &self.queue, &mut self.pics, bytemuck::cast_slice(painter.pics()));
         let [r, g, b, _] = clear.to_le_bytes().map(|c| srgb_to_linear(f64::from(c) / 255.0));
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
@@ -343,11 +393,16 @@ impl<'w> Renderer<'w> {
             multiview_mask: None,
         });
         pass.set_bind_group(0, &self.bind_group, &[]);
-        for (q, g) in painter.spans() {
+        for [q, p, g] in painter.spans() {
             if !q.is_empty() {
                 pass.set_pipeline(&self.pipeline);
                 pass.set_vertex_buffer(0, self.instances.slice(..quad_bytes));
                 pass.draw(0..4, q);
+            }
+            if !p.is_empty() {
+                pass.set_pipeline(&self.pic_pipeline);
+                pass.set_vertex_buffer(0, self.pics.slice(..pic_bytes));
+                pass.draw(0..4, p);
             }
             if !g.is_empty() {
                 pass.set_pipeline(&self.glyph_pipeline);

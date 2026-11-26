@@ -44,6 +44,10 @@ pub enum Command {
     Spin(usize, f32),
     Reverse(usize, bool),
     Slip(usize, bool),
+    /// A hand on the platter turning the record at this many times normal speed; `None` lets go.
+    Scratch(usize, Option<f64>),
+    /// Pausing slows the decks to a stop as a record does.
+    VinylStop(bool),
     Key(usize, f32),
     Gain(usize, f32),
     Volume(usize, f32),

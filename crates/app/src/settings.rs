@@ -41,6 +41,7 @@ pub enum Opt {
     MixStyle,
     MixRepeat,
     SkipNonMusic,
+    VinylStop,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -90,7 +91,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 36] = [
+pub const OPTIONS: [Spec; 37] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -379,6 +380,14 @@ pub const OPTIONS: [Spec; 36] = [
         kind: Kind::Switch,
         default: 1,
     },
+    Spec {
+        opt: Opt::VinylStop,
+        key: "vinyl_stop",
+        title: "Vinyl stop",
+        detail: "Pausing slows the track to a stop as a record does, instead of stopping it dead.",
+        kind: Kind::Switch,
+        default: 1,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -411,6 +420,7 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> 
             Row::Opt(Opt::TempoUp),
             Row::Heading("PLAYING"),
             Row::Opt(Opt::CueMode),
+            Row::Opt(Opt::VinylStop),
             Row::Opt(Opt::SyncOnPlay),
             Row::Opt(Opt::EndWarning),
             Row::Opt(Opt::SkipNonMusic),

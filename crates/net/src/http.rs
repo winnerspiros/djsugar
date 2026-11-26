@@ -166,6 +166,11 @@ pub fn save_art(url: &str, track: &std::path::Path) -> Result<()> {
     if url.is_empty() || to.is_file() {
         return Ok(());
     }
+    std::fs::write(&to, picture(url)?).map_err(net)
+}
+
+/// The picture at `url`, as the file it is.
+pub fn picture(url: &str) -> Result<Vec<u8>> {
     let mut resp = agent()
         .get(url)
         .config()
@@ -176,8 +181,7 @@ pub fn save_art(url: &str, track: &std::path::Path) -> Result<()> {
     if resp.status().as_u16() != 200 {
         return Err(Error::Status(resp.status().as_u16()));
     }
-    let bytes = resp.body_mut().with_config().limit(8 << 20).read_to_vec().map_err(net)?;
-    std::fs::write(&to, bytes).map_err(net)
+    resp.body_mut().with_config().limit(8 << 20).read_to_vec().map_err(net)
 }
 
 #[cfg(test)]

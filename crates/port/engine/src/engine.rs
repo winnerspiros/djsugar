@@ -109,6 +109,10 @@ const BEND_PER_TICK_PER_SECOND: f64 = 0.0008;
 /// Seconds the rim's speed is averaged over: the
 /// bend follows the hand smoothly and springs back once the rim stops.
 const BEND_SMOOTH: f64 = 0.15;
+/// Seconds over which the needle's sound comes in under a hand and leaves after it.
+const NEEDLE_FADE: f64 = 0.02;
+/// How long a deck paused with vinyl stop on takes to wind down.
+const WIND_SECONDS: f64 = 0.8;
 /// Track seconds one rim tick moves a paused deck by.
 const BEND_PAUSED_SECONDS: f64 = 0.008;
 /// How long a clip lights a PeakIndicator, in seconds.
@@ -237,6 +241,11 @@ struct Deck {
     /// Whether play was on last buffer: starting and stopping are instant,
     /// other speed changes ramp.
     was_playing: bool,
+    /// Vinyl stop: how much of the speed it was paused at the deck still has, 1 down to 0; and that speed, and
+    /// where the track was a buffer ago, so a jump away ends it.
+    wind: f64,
+    wind_speed: f64,
+    wind_at: f64,
     cue_edge: Edge,
     cup_edge: Edge,
     zero_edge: Edge,
@@ -307,6 +316,10 @@ struct Deck {
     shifted: Vec<[f32; 2]>,
     /// Low-pass state that softens fast waveform scrubbing.
     scrub_tone: [f32; 2],
+    /// A scratched record through the cartridge: quiet when slow, silent when held.
+    needle: crate::fxstation::vinylmotion::NeedleShaper,
+    /// How much of the output is the needle's, 0 to 1: it fades in and out so touching a record never clicks.
+    needle_mix: f32,
     /// Where the play position would be now had nothing jumped, while the
     /// deck plays; a jump from it fades over, see [`Declick`].
     expected_pos: Option<f64>,
@@ -1083,10 +1096,32 @@ impl Deck {
         (gap / SCRUB_GLIDE.max(dt)).clamp(-SCRUB_MAX_SPEED, SCRUB_MAX_SPEED)
     }
 
+    /// Vinyl stop: the speed a deck paused while playing forwards winds down through, over [`WIND_SECONDS`], as
+    /// a record does when its platter is stopped. Play, a hand on the deck or a jump elsewhere ends it at once.
+    fn wind_step(&mut self, dt: f64) -> f64 {
+        let hand = self.c.seek_hold.get_bool()
+            || self.c.scrub_enable.get_bool()
+            || self.c.scratch2_enable.get_bool()
+            || self.c.rate_search.get() != 0.0;
+        let jumped = (self.pos - self.wind_at).abs() > self.source_rate() * 0.25;
+        self.wind_at = self.pos;
+        if self.c.play.get_bool() || hand || self.audio.is_none() || !self.c.vinyl_stop.get_bool() {
+            self.wind = 0.0;
+        } else if self.was_playing && self.velocity > 0.0 {
+            self.wind = 1.0;
+            self.wind_speed = self.velocity;
+        } else if jumped {
+            self.wind = 0.0;
+        }
+        self.wind = (self.wind - dt / WIND_SECONDS).max(0.0);
+        self.wind_speed * self.wind
+    }
+
     /// The speed to reach by the end of this buffer of `dt` seconds.
     fn target_velocity(&mut self, dt: f64) -> f64 {
         self.search_quiet = (self.search_quiet - dt).max(0.0);
         let bend = self.bend_step(dt);
+        let wind = self.wind_step(dt);
         if self.audio.is_none() {
             self.jog_pending = 0.0;
             return 0.0;
@@ -1113,7 +1148,7 @@ impl Deck {
             // counterclockwise, but never backwards.
             (self.forward_speed() + bend).max(0.0)
         } else {
-            0.0
+            wind
         };
         if self.c.reverse.get_bool() || self.c.reverseroll.get_bool() {
             v = -v;
@@ -1745,6 +1780,9 @@ impl Engine {
             slice_held: None,
             freeze: None,
             was_playing: false,
+            wind: 0.0,
+            wind_speed: 0.0,
+            wind_at: 0.0,
             cue_edge: Edge::default(),
             cup_edge: Edge::default(),
             zero_edge: Edge::default(),
@@ -1781,6 +1819,8 @@ impl Engine {
             shifter: KeyShifter::new(sample_rate),
             shifted: vec![[0.0; 2]; 4096],
             scrub_tone: [0.0; 2],
+            needle: Default::default(),
+            needle_mix: 0.0,
             expected_pos: None,
             declick: None,
             stem_gains: [1.0; MAX_STEMS],
@@ -3091,6 +3131,7 @@ impl Engine {
             shift_fade: Option<ShiftFade>,
             /// Dragging a scrolling waveform: fast passes are softened.
             scrub: bool,
+            scratch: bool,
             /// Stem gains at the start and end of the buffer, when the deck
             /// plays stems.
             stems: Option<([f32; MAX_STEMS], [f32; MAX_STEMS])>,
@@ -3148,8 +3189,11 @@ impl Engine {
             let held = d.c.scratch2_enable.get_bool() || d.c.scrub_enable.get_bool();
             // Holding the overview cuts the sound at once instead of winding
             // down through what the deck was playing.
-            let from =
-                if d.c.seek_hold.get_bool() || (playing != d.was_playing && !held) { target } else { d.velocity };
+            let from = if d.c.seek_hold.get_bool() || (playing != d.was_playing && !held && d.wind == 0.0) {
+                target
+            } else {
+                d.velocity
+            };
             d.was_playing = playing;
             // Key lock and key shifts go through the time-stretcher while
             // playing forwards, nudges and pitch bends included; scratching,
@@ -3160,6 +3204,7 @@ impl Engine {
                 && target > 0.0
                 && from.max(target) <= MAX_RATE
                 && !held
+                && d.wind == 0.0
                 && d.c.rate_search.get() == 0.0
                 && (keylock || semitones.abs() > 1e-3);
             // The deck was heard moving last buffer (not starting from a stop).
@@ -3317,6 +3362,7 @@ impl Engine {
                 shifted: shifting && d.audio.is_some(),
                 shift_fade,
                 scrub: d.c.scrub_enable.get_bool(),
+                scratch: d.c.scratch2_enable.get_bool(),
                 moving: d.audio.is_some() && (from != 0.0 || target != 0.0),
                 velocity: (from, target),
                 ratio,
@@ -3520,6 +3566,17 @@ impl Engine {
                     }
                     if p.scrub {
                         s = soften_scrub(s, v.abs(), out_rate, &mut d.scrub_tone);
+                    }
+                    if p.scratch || d.needle_mix > 0.0 {
+                        let step = (1.0 / (NEEDLE_FADE * out_rate)) as f32;
+                        let was = d.needle_mix;
+                        d.needle_mix = if p.scratch { (was + step).min(1.0) } else { (was - step).max(0.0) };
+                        let [mut l, mut r] = s;
+                        d.needle.process(&mut l, &mut r, v);
+                        s = [s[0] + (l - s[0]) * d.needle_mix, s[1] + (r - s[1]) * d.needle_mix];
+                        if d.needle_mix == 0.0 {
+                            d.needle.reset();
+                        }
                     }
                     let before = d.pos;
                     d.pos += step;
@@ -5114,6 +5171,44 @@ mod tests {
         run(&mut engine, 0.05);
         assert!(phase_gap(&engine) < 0.01, "{}", phase_gap(&engine));
         assert!((c("[Channel2]", "bpm").get() - 124.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn vinyl_stop_winds_a_paused_deck_down() {
+        let (reg, mut engine, mut input) = setup();
+        load(&mut input, 0, short_track(124.0, 30.0));
+        run(&mut engine, 0.02);
+        let c = |k: &str| reg.get("[Channel1]", k).unwrap();
+        c("vinyl_stop").set_bool(true);
+        c("play").set_bool(true);
+        run(&mut engine, 1.0);
+        let paused = engine.decks[0].seconds();
+        c("play").set_bool(false);
+        assert!(run(&mut engine, 0.3) > 0.01, "still heard as it slows");
+        run(&mut engine, 0.7);
+        let coast = engine.decks[0].seconds() - paused;
+        // Slowing evenly to a stop covers half of what full speed would.
+        assert!((0.3..0.5).contains(&coast), "coasted {coast}");
+        let stopped = engine.decks[0].seconds();
+        run(&mut engine, 0.2);
+        assert_eq!(engine.decks[0].seconds(), stopped);
+        // A jump while it winds down stops it there.
+        c("play").set_bool(true);
+        run(&mut engine, 0.5);
+        c("play").set_bool(false);
+        run(&mut engine, 0.1);
+        c("playposition").set(0.1);
+        run(&mut engine, 0.5);
+        assert!((engine.decks[0].seconds() - 3.0).abs() < 0.05, "at {}", engine.decks[0].seconds());
+        // Off, a pause is at once.
+        c("vinyl_stop").set_bool(false);
+        c("play").set_bool(true);
+        run(&mut engine, 0.5);
+        c("play").set_bool(false);
+        run(&mut engine, 0.02);
+        let at = engine.decks[0].seconds();
+        run(&mut engine, 0.3);
+        assert_eq!(engine.decks[0].seconds(), at);
     }
 
     #[test]

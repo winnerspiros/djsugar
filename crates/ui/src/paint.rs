@@ -49,24 +49,47 @@ pub struct Glyph {
     pub colour: u32,
 }
 
+/// A picture from the picture texture: where on screen, where in the texture, corner radius, and a tint whose
+/// alpha fades it.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+pub struct Pic {
+    pub rect: [f32; 4],
+    pub uv: [u16; 4],
+    pub radius: f32,
+    pub tint: u32,
+}
+
 #[derive(Debug)]
 pub struct Painter {
     quads: Vec<Quad>,
     glyphs: Vec<Glyph>,
-    layers: Vec<(u32, u32)>,
+    pics: Vec<Pic>,
+    layers: Vec<(u32, u32, u32)>,
     scale: f32,
     pub fonts: Fonts,
+    pub pictures: crate::Pictures,
 }
 
 impl Painter {
     pub fn new(fonts: Fonts) -> Self {
-        Self { quads: Vec::new(), glyphs: Vec::new(), layers: Vec::new(), scale: 1.0, fonts }
+        Self {
+            quads: Vec::new(),
+            glyphs: Vec::new(),
+            pics: Vec::new(),
+            layers: Vec::new(),
+            scale: 1.0,
+            fonts,
+            pictures: crate::Pictures::default(),
+        }
     }
 
     pub fn begin(&mut self, scale: f32) {
         self.quads.clear();
         self.glyphs.clear();
+        self.pics.clear();
         self.layers.clear();
+        self.pictures.tick();
         self.scale = scale;
     }
 
@@ -89,13 +112,31 @@ impl Painter {
     }
 
     pub fn layer(&mut self) {
-        self.layers.push((self.quads.len() as u32, self.glyphs.len() as u32));
+        self.layers.push(self.counts());
     }
 
-    pub(crate) fn spans(&self) -> impl Iterator<Item = (std::ops::Range<u32>, std::ops::Range<u32>)> + '_ {
-        let ends = self.layers.iter().copied().chain([(self.quads.len() as u32, self.glyphs.len() as u32)]);
-        let starts = [(0, 0)].into_iter().chain(self.layers.iter().copied());
-        starts.zip(ends).map(|(a, b)| (a.0..b.0, a.1..b.1))
+    fn counts(&self) -> (u32, u32, u32) {
+        (self.quads.len() as u32, self.pics.len() as u32, self.glyphs.len() as u32)
+    }
+
+    /// Each layer's shapes, pictures and glyphs, drawn in that order.
+    pub(crate) fn spans(&self) -> impl Iterator<Item = [std::ops::Range<u32>; 3]> + '_ {
+        let ends = self.layers.iter().copied().chain([self.counts()]);
+        let starts = [(0, 0, 0)].into_iter().chain(self.layers.iter().copied());
+        starts.zip(ends).map(|(a, b)| [a.0..b.0, a.1..b.1, a.2..b.2])
+    }
+
+    pub fn pics(&self) -> &[Pic] {
+        &self.pics
+    }
+
+    /// Draws the picture kept as `key` over the rectangle, above the layer's shapes; false when there is none.
+    #[allow(clippy::too_many_arguments)]
+    pub fn picture(&mut self, key: u64, x: f32, y: f32, w: f32, h: f32, radius: f32, tint: u32) -> bool {
+        let Some(uv) = self.pictures.find(key) else { return false };
+        let s = self.scale;
+        self.pics.push(Pic { rect: [x * s, y * s, w * s, h * s], uv, radius: radius * s, tint });
+        true
     }
 
     pub fn glyphs(&self) -> &[Glyph] {
