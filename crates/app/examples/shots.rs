@@ -248,6 +248,12 @@ fn main() {
                     faults.push(format!("{name}: new playlist has no name field"));
                 }
             }
+            // The pads' stems layer.
+            if ui.tap("Mode(0, Stems)") {
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-stems.png")));
+                ui.tap("Mode(0, Cues)");
+            }
             // The effects bar: a slot's list opens, a pick loads it and turns it on.
             if !ui.targets().iter().any(|(t, _)| t == "FxName(0, 0)") {
                 ui.key(Key::Char('5'), Mods { ctrl: true, ..Mods::default() });

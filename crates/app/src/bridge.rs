@@ -222,6 +222,9 @@ impl Bridge {
                     self.deck(d, "vinyl_stop", f64::from(u8::from(on)));
                 }
             }
+            Command::Stem(d, stem, on) => {
+                self.set(&djsugar_engine::stem_group(d, stem), "mute", f64::from(u8::from(!on)));
+            }
             Command::Key(d, st) => self.deck(d, "pitch", f64::from(st)),
             Command::Gain(d, g) => self.deck(d, "pregain", f64::from(g)),
             Command::Volume(d, v) => self.deck(d, "volume", f64::from(v)),
@@ -289,6 +292,7 @@ impl Bridge {
                 peak: self.get(&g, "VuMeter") as f32,
                 sync_lock: self.get(&g, "sync_enabled") != 0.0,
                 sync_leader: self.get(&g, "sync_leader").round() as u8,
+                stems: self.get(&g, "stem_count") as u8,
             };
         }
         t.main_peak = [self.get("[Master]", "VuMeterL") as f32, self.get("[Master]", "VuMeterR") as f32];

@@ -192,8 +192,8 @@ fn readout(p: &mut Painter, s: &mut State, r: Rect, d: usize, u: f32) {
     }
 }
 
-const MODES: [(Mode, &str); 4] =
-    [(Mode::Cues, "CUES"), (Mode::Loops, "LOOPS"), (Mode::Samples, "SMPL"), (Mode::Fx, "FX")];
+const MODES: [(Mode, &str); 5] =
+    [(Mode::Cues, "CUES"), (Mode::Loops, "LOOPS"), (Mode::Samples, "SMPL"), (Mode::Fx, "FX"), (Mode::Stems, "STEM")];
 
 /// What the pads play, as one segmented pill, then the loop: its size between halve and
 /// double, IN and OUT.
@@ -262,6 +262,7 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize, u: f32) {
             Mode::Loops => (beats_label(LOOP_BEATS[i]), (s.decks[d].looping == Some(i)).then_some(PINK)),
             Mode::Samples => (pad_name(s, d, i), None),
             Mode::Fx => (FX_PADS[i].to_string(), (s.decks[d].echo == Some(i)).then_some(rgb(0xff9f0a))),
+            Mode::Stems => crate::classic::stem_pad(s, d, i),
         };
         let (fill, edge, ink) = match (lit, down) {
             (Some(c), true) => (c, c, INK),

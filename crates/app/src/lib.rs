@@ -3,6 +3,7 @@ mod classic;
 mod hub;
 mod library;
 mod lyrics;
+mod models;
 mod prefs;
 mod record;
 mod settings;
@@ -42,6 +43,7 @@ impl Ui {
         let status = None;
         let engine = Some(engine);
         stage("audio open");
+        crate::models::install();
         let mut state = State::new(engine, read, status, out_rate);
         state.scan();
         // The YouTube player script takes seconds to load; have it ready before the first download.

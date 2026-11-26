@@ -8094,6 +8094,7 @@ dependencies = [
  "boa_engine",
  "rustls-rustcrypto",
  "serde_json",
+ "sha2 0.11.1",
  "ureq 3.5.2",
  "webpki-root-certs",
 ]

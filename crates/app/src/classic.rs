@@ -4,7 +4,7 @@
 use sugar_layout::Rect;
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-use crate::state::{FX_PADS, LOOP_BEATS, Mode, State, Target, beats_label, pad_name};
+use crate::state::{FX_PADS, LOOP_BEATS, Mode, STEMS, State, Target, beats_label, pad_name};
 use crate::sugar::{DECK, cue_colour, fade, hit};
 use crate::theme::{
     BACKDROP, BORDER, CONTROL, DIM, FAINT, PANEL, PRESSED, RAISED, SEPARATOR, TEXT as WHITE, WELL, centred,
@@ -317,8 +317,24 @@ fn jog_and_transport(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     hit(s, cue, Target::Cue(d));
 }
 
-const MODES: [(Mode, &str); 4] =
-    [(Mode::Cues, "HOT CUES"), (Mode::Loops, "LOOPS"), (Mode::Samples, "SAMPLER"), (Mode::Fx, "PAD FX")];
+const MODES: [(Mode, &str); 5] = [
+    (Mode::Cues, "HOT CUES"),
+    (Mode::Loops, "LOOPS"),
+    (Mode::Samples, "SAMPLER"),
+    (Mode::Fx, "PAD FX"),
+    (Mode::Stems, "STEMS"),
+];
+/// A STEMS pad's label and, while its stem is heard, its colour: the top row are the stems, the bottom row each alone.
+pub(crate) fn stem_pad(s: &State, d: usize, i: usize) -> (String, Option<u32>) {
+    let (stem, muted) = (i % 4, s.decks[d].muted);
+    let has = s.telemetry.decks[d].stems > 0;
+    if i < 4 {
+        (STEMS[stem].to_string(), (has && !muted[stem]).then_some(crate::theme::STEM[stem]))
+    } else {
+        let alone = (0..4).all(|k| muted[k] == (k != stem));
+        (format!("{} SOLO", &STEMS[stem][..1]), (has && alone).then_some(crate::theme::STEM[stem]))
+    }
+}
 
 /// Pads under their mode tabs: a dark grid whose labels light in the pad's colour.
 fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
@@ -351,6 +367,7 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             Mode::Loops => (beats_label(LOOP_BEATS[i]), (s.decks[d].looping == Some(i)).then_some(LOOP_ON)),
             Mode::Samples => (pad_name(s, d, i), None),
             Mode::Fx => (FX_PADS[i].to_string(), (s.decks[d].echo == Some(i)).then_some(FX_ON)),
+            Mode::Stems => stem_pad(s, d, i),
         };
         // Dark cells: a lit pad takes a deep tint of its colour, a line of it along the bottom and text in it.
         let fill = match (down, lit) {
@@ -370,6 +387,7 @@ fn pads(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 Mode::Loops => LOOP_ON,
                 Mode::Samples => SAMPLE_ON,
                 Mode::Fx => FX_ON,
+                Mode::Stems => crate::theme::STEM[i % 4],
             };
             p.rect(b.x + 4.0, b.y + 3.0, b.w - 8.0, 2.0, 1.0, fade(c, 0x60));
         }

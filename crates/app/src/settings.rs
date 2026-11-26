@@ -42,6 +42,7 @@ pub enum Opt {
     MixRepeat,
     SkipNonMusic,
     VinylStop,
+    Stems,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -91,7 +92,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 37] = [
+pub const OPTIONS: [Spec; 38] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -388,6 +389,14 @@ pub const OPTIONS: [Spec; 37] = [
         kind: Kind::Switch,
         default: 1,
     },
+    Spec {
+        opt: Opt::Stems,
+        key: "stems",
+        title: "Stems",
+        detail: "A loaded track is split into drums, bass, instruments and vocals for the STEMS pads. The first time downloads the model (79 MB).",
+        kind: Kind::Switch,
+        default: 0,
+    },
 ];
 
 pub fn spec(o: Opt) -> &'static Spec {
@@ -424,6 +433,7 @@ pub fn page(n: usize, roots: &[std::path::PathBuf], rate: u32, device: &str) -> 
             Row::Opt(Opt::SyncOnPlay),
             Row::Opt(Opt::EndWarning),
             Row::Opt(Opt::SkipNonMusic),
+            Row::Opt(Opt::Stems),
             Row::Heading("TEMPO AND KEY ON LOAD"),
             Row::Opt(Opt::TempoMatch),
             Row::Opt(Opt::KeyMatch),

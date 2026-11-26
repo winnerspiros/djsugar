@@ -239,3 +239,32 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+/// The SHA-256 of a file, as lowercase hex.
+pub fn sha256(path: &std::path::Path) -> std::io::Result<String> {
+    use sha2::Digest;
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut hash = sha2::Sha256::new();
+    let mut buf = vec![0u8; 1 << 16];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hash.update(&buf[..n]);
+    }
+    Ok(hash.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
+#[cfg(test)]
+mod digest {
+    #[test]
+    fn hashes_a_file() {
+        let p = std::env::temp_dir().join(format!("sugar-sha-{}", std::process::id()));
+        std::fs::write(&p, b"abc").unwrap();
+        let got = super::sha256(&p).unwrap();
+        let _ = std::fs::remove_file(&p);
+        assert_eq!(got, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    }
+}

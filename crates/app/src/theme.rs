@@ -20,6 +20,8 @@ pub const DIM: u32 = rgb(0x8e8e93);
 pub const FAINT: u32 = rgb(0x55555c);
 pub const ACCENT: u32 = rgb(0xff4fa8);
 /// Automix's own colour: what it is running, and what it holds.
+/// The stems' colours: drums, bass, instruments, vocals.
+pub const STEM: [u32; 4] = [rgb(0x4a9eff), rgb(0xff5a5f), rgb(0xffa23a), rgb(0x30c158)];
 pub const AUTOMIX: u32 = rgb(0x30c158);
 
 pub fn style(px: f32, weight: Weight, colour: u32) -> Style {

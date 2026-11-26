@@ -343,7 +343,11 @@ pub enum Mode {
     Loops,
     Samples,
     Fx,
+    Stems,
 }
+
+/// The stems in the engine's order.
+pub const STEMS: [&str; 4] = ["DRUMS", "BASS", "INST", "VOCAL"];
 
 pub const ECHO_BEATS: [f64; 5] = [0.25, 0.5, 0.75, 1.0, 2.0];
 /// The engine's Echo and Echo Out, as `loaded_effect` values.
@@ -466,6 +470,8 @@ pub struct DeckUi {
     pub looping: Option<usize>,
     pub loop_range: Option<(f64, f64)>,
     pub echo: Option<usize>,
+    /// Stems silenced on the STEMS pads.
+    pub muted: [bool; 4],
     pub gain: f32,
     pub jump: usize,
     pub loop_size: usize,
@@ -910,6 +916,7 @@ impl State {
         s.send_curve();
         s.send_phones();
         s.send(Command::VinylStop(s.settings.on(crate::settings::Opt::VinylStop)));
+        djsugar_engine::separation::set_on_load(s.settings.on(crate::settings::Opt::Stems));
         s
     }
 
@@ -997,6 +1004,7 @@ impl State {
                     self.decks[d].loading = false;
                     self.decks[d].cue = 0.0;
                     self.decks[d].cues = [None; 8];
+                    self.decks[d].muted = [false; 4];
                     self.decks[d].grid_undo.clear();
                     self.decks[d].grid_locked = false;
                     self.decks[d].cue_colours = [0; 8];
@@ -2215,6 +2223,7 @@ impl State {
             Opt::FaderOn | Opt::FaderCurve | Opt::CutIn => self.send_curve(),
             Opt::CueMix | Opt::SplitCue | Opt::Ducking | Opt::DuckDepth => self.send_phones(),
             Opt::VinylStop => self.send(Command::VinylStop(v != 0)),
+            Opt::Stems => djsugar_engine::separation::set_on_load(v != 0),
             Opt::AutoGain | Opt::GainTarget => {
                 for d in 0..self.decks.len() {
                     let target = self.settings.gain_target();
@@ -2248,6 +2257,21 @@ impl State {
         match self.samples.get(i).cloned().flatten() {
             Some(_) => self.play_sample(i),
             None => self.load(Job::Sample(i, true), i),
+        }
+    }
+
+    /// A STEMS pad: the top row silences a stem or brings it back, the bottom row leaves one playing alone.
+    fn stem(&mut self, d: usize, p: usize) {
+        let s = p % 4;
+        let m = &mut self.decks[d].muted;
+        if p < 4 {
+            m[s] = !m[s];
+        } else {
+            let alone = (0..4).all(|i| m[i] == (i != s));
+            *m = std::array::from_fn(|i| !alone && i != s);
+        }
+        for (i, off) in self.decks[d].muted.into_iter().enumerate() {
+            self.send(Command::Stem(d, i, !off));
         }
     }
 
@@ -2541,6 +2565,7 @@ impl State {
                     Mode::Loops => self.auto_loop(d, p),
                     Mode::Samples => self.pad(d, p),
                     Mode::Fx => self.fx(d, p),
+                    Mode::Stems => self.stem(d, p),
                 }
             }
             Target::Mode(d, m) => {

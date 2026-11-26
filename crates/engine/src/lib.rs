@@ -48,6 +48,8 @@ pub enum Command {
     Scratch(usize, Option<f64>),
     /// Pausing slows the decks to a stop as a record does.
     VinylStop(bool),
+    /// One of a deck's stems (drums, bass, the rest, vocals) heard or not.
+    Stem(usize, usize, bool),
     Key(usize, f32),
     Gain(usize, f32),
     Volume(usize, f32),
@@ -91,6 +93,8 @@ pub struct DeckState {
     pub sync_lock: bool,
     /// 0 not leading, 1 leading, 2 leading because the DJ picked it.
     pub sync_leader: u8,
+    /// Stems the loaded track plays from; 0 while it has none.
+    pub stems: u8,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

@@ -232,6 +232,7 @@ impl Mixer {
             Command::Fx(..) => {}
             Command::Pfl(..)
             | Command::VinylStop(_)
+            | Command::Stem(..)
             | Command::Scratch(..)
             | Command::Phones(..)
             | Command::Ducking(..)
@@ -342,6 +343,7 @@ impl Mixer {
                     peak: c.peak,
                     sync_lock: false,
                     sync_leader: 0,
+                    stems: 0,
                 }
             }),
             main_peak: self.main_peak,
