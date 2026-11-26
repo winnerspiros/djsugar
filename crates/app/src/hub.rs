@@ -25,10 +25,11 @@ pub enum Service {
     SoundCloud,
     Audius,
     Archive,
+    Spotify,
 }
 
 impl Service {
-    pub const ALL: [Self; 4] = [Self::YouTube, Self::SoundCloud, Self::Audius, Self::Archive];
+    pub const ALL: [Self; 5] = [Self::YouTube, Self::SoundCloud, Self::Spotify, Self::Audius, Self::Archive];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -36,6 +37,7 @@ impl Service {
             Self::SoundCloud => "SOUNDCLOUD",
             Self::Audius => "AUDIUS",
             Self::Archive => "ARCHIVE",
+            Self::Spotify => "SPOTIFY",
         }
     }
 
@@ -46,6 +48,7 @@ impl Service {
             Self::SoundCloud => "SoundCloud",
             Self::Audius => "Audius",
             Self::Archive => "the Internet Archive",
+            Self::Spotify => "Spotify",
         }
     }
 
@@ -64,6 +67,7 @@ impl Service {
             Self::SoundCloud => 0xff5500,
             Self::Audius => 0xcc0fe0,
             Self::Archive => 0x9a9a9e,
+            Self::Spotify => 0x1db954,
         }
     }
 }
@@ -82,6 +86,8 @@ struct Clients {
     soundcloud: SoundCloud,
     audius: Audius,
     archive: Archive,
+    /// Where the Spotify account is kept.
+    spotify: PathBuf,
 }
 
 impl Clients {
@@ -91,17 +97,21 @@ impl Clients {
             Service::SoundCloud => self.soundcloud.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Audius => self.audius.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Archive => self.archive.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::Spotify => crate::spotify::list(&self.spotify, q, more),
         }
     }
 
     fn fetch(
         &self,
         sv: Service,
-        id: &str,
+        hit: &Hit,
         dir: &std::path::Path,
         progress: &(dyn Fn(u64, u64) + Sync),
+        said: &(dyn Fn(String) + Sync),
     ) -> Result<PathBuf> {
+        let id = hit.id.as_str();
         match sv {
+            Service::Spotify => crate::spotify::fetch(&self.spotify, &self.youtube, hit, dir, progress, said),
             Service::YouTube => self.youtube.fetch(id, dir, progress),
             Service::SoundCloud => self.soundcloud.fetch(id, dir, progress),
             Service::Audius => self.audius.fetch(id, dir, progress),
@@ -112,7 +122,12 @@ impl Clients {
 
 #[derive(Debug)]
 pub enum Reply {
-    Page(Page, bool),
+    /// A page, whether it follows the one shown, and the era it was asked in.
+    Page(Page, bool, u64),
+    /// The Spotify login ended: the account's name, or why not.
+    Account(std::result::Result<String, String>, u64),
+    /// Something to tell the DJ while a job goes on.
+    Said(String),
     Progress(String, f32),
     Ready(String, PathBuf, usize, Service),
     /// A hit's picture, for the search it was asked in.
@@ -134,6 +149,14 @@ pub struct Hub {
     pub scroll: f32,
     /// The hits' pictures by ID, fetched as soon as a search answers.
     pub thumbs: std::collections::HashMap<String, Art>,
+    /// The Spotify account's name once signed in; empty until Spotify has told it.
+    pub account: Option<String>,
+    /// The Spotify login page is open.
+    pub signing: bool,
+    /// The Spotify list shown: liked songs, the playlists, one playlist or a search.
+    pub list: String,
+    /// Counts service switches and sign-outs, so answers to an earlier one are dropped.
+    era: u64,
     /// Counts searches, so pictures for an old one are dropped.
     round: Arc<std::sync::atomic::AtomicU64>,
     clients: Arc<Clients>,
@@ -145,6 +168,7 @@ pub struct Hub {
 impl Hub {
     pub fn new(cache: PathBuf) -> Self {
         let (tx, rx) = channel();
+        let spotify = cache.with_file_name("spotify");
         Self {
             service: Service::YouTube,
             query: String::new(),
@@ -156,12 +180,17 @@ impl Hub {
             fetching: Vec::new(),
             scroll: 0.0,
             thumbs: std::collections::HashMap::new(),
+            account: djsugar_spotify::logged_in(&spotify).then(String::new),
+            signing: false,
+            list: crate::spotify::LIKED.to_owned(),
+            era: 0,
             round: Arc::default(),
             clients: Arc::new(Clients {
                 youtube: YouTube::new("US", ""),
                 soundcloud: SoundCloud::new(),
                 audius: Audius::new(),
                 archive: Archive,
+                spotify,
             }),
             cache,
             tx,
@@ -169,18 +198,91 @@ impl Hub {
         }
     }
 
-    pub fn search(&mut self) {
+    /// Opens Spotify's login page and waits for it; a second call gives the wait up.
+    pub fn sign_in(&mut self) {
+        if self.signing {
+            djsugar_spotify::cancel_login();
+            return;
+        }
+        self.signing = true;
+        self.status = "Sign in on the page that opened".into();
+        let (c, tx, era) = (self.clients.clone(), self.tx.clone(), self.era);
+        std::thread::spawn(move || {
+            let r = djsugar_spotify::login(&c.spotify, |url| {
+                crate::open::open(url);
+            });
+            let _ = tx.send(Reply::Account(r, era));
+        });
+    }
+
+    pub fn sign_out(&mut self) {
+        djsugar_spotify::cancel_login();
+        djsugar_spotify::logout(&self.clients.spotify);
+        self.account = None;
+        self.era += 1;
+        self.searching = false;
+        self.hits.clear();
+        self.more = None;
+        self.status = String::new();
+        self.list = crate::spotify::LIKED.to_owned();
+    }
+
+    /// Shows one of the Spotify account's lists.
+    pub fn show(&mut self, list: &str) {
+        if self.account.is_none() || self.service != Service::Spotify {
+            return;
+        }
+        self.list = list.to_owned();
+        self.query.clear();
+        self.hits.clear();
+        self.more = None;
+        self.era += 1;
+        self.searching = false;
+        self.search();
+    }
+
+    /// Opens the playlist among the hits.
+    pub fn open(&mut self, hit: usize) {
+        if let Some(id) = self.hits.get(hit).map(|h| h.id.clone()) {
+            self.show(&id);
+        }
+    }
+
+    /// What a search asks the service: the words, or for Spotify the list they stand for.
+    fn request(&mut self) -> String {
         let q = self.query.trim().to_string();
+        if self.service != Service::Spotify {
+            return q;
+        }
+        if self.account.is_none() {
+            return String::new();
+        }
+        if !q.is_empty() {
+            self.list = crate::spotify::search(&q);
+        }
+        self.list.clone()
+    }
+
+    pub fn search(&mut self) {
+        let q = self.request();
         if q.is_empty() || self.searching {
             return;
         }
         self.searching = true;
-        self.status = format!("Searching {} for \"{q}\"", self.service.title());
+        self.status = if self.service == Service::Spotify && self.query.trim().is_empty() {
+            String::new()
+        } else {
+            format!("Searching {} for \"{}\"", self.service.title(), self.query.trim())
+        };
         self.scroll = 0.0;
-        let (c, tx, sv) = (self.clients.clone(), self.tx.clone(), self.service);
+        let (c, tx, sv, era) = (self.clients.clone(), self.tx.clone(), self.service, self.era);
+        let nameless = sv == Service::Spotify && self.account.as_deref() == Some("");
         std::thread::spawn(move || {
+            if nameless && let Some(name) = crate::spotify::name(&c.spotify) {
+                let _ = tx.send(Reply::Account(Ok(name), era));
+            }
             let _ = tx.send(match c.search(sv, &q, None) {
-                Ok(p) => Reply::Page(p, false),
+                Ok(p) => Reply::Page(p, false, era),
                 Err(e) => Reply::Failed(None, e.to_string()),
             });
         });
@@ -194,10 +296,10 @@ impl Hub {
             return;
         }
         self.searching = true;
-        let (c, tx, q, sv) = (self.clients.clone(), self.tx.clone(), self.query.clone(), self.service);
+        let (c, tx, q, sv, era) = (self.clients.clone(), self.tx.clone(), self.request(), self.service, self.era);
         std::thread::spawn(move || {
             let _ = tx.send(match c.search(sv, &q, Some(&token)) {
-                Ok(p) => Reply::Page(p, true),
+                Ok(p) => Reply::Page(p, true, era),
                 Err(e) => Reply::Failed(None, e.to_string()),
             });
         });
@@ -208,7 +310,10 @@ impl Hub {
         if self.fetching.iter().any(|(id, ..)| *id == h.id) {
             return;
         }
-        let (id, art) = (h.id.clone(), h.art.clone());
+        if h.id.starts_with(crate::spotify::LIST) {
+            return;
+        }
+        let (id, art, wanted) = (h.id.clone(), h.art.clone(), h.clone());
         self.fetching.push((id.clone(), deck, 0.0));
         self.status = format!("Getting \"{}\" for deck {}", h.title, ["A", "B"][deck.min(1)]);
         let (c, tx, dir, sv) = (self.clients.clone(), self.tx.clone(), self.cache.clone(), self.service);
@@ -224,7 +329,10 @@ impl Hub {
                     }
                 }
             };
-            let r = c.fetch(sv, &id, &dir, &progress);
+            let said = |what: String| {
+                let _ = tx.send(Reply::Said(what));
+            };
+            let r = c.fetch(sv, &wanted, &dir, &progress, &said);
             if let Ok(path) = &r {
                 // The largest picture there is; YouTube has not got the large ones for every video.
                 let large = ["maxresdefault", "hq720"].map(|size| sugar_net::youtube::art(&id, size));
@@ -286,6 +394,7 @@ impl Hub {
         self.hits.clear();
         self.more = None;
         self.searching = false;
+        self.era += 1;
         self.search();
     }
 
@@ -294,7 +403,23 @@ impl Hub {
         let mut ready = Vec::new();
         while let Ok(r) = self.rx.try_recv() {
             match r {
-                Reply::Page(p, append) => {
+                Reply::Page(_, _, era) | Reply::Account(Ok(_), era) if era != self.era => {}
+                Reply::Said(what) => self.status = what,
+                Reply::Account(r, _) => {
+                    let fresh = self.signing;
+                    self.signing = false;
+                    match r {
+                        Ok(name) => {
+                            self.account = Some(name);
+                            if fresh {
+                                self.status = String::new();
+                                self.show(crate::spotify::LIKED);
+                            }
+                        }
+                        Err(why) => self.status = if why == "cancelled" { String::new() } else { why },
+                    }
+                }
+                Reply::Page(p, append, _) => {
                     self.searching = false;
                     self.status = if p.hits.is_empty() && !append { "Nothing found".into() } else { String::new() };
                     if append {

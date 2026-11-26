@@ -172,7 +172,7 @@ fn main() {
         if pixels(&r) != before {
             faults.push(format!("{name}: frame changes when the GPU is recreated, as after leaving the app"));
         }
-        typing(&mut ui, &mut r, name, &mut faults);
+        typing(&mut ui, &mut r, name, &out, &mut faults);
         save(&r, &out.join(format!("{name}-typed.png")));
         ui.tap("View(Lib)");
         ui.key(Key::Escape, Mods::default());
@@ -398,11 +398,25 @@ fn view_name(v: &str) -> &str {
 }
 
 /// Tap the hub field, type, lose focus, come back and type more: the text must survive.
-fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, faults: &mut Vec<String>) {
+fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, out: &Path, faults: &mut Vec<String>) {
     if !ui.tap("View(Stream)") {
         ui.key(Key::Char('5'), Mods { ctrl: true, alt: true, shift: false });
     }
     ui.render(r);
+    // Spotify asks for a sign-in before it lists anything; the query is still empty, so no service is asked.
+    if ui.tap("HubService(Spotify)") || ui.tap("StreamFrom(Spotify)") {
+        ui.render(r);
+        if !ui.targets().iter().any(|t| t.0 == "HubSignIn") {
+            faults.push(format!("{name}: Spotify has no sign-in button"));
+        }
+        save(r, &out.join(format!("{name}-spotify.png")));
+        if !(ui.tap("HubService(YouTube)") || ui.tap("StreamFrom(YouTube)")) {
+            faults.push(format!("{name}: no way back to YouTube"));
+        }
+        ui.render(r);
+    } else {
+        faults.push(format!("{name}: no Spotify among the services"));
+    }
     if !ui.tap("HubFocus") {
         faults.push(format!("{name}: no hub search field"));
         return;

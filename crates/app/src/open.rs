@@ -5,6 +5,7 @@ pub const HOME: &str = "https://github.com/winnerspiros/djsugar/tree/rust";
 pub const ISSUES: &str = "https://github.com/winnerspiros/djsugar/issues/new";
 
 /// Opens `what`, a link or a path; false when the system has nothing to open it with.
+#[cfg(not(target_os = "android"))]
 pub fn open(what: &str) -> bool {
     let tool = if cfg!(target_os = "macos") {
         "open"
@@ -14,4 +15,43 @@ pub fn open(what: &str) -> bool {
         "xdg-open"
     };
     std::process::Command::new(tool).arg(what).spawn().is_ok()
+}
+
+/// Opens the link `what` in the phone's browser.
+#[cfg(target_os = "android")]
+#[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
+pub fn open(what: &str) -> bool {
+    use jni::objects::{JObject, JValue};
+    use jni::{jni_sig, jni_str};
+    let Some(app) = crate::android::app() else { return false };
+    let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) };
+    vm.attach_current_thread(|env| -> jni::errors::Result<()> {
+        let activity = unsafe { JObject::from_raw(env, app.activity_as_ptr().cast()) };
+        let link = env.new_string(what)?;
+        let uri = env
+            .call_static_method(
+                jni_str!("android/net/Uri"),
+                jni_str!("parse"),
+                jni_sig!("(Ljava/lang/String;)Landroid/net/Uri;"),
+                &[JValue::Object(&link)],
+            )?
+            .l()?;
+        let action = env.new_string("android.intent.action.VIEW")?;
+        let intent = env.new_object(
+            jni_str!("android/content/Intent"),
+            jni_sig!("(Ljava/lang/String;Landroid/net/Uri;)V"),
+            &[JValue::Object(&action), JValue::Object(&uri)],
+        )?;
+        let r = env.call_method(
+            &activity,
+            jni_str!("startActivity"),
+            jni_sig!("(Landroid/content/Intent;)V"),
+            &[JValue::Object(&intent)],
+        );
+        if r.is_err() {
+            env.exception_clear();
+        }
+        r.map(|_| ())
+    })
+    .is_ok()
 }

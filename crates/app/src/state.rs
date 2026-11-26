@@ -133,6 +133,13 @@ pub enum Target {
     HubSearch,
     HubList,
     HubLoad(usize, usize),
+    /// Signs in to Spotify, or gives up waiting for its page.
+    HubSignIn,
+    HubSignOut,
+    /// One of the Spotify account's lists: liked songs, then the playlists.
+    HubShow(u8),
+    /// Opens the playlist among the hits.
+    HubOpen(usize),
     LoadSelected(usize),
     GridOp(GridOp),
     GridClose,
@@ -2889,6 +2896,10 @@ impl State {
             }
             Target::HubList => {}
             Target::HubLoad(hit, deck) => self.hub.fetch(hit, deck),
+            Target::HubSignIn => self.hub.sign_in(),
+            Target::HubSignOut => self.hub.sign_out(),
+            Target::HubShow(n) => self.hub.show([crate::spotify::LIKED, crate::spotify::LISTS][usize::from(n.min(1))]),
+            Target::HubOpen(hit) => self.hub.open(hit),
             Target::Shelf(sh) => {
                 if self.view == View::Stream {
                     self.view = View::Lib;

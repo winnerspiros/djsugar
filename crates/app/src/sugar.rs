@@ -2046,16 +2046,58 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
         ACCENT,
         Target::HubSearch,
     );
+    let spotify = s.hub.service == Service::Spotify;
+    let green = rgb(Service::Spotify.colour());
+    // Spotify's own row: the account's lists on the left, whose account it is on the right.
+    let account_h = if spotify && s.hub.account.is_some() { 34.0 } else { 0.0 };
+    if account_h > 0.0 {
+        let y = r.y + bar + 5.0;
+        let list = s.hub.list.clone();
+        let lists = list == crate::spotify::LISTS || list.starts_with(crate::spotify::LIST);
+        button(
+            p,
+            s,
+            Rect::new(r.x + 10.0, y, 96.0, 24.0),
+            "LIKED SONGS",
+            list == crate::spotify::LIKED,
+            green,
+            Target::HubShow(0),
+        );
+        button(p, s, Rect::new(r.x + 112.0, y, 84.0, 24.0), "PLAYLISTS", lists, green, Target::HubShow(1));
+        let out = Rect::new(r.x + r.w - 82.0, y, 72.0, 24.0);
+        button(p, s, out, "SIGN OUT", false, ACCENT, Target::HubSignOut);
+        let name = s.hub.account.clone().unwrap_or_default();
+        let nw = p.text_width(ARTIST, &name).min(out.x - r.x - 220.0).max(0.0);
+        p.text_in(out.x - 10.0 - nw, y + 16.0, nw, ARTIST, &name);
+        p.rect(r.x, r.y + bar + account_h - 1.0, r.w, 1.0, 0.0, EDGE);
+    }
     let status_h = if s.hub.status.is_empty() { 0.0 } else { 24.0 };
     if status_h > 0.0 {
         let status = s.hub.status.clone();
-        p.text_in(r.x + 12.0, r.y + bar + 16.0, r.w - 24.0, Style { colour: AMBER, ..ARTIST }, &status);
+        p.text_in(r.x + 12.0, r.y + bar + account_h + 16.0, r.w - 24.0, Style { colour: AMBER, ..ARTIST }, &status);
     }
-    let list = Rect::new(r.x, r.y + bar + status_h, r.w, r.h - bar - status_h);
+    let top = bar + account_h + status_h;
+    let list = Rect::new(r.x, r.y + top, r.w, r.h - top);
     s.hub_area = list;
+    if spotify && s.hub.account.is_none() {
+        let msg = "Sign in to Spotify for your liked songs, your playlists and its search.";
+        p.text_in(
+            list.x + ((list.w - p.text_width(ARTIST, msg)) * 0.5).max(12.0),
+            list.y + 40.0,
+            list.w - 24.0,
+            Style { colour: GREY, ..ARTIST },
+            msg,
+        );
+        let waiting = s.hub.signing;
+        let b = Rect::new(list.x + (list.w - 150.0) * 0.5, list.y + 58.0, 150.0, 30.0);
+        button(p, s, b, if waiting { "STOP WAITING" } else { "SIGN IN" }, waiting, green, Target::HubSignIn);
+        return;
+    }
     if s.hub.hits.is_empty() {
         let msg = if busy {
             "Searching".to_string()
+        } else if spotify {
+            "Nothing in this list yet.".to_string()
         } else {
             format!(
                 "Search {}, then send a result to deck A or B. Audio is cached for next time.",
@@ -2094,8 +2136,13 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
         let tw = list.x + list.w - 2.0 * (bw + 6.0) - 90.0 - left;
         p.text_in(left, y + 18.0, tw, Style::new(12.5, Weight::Semibold, TEXT), &title);
         p.text_in(left, y + 34.0, tw, ARTIST, &artist);
-        let t = mmss(secs as f32);
+        let t = if secs > 0 { mmss(secs as f32) } else { String::new() };
         p.text(list.x + list.w - 2.0 * (bw + 6.0) - 12.0 - p.text_width(ARTIST, &t), y + 26.0, ARTIST, &t);
+        if s.hub.hits[i].id.starts_with(crate::spotify::LIST) {
+            let b = Rect::new(list.x + list.w - (bw + 6.0), y + 7.0, bw, HUB_ROW - 14.0);
+            button(p, s, b, "OPEN", false, green, Target::HubOpen(i));
+            continue;
+        }
         for (d, &colour) in DECK.iter().enumerate() {
             let b = Rect::new(list.x + list.w - (2 - d) as f32 * (bw + 6.0), y + 7.0, bw, HUB_ROW - 14.0);
             let getting = s.hub.fetching.iter().find(|f| f.0 == s.hub.hits[i].id && f.1 == d).map(|f| f.2);

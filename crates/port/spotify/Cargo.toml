@@ -1,0 +1,29 @@
+[package]
+name = "djsugar-spotify"
+description = "Spotify for the decks: web login, the account's lists, and tracks fetched as Ogg Vorbis"
+version.workspace = true
+edition = "2021"
+publish = false
+license.workspace = true
+
+[dependencies]
+librespot-core = { version = "0.8.0", default-features = false }
+librespot-audio = { version = "0.8.0", default-features = false }
+librespot-metadata = { version = "0.8.0", default-features = false }
+librespot-protocol = "0.8.0"
+protobuf = "3.7"
+protobuf-json-mapping = "3.7"
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+futures-util = "0.3"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.9"
+bytes = "1"
+http = "1"
+serde_json = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+
+[lints]
+workspace = true

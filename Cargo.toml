@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/app", "crates/core", "crates/decode", "crates/engine", "crates/analysis", "crates/io", "crates/layout", "crates/shell", "crates/stretch", "crates/ui", "crates/net", "crates/port/engine", "crates/port/stretch", "crates/port/control", "crates/port/controllers", "crates/port/script", "crates/port/js", "crates/port/hid", "crates/port/timecode", "crates/port/separation", "crates/port/plugin-host", "crates/port/plugin-host/test-plugin", "crates/port/plugin-host/test-vst3", "crates/port/link", "crates/port/third_party/demucs-core"]
+members = ["crates/app", "crates/core", "crates/decode", "crates/engine", "crates/analysis", "crates/io", "crates/layout", "crates/shell", "crates/stretch", "crates/ui", "crates/net", "crates/port/engine", "crates/port/stretch", "crates/port/control", "crates/port/controllers", "crates/port/script", "crates/port/js", "crates/port/hid", "crates/port/spotify", "crates/port/timecode", "crates/port/separation", "crates/port/plugin-host", "crates/port/plugin-host/test-plugin", "crates/port/plugin-host/test-vst3", "crates/port/link", "crates/port/third_party/demucs-core"]
 
 [workspace.package]
 edition = "2024"
@@ -28,3 +28,8 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# librespot-core 0.8.0 with changes marked "DJ Sugar": TLS in pure Rust, Android reports as Linux, audio key refusals
+# keep their code, an account without Premium no longer ends the app, and the build reads no git or clock.
+[patch.crates-io]
+librespot-core = { path = "crates/port/spotify/vendor/librespot-core" }
