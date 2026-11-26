@@ -17,7 +17,7 @@ use crate::dsp::Svf;
 use crate::inputs::{input_group, MICROPHONE, NUM_INPUTS};
 
 /// The built-in effects, in `loaded_effect` order.
-pub const AVAILABLE_EFFECTS: [&str; 23] = [
+pub const AVAILABLE_EFFECTS: [&str; 25] = [
     "Echo",
     "Reverb",
     "Filter",
@@ -41,6 +41,8 @@ pub const AVAILABLE_EFFECTS: [&str; 23] = [
     "Compressor",
     "Tape Echo",
     "Glitch",
+    "Backspin",
+    "Pitch Shift",
 ];
 
 /// Parameter knobs (`parameterK`) and buttons (`button_parameterK`) per slot.
@@ -252,9 +254,11 @@ enum Kind {
     Compressor,
     TapeEcho,
     Glitch,
+    Backspin,
+    PitchShift,
 }
 
-const KINDS: [Kind; 23] = [
+const KINDS: [Kind; 25] = [
     Kind::Echo,
     Kind::Reverb,
     Kind::Filter,
@@ -278,6 +282,8 @@ const KINDS: [Kind; 23] = [
     Kind::Compressor,
     Kind::TapeEcho,
     Kind::Glitch,
+    Kind::Backspin,
+    Kind::PitchShift,
 ];
 
 impl Kind {
@@ -298,7 +304,9 @@ impl Kind {
             | Kind::RevRoll
             | Kind::FilterEcho
             | Kind::TapeEcho
-            | Kind::Glitch => Memory::Long,
+            | Kind::Glitch
+            | Kind::Backspin
+            | Kind::PitchShift => Memory::Long,
             Kind::Reverb | Kind::Flanger | Kind::Chorus => Memory::Short,
             Kind::Filter
             | Kind::Bitcrusher
@@ -320,7 +328,7 @@ struct Manifest {
     defaults: &'static [f64],
 }
 
-const MANIFESTS: [Manifest; 23] = [
+const MANIFESTS: [Manifest; 25] = [
     Manifest { names: &["Time", "Feedback", "Ping Pong", "Send"], defaults: &[0.5, 0.5, 0.0, 1.0] },
     Manifest { names: &["Decay", "Bandwidth", "Damping", "Send"], defaults: &[0.5, 0.75, 0.5, 1.0] },
     Manifest { names: &["Low Pass", "Resonance", "High Pass"], defaults: &[1.0, 0.25, 0.0] },
@@ -344,6 +352,8 @@ const MANIFESTS: [Manifest; 23] = [
     Manifest { names: &["Amount", "Attack", "Release", "Mix"], defaults: &[0.3, 0.667, 0.467, 1.0] },
     Manifest { names: &["Time", "Feedback", "Age", "Send"], defaults: &[0.5, 0.55, 0.35, 1.0] },
     Manifest { names: &["Step", "Chance", "Reverse", "Half Speed"], defaults: &[0.5, 0.5, 0.25, 0.15] },
+    Manifest { names: &["Time", "Mix"], defaults: &[0.4, 1.0] },
+    Manifest { names: &["Pitch", "Mix", "Grain"], defaults: &[0.5, 1.0, 0.5] },
 ];
 
 /// The beat switch's range: 1/16 to 4 beats, as powers of two.
@@ -367,6 +377,7 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
         Kind::Tremolo => Some((0, -4, 2, false)),
         Kind::Autopan => Some((0, -2, 2, false)),
         Kind::Glitch => Some((0, -4, 0, false)),
+        Kind::Backspin => Some((0, -2, 3, false)),
         Kind::Reverb
         | Kind::Filter
         | Kind::Bitcrusher
@@ -374,7 +385,8 @@ fn time_parameter(kind: Kind) -> Option<(usize, i32, i32, bool)> {
         | Kind::Drive
         | Kind::Ladder
         | Kind::Hall
-        | Kind::Compressor => None,
+        | Kind::Compressor
+        | Kind::PitchShift => None,
     }
 }
 
@@ -398,7 +410,8 @@ fn link(kind: Kind, meta: f64) -> [Option<f64>; MAX_PARAMETERS] {
         Kind::Noise => [Some(meta), None, None, None],
         Kind::Spiral => [None, None, Some(meta), None],
         // Drive leaves its tone to the FX bar's slider.
-        Kind::Drive | Kind::Compressor => [Some(meta), None, None, None],
+        Kind::Drive | Kind::Compressor | Kind::PitchShift => [Some(meta), None, None, None],
+        Kind::Backspin => [None, Some(meta), None, None],
         Kind::Chorus => [None, Some(meta), None, None],
         // Turning up closes the ladder, from fully open.
         Kind::Ladder => [Some(1.0 - 0.85 * meta), None, None, None],
@@ -761,6 +774,8 @@ struct Instance {
     compressor: extra::Compressor,
     tape_echo: extra::TapeEcho,
     glitch: extra::Glitch,
+    backspin: extra::Backspin,
+    pitch_shift: extra::PitchShift,
     hall: extra::Hall,
     filter_echo: extra::FilterEcho,
 }
@@ -799,6 +814,8 @@ impl Instance {
             compressor: extra::Compressor::default(),
             tape_echo: extra::TapeEcho::new(sample_rate),
             glitch: extra::Glitch::new(sample_rate),
+            backspin: extra::Backspin::new(sample_rate),
+            pitch_shift: extra::PitchShift::new(sample_rate),
             hall: extra::Hall::new(sample_rate),
             filter_echo: extra::FilterEcho::new(sample_rate),
         }
@@ -852,6 +869,8 @@ impl Instance {
             Some(Kind::Compressor) => self.compressor = extra::Compressor::default(),
             Some(Kind::TapeEcho) => self.tape_echo.reset(&mut self.mem),
             Some(Kind::Glitch) => self.glitch.reset(&mut self.mem),
+            Some(Kind::Backspin) => self.backspin.reset(&mut self.mem),
+            Some(Kind::PitchShift) => self.pitch_shift.reset(&mut self.mem),
             Some(Kind::Hall) => self.hall.reset(&mut self.mem),
             Some(Kind::FilterEcho) => self.filter_echo.reset(&mut self.mem),
             None => {}
@@ -887,6 +906,8 @@ impl Instance {
             Some(Kind::Compressor) => self.compressor.prepare(p, ctx),
             Some(Kind::TapeEcho) => self.tape_echo.prepare(p, ctx),
             Some(Kind::Glitch) => self.glitch.prepare(p, ctx),
+            Some(Kind::Backspin) => self.backspin.prepare(p, ctx),
+            Some(Kind::PitchShift) => self.pitch_shift.prepare(p),
             Some(Kind::Hall) => self.hall.prepare(p),
             Some(Kind::FilterEcho) => self.filter_echo.prepare(p, ctx),
             None => {}
@@ -916,6 +937,8 @@ impl Instance {
             Some(Kind::Compressor) => self.compressor.process(x),
             Some(Kind::TapeEcho) => self.tape_echo.process(&mut self.mem, x),
             Some(Kind::Glitch) => self.glitch.process(&mut self.mem, x),
+            Some(Kind::Backspin) => self.backspin.process(&mut self.mem, x),
+            Some(Kind::PitchShift) => self.pitch_shift.process(&mut self.mem, x),
             Some(Kind::Hall) => self.hall.process(&mut self.mem, x),
             Some(Kind::FilterEcho) => self.filter_echo.process(&mut self.mem, x),
             None => x,

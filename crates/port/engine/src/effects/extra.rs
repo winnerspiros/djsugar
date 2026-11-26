@@ -1030,6 +1030,207 @@ impl Glitch {
     }
 }
 
+/// The share of a back spin the hand takes to catch the record and throw it back.
+const CATCH: f32 = 0.08;
+/// How far back a spin goes, in its own lengths, for each unit of its top speed.
+const BACK: f32 = (1.0 - CATCH) / 3.0 + CATCH / 2.0;
+/// The fastest a record is thrown back, in times its playing speed.
+const THROW: f32 = 4.0;
+
+/// How fast the record turns `t` of the way through a back spin whose top speed is `peak`: forward, through a stop as
+/// the hand catches it, back at `peak`, then coasting down to a stop.
+fn spin(t: f32, peak: f32) -> f32 {
+    if t >= 1.0 {
+        0.0
+    } else if t < CATCH {
+        let u = t / CATCH;
+        1.0 - (1.0 + peak) * u * u * (3.0 - 2.0 * u)
+    } else {
+        let u = (t - CATCH) / (1.0 - CATCH);
+        -peak * (1.0 - u) * (1.0 - u)
+    }
+}
+
+/// A back spin: from the next beat the record is thrown backwards and coasts to a stop, over 1/4 to 8 beats, and stays
+/// silent until the effect is turned off. It spins back through what it heard since it was turned on.
+pub(super) struct Backspin {
+    len: usize,
+    written: usize,
+    spinning: bool,
+    at: f32,
+    elapsed: f32,
+    frames: f32,
+    peak: f32,
+    beat: f32,
+    sweep: Sweep,
+    last: f32,
+    mix: f32,
+    mix_target: f32,
+}
+
+impl Backspin {
+    pub(super) fn new(sample_rate: f32) -> Self {
+        Self {
+            len: Echo::new(sample_rate).len,
+            written: 0,
+            spinning: false,
+            at: 0.0,
+            elapsed: 0.0,
+            frames: 1.0,
+            peak: 0.0,
+            beat: 1.0,
+            sweep: Sweep::default(),
+            last: 0.0,
+            mix: 1.0,
+            mix_target: 1.0,
+        }
+    }
+
+    pub(super) fn reset(&mut self, mem: &mut [f32]) {
+        mem[..2 * self.len].fill(0.0);
+        let (len, mix) = (self.len, self.mix_target);
+        *self = Self { len, mix, mix_target: mix, ..Self::new(48_000.0) };
+    }
+
+    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS], ctx: Ctx) {
+        self.sweep.prepare(1.0, ctx);
+        self.beat = ctx.beat_seconds * ctx.sample_rate;
+        self.frames = (beats(p[0], -2, 3) * self.beat).clamp(256.0, self.len as f32);
+        self.mix_target = p[1].clamp(0.0, 1.0);
+    }
+
+    /// The sound `at` frames into what was heard, on a curve through the frames either side.
+    fn read(&self, mem: &[f32]) -> [f32; 2] {
+        let at = self.at.clamp(1.0, (self.written.max(4) - 3) as f32);
+        let (i, t) = (at as usize, at.fract());
+        std::array::from_fn(|c| {
+            let m = &mem[c * self.len..];
+            let (p0, p1, p2, p3) = (m[i - 1], m[i], m[i + 1], m[i + 2]);
+            let c1 = 0.5 * (p2 - p0);
+            let c2 = p0 - 2.5 * p1 + 2.0 * p2 - 0.5 * p3;
+            let c3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
+            ((c3 * t + c2) * t + c1) * t + p1
+        })
+    }
+
+    #[inline]
+    pub(super) fn process(&mut self, mem: &mut [f32], x: [f32; 2]) -> [f32; 2] {
+        glide(&mut self.mix, self.mix_target);
+        let phase = self.sweep.tick();
+        if !self.spinning {
+            if self.written < self.len {
+                mem[self.written] = x[0];
+                mem[self.len + self.written] = x[1];
+                self.written += 1;
+            }
+            // Thrown on the beat, or once the memory is full when no beat came.
+            let on_beat = phase < self.last && self.written as f32 > 0.25 * self.beat;
+            if (on_beat || self.written == self.len) && self.written > 4 {
+                self.spinning = true;
+                self.at = (self.written - 2) as f32;
+                // No faster than what was heard reaches back for.
+                self.peak = ((self.at / self.frames + CATCH / 2.0) / BACK).clamp(0.0, THROW);
+            }
+            self.last = phase;
+            return x;
+        }
+        let speed = spin((self.elapsed / self.frames).min(1.0), self.peak);
+        let y = self.read(mem);
+        // A record turning slower than it plays is quieter, and silent when still.
+        let level = speed.abs().min(1.0);
+        self.at += speed;
+        self.elapsed += 1.0;
+        [x[0] + (y[0] * level - x[0]) * self.mix, x[1] + (y[1] * level - x[1]) * self.mix]
+    }
+}
+
+/// Semitones the pitch knob reaches either way.
+const SHIFT: f32 = 12.0;
+
+/// Moves the pitch up to an octave either way without changing the tempo; the knob's middle is no shift. Two heads
+/// read the last moments faster or slower than they were written, each fading out as it runs out of them while the
+/// other takes over. Grain is how long a head reads, 25 to 100 ms: short for drums, long for voices and pads.
+pub(super) struct PitchShift {
+    /// Frames the line holds for each side, and where the next is written.
+    len: usize,
+    write: usize,
+    phase: f32,
+    window: f32,
+    semitones: f32,
+    semitones_target: f32,
+    mix: f32,
+    mix_target: f32,
+    sample_rate: f32,
+    fresh: bool,
+}
+
+impl PitchShift {
+    pub(super) fn new(sample_rate: f32) -> Self {
+        Self {
+            len: (0.1 * sample_rate) as usize + 8,
+            write: 0,
+            phase: 0.0,
+            window: 0.0625 * sample_rate,
+            semitones: 0.0,
+            semitones_target: 0.0,
+            mix: 1.0,
+            mix_target: 1.0,
+            sample_rate,
+            fresh: true,
+        }
+    }
+
+    pub(super) fn reset(&mut self, mem: &mut [f32]) {
+        mem[..2 * self.len].fill(0.0);
+        *self = Self::new(self.sample_rate);
+    }
+
+    pub(super) fn prepare(&mut self, p: &[f32; MAX_PARAMETERS]) {
+        self.semitones_target = (p[0].clamp(0.0, 1.0) * 2.0 - 1.0) * SHIFT;
+        self.mix_target = p[1].clamp(0.0, 1.0);
+        self.window = ((0.025 + 0.075 * p[2].clamp(0.0, 1.0)) * self.sample_rate).clamp(64.0, (self.len - 4) as f32);
+        if self.fresh {
+            self.fresh = false;
+            self.semitones = self.semitones_target;
+            self.mix = self.mix_target;
+        }
+    }
+
+    /// One side's sound `back` frames ago, on a curve through the frames either side.
+    fn read(&self, side: &[f32], back: f32) -> f32 {
+        let at = (self.write + 2 * self.len) as f32 - 1.0 - back;
+        let (i, t) = (at as usize, at.fract());
+        let s = |k: usize| side[(i + k - 1) % self.len];
+        let (p0, p1, p2, p3) = (s(0), s(1), s(2), s(3));
+        let c1 = 0.5 * (p2 - p0);
+        let c2 = p0 - 2.5 * p1 + 2.0 * p2 - 0.5 * p3;
+        let c3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
+        ((c3 * t + c2) * t + c1) * t + p1
+    }
+
+    #[inline]
+    pub(super) fn process(&mut self, mem: &mut [f32], x: [f32; 2]) -> [f32; 2] {
+        glide(&mut self.semitones, self.semitones_target);
+        glide(&mut self.mix, self.mix_target);
+        mem[self.write] = x[0];
+        mem[self.len + self.write] = x[1];
+        self.write = (self.write + 1) % self.len;
+        // The heads move at the ratio while the writing moves at one, so how far back they read changes by the rest.
+        let ratio = (self.semitones / 12.0).exp2();
+        self.phase = (self.phase + (1.0 - ratio) / self.window).rem_euclid(1.0);
+        let other = (self.phase + 0.5).fract();
+        let near = 0.5 - 0.5 * (TAU * self.phase).cos();
+        // Within a quarter semitone of the middle the shifter fades away, so the middle is the sound untouched.
+        let wet = self.mix * (self.semitones.abs() * 4.0).min(1.0);
+        std::array::from_fn(|c| {
+            let side = &mem[c * self.len..(c + 1) * self.len];
+            let y = near * self.read(side, 2.0 + self.phase * self.window)
+                + (1.0 - near) * self.read(side, 2.0 + other * self.window);
+            x[c] + (y - x[c]) * wet
+        })
+    }
+}
+
 /// Decibels the knee is wide.
 const KNEE: f32 = 6.0;
 
@@ -1170,6 +1371,50 @@ mod tests {
         assert_eq!(slow[15_002].1 - slow[15_000].1, 1.0);
         // Only ever sound that came in; where two steps cross over, both are heard.
         assert!(rev.iter().chain(&slow).all(|(x, y)| (-0.01..=*x * 1.42).contains(y)));
+    }
+
+    /// Times a second a 440 Hz tone crosses zero going up once shifted by the pitch knob at `knob`.
+    fn shifted(knob: f32) -> f32 {
+        let mut s = PitchShift::new(48_000.0);
+        let mut mem = vec![0.0; super::super::long_size(48_000.0)];
+        s.reset(&mut mem);
+        s.prepare(&[knob, 1.0, 0.5, 0.0]);
+        let out: Vec<f32> =
+            (0..96_000).map(|i| s.process(&mut mem, [(i as f32 * 440.0 * TAU / 48_000.0).sin(); 2])[0]).collect();
+        out[48_000..].windows(2).filter(|w| w[0] < 0.0 && w[1] >= 0.0).count() as f32
+    }
+
+    #[test]
+    fn pitch_shift_moves_a_tone_an_octave_either_way_and_leaves_the_middle_alone() {
+        // A crossing may fall on either edge of the second counted.
+        assert!((shifted(0.5) - 440.0).abs() <= 1.0);
+        let (up, down) = (shifted(1.0), shifted(0.0));
+        assert!((up - 880.0).abs() < 30.0, "an octave up: {up}");
+        assert!((down - 220.0).abs() < 15.0, "an octave down: {down}");
+        let fifth = shifted(0.5 + 7.0 / 24.0);
+        assert!((fifth - 659.3).abs() < 25.0, "a fifth up: {fifth}");
+    }
+
+    #[test]
+    fn backspin_throws_the_record_back_on_the_beat_and_stops() {
+        let mut b = Backspin::new(48_000.0);
+        let mut mem = vec![0.0; super::super::long_size(48_000.0)];
+        b.reset(&mut mem);
+        // Time two fifths up is one beat, 24 000 frames; the ramp says where in the sound each frame comes from.
+        b.prepare(&[0.4, 1.0, 0.0, 0.0], ctx());
+        let out: Vec<f32> = (0..96_000).map(|i| b.process(&mut mem, [i as f32, i as f32])[0]).collect();
+        let thrown = out.iter().zip(0..).position(|(y, i)| *y != i as f32).unwrap();
+        assert!((23_990..=24_010).contains(&thrown), "thrown at {thrown}");
+        // Soon after the catch it runs backwards, faster than it played.
+        let fast = out[thrown + 4_000] - out[thrown + 4_001];
+        assert!(fast > 1.5, "{fast} frames back each frame");
+        assert!(out[thrown..].iter().all(|y| (0.0..=thrown as f32 * 1.01).contains(y)), "only what was heard");
+        // A beat later the record has stopped, and stays so.
+        assert!(out[thrown + 24_100..].iter().all(|y| *y == 0.0));
+        // The curve itself: playing speed, through a stop, the top speed back, then still.
+        assert_eq!(spin(0.0, 3.0), 1.0);
+        assert!((spin(CATCH, 3.0) - -3.0).abs() < 1e-5);
+        assert_eq!(spin(1.0, 3.0), 0.0);
     }
 
     /// What a click leaves behind it: `seconds` of the tape echo's repeats alone, at a beat's delay.
