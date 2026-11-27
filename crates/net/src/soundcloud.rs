@@ -100,7 +100,7 @@ impl SoundCloud {
     }
 
     /// Downloads a track into `dir` as `sc<id>.mp3` or `.m4a`. Returns the file.
-    pub fn fetch(&self, id: &str, dir: &Path, progress: &(dyn Fn(u64, u64) + Sync)) -> Result<PathBuf> {
+    pub fn fetch(&self, id: &str, dir: &Path, progress: crate::Progress<'_>) -> Result<PathBuf> {
         if id.is_empty() || !id.bytes().all(|b| b.is_ascii_digit()) {
             return Err(Error::Refused("Not a SoundCloud track".into()));
         }
@@ -199,8 +199,8 @@ fn pick(list: &[Value]) -> Option<(String, bool, &'static str)> {
 }
 
 /// Joins a playlist's header part and parts into one file that plays whole.
-fn playlist(src: &str, to: &Path, progress: &(dyn Fn(u64, u64) + Sync)) -> Result<u64> {
-    let (status, list) = read(agent().get(src).call())?;
+fn playlist(src: &str, to: &Path, progress: crate::Progress<'_>) -> Result<u64> {
+    let (status, list) = read(agent().get(src).config().timeout_global(Some(TIMEOUT)).build().call())?;
     if status >= 400 {
         return Err(Error::Status(status));
     }
@@ -233,7 +233,9 @@ fn playlist(src: &str, to: &Path, progress: &(dyn Fn(u64, u64) + Sync)) -> Resul
             };
             out.write_all(&body).map_err(net)?;
             bytes += body.len() as u64;
-            progress(n as u64 + 1, parts.len() as u64);
+            if !progress(n as u64 + 1, parts.len() as u64) {
+                return Err(Error::Stopped);
+            }
         }
         out.flush().map_err(net)?;
         Ok(bytes)
@@ -326,7 +328,7 @@ mod tests {
         assert!(!page.hits.is_empty());
         let dir = std::env::temp_dir().join(format!("sc-{}", std::process::id()));
         let got = page.hits.iter().take(8).find_map(|h| {
-            let r = sc.fetch(&h.id, &dir, &|_, _| {});
+            let r = sc.fetch(&h.id, &dir, &|_, _| true);
             println!("{} {}: {r:?}", h.id, h.title);
             r.ok()
         });

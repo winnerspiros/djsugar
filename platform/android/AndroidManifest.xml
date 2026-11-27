@@ -20,6 +20,7 @@
     <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:label="DJ Sugar"
         android:hasCode="true"
+        android:enableOnBackInvokedCallback="false"
         android:resizeableActivity="true"
         android:extractNativeLibs="true">
         <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />

@@ -35,6 +35,14 @@ pub fn find(artist: &str, title: &str, seconds: f64) -> Result<Option<String>> {
     }
     let q = if artist.trim().is_empty() { format!("q={t}") } else { format!("track_name={t}&artist_name={a}") };
     let v = get(&format!("{API}/search?{q}"))?;
+    if let Some(found) = best(&v, seconds) {
+        return Ok(Some(found));
+    }
+    if artist.trim().is_empty() {
+        return Ok(None);
+    }
+    // Names that are not quite the record's own still turn up in a search of everything.
+    let v = get(&format!("{API}/search?q={a}+{t}"))?;
     Ok(best(&v, seconds))
 }
 

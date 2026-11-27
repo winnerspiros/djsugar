@@ -47,6 +47,8 @@ struct Shell {
     started: bool,
     drawn: bool,
     dirty: bool,
+    /// When the last frame was drawn.
+    last: std::time::Instant,
 }
 
 impl Shell {
@@ -171,13 +173,15 @@ impl Shell {
                 if e.action() == KeyAction::Up {
                     return InputStatus::Handled;
                 }
-                // Back closes what is open; with nothing open the system takes it.
-                return if self.ui.back() {
-                    self.dirty = true;
-                    InputStatus::Handled
-                } else {
-                    InputStatus::Unhandled
-                };
+                // Back closes what is open; with nothing open it asks whether to leave.
+                if !self.ui.back() {
+                    self.ui.ask_quit();
+                }
+                self.dirty = true;
+                if self.ui.quit() {
+                    crate::android::finish(&self.app);
+                }
+                return InputStatus::Handled;
             }
             Keycode::Del => Key::Backspace,
             Keycode::ForwardDel => Key::Delete,
@@ -246,10 +250,17 @@ pub fn run(app: AndroidApp, read: Reader) {
         started: false,
         drawn: false,
         dirty: true,
+        last: std::time::Instant::now(),
     };
     crate::stage("waiting for window");
     loop {
-        let wait = (shell.gpu.is_some() && (shell.dirty || shell.ui.animating())).then_some(std::time::Duration::ZERO);
+        // A touch is drawn at once; what only moves by itself is drawn no more often than its frame gap.
+        let due = shell.ui.frame_gap().saturating_sub(shell.last.elapsed());
+        let wait = match (shell.gpu.is_some(), shell.dirty, shell.ui.animating()) {
+            (true, true, _) => Some(std::time::Duration::ZERO),
+            (true, false, true) => Some(due),
+            _ => None,
+        };
         let mut quit = false;
         app.poll_events(wait, |event| {
             let PollEvent::Main(event) = event else { return };
@@ -299,8 +310,11 @@ pub fn run(app: AndroidApp, read: Reader) {
                 _ => InputStatus::Unhandled,
             }) {}
         }
-        if shell.gpu.is_some() && (shell.dirty || shell.ui.animating()) {
+        if shell.gpu.is_some()
+            && (shell.dirty || (shell.ui.animating() && shell.last.elapsed() >= shell.ui.frame_gap()))
+        {
             shell.draw();
+            shell.last = std::time::Instant::now();
         }
     }
 }

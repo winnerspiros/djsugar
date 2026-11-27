@@ -14,7 +14,7 @@ fn main() {
         println!("  {} | {} - {} ({} s)", h.id, h.artist, h.title, h.seconds);
     }
     let t = std::time::Instant::now();
-    match yt.fetch(&page.hits[0].id, &dir, &|_, _| {}) {
+    match yt.fetch(&page.hits[0].id, &dir, &|_, _| true) {
         Ok(f) => println!(
             "downloaded {} ({} bytes) in {:?}",
             f.display(),

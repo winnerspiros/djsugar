@@ -85,6 +85,8 @@ pub fn app_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             Line::item("Your First Mix", Target::Tour).mark(Mark::Check(s.tour.is_some())),
             Line::Rule,
             Line::item("Report a Problem", Target::Open(1)),
+            Line::item("Keep a Log", Target::Pref(Opt::Log)).mark(Mark::Check(s.settings.on(Opt::Log))),
+            Line::item(if cfg!(target_os = "android") { "Send the Log" } else { "Show the Log" }, Target::Open(4)),
             Line::item("Show the App's Files", Target::Open(2)),
             Line::Rule,
             Line::item("About DJ Sugar", Target::Prefs(8)),

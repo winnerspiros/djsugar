@@ -123,6 +123,8 @@ pub enum Target {
     /// A choice picked for a setting.
     PrefPick(crate::settings::Opt, u8),
     Rescan,
+    /// Calls off the nth download.
+    HubStop(u8),
     /// Brings the other deck of a side forward, with four decks in use.
     Layer(usize),
     /// Waits for the key to put an action on, by the key it shipped on; and every key back as shipped.
@@ -199,6 +201,10 @@ pub enum Target {
     SideClear,
     /// A row of the Related tab onto a deck, and a linked one unlinked.
     RelatedLoad(usize, usize),
+    /// A row of the Related tab, to pick up: of the collection, and of what the streaming service suggests.
+    RelatedRow(usize),
+    SuggestRow(usize),
+    SuggestLoad(usize, usize),
     Unlink(usize),
     QueueClear,
     MixNow,
@@ -397,6 +403,8 @@ const CONTEXT: u64 = u64::MAX - 1;
 pub enum Carried {
     Track(u32),
     Hit(usize),
+    /// A row of what the streaming service suggests on the Related tab.
+    Suggested(usize),
 }
 /// How long a message stays on screen.
 pub const TOAST: std::time::Duration = std::time::Duration::from_secs(6);
@@ -1131,6 +1139,17 @@ impl State {
             || self.auto.is_some()
             || self.view_at.is_some_and(|t| t.elapsed() < VIEW_FADE)
             || self.toast.as_ref().is_some_and(|t| t.1.elapsed() < TOAST)
+            || self.hub.busy()
+    }
+
+    /// The least time between two frames: short while something on screen moves, long while the screen only
+    /// waits on a download or a search, so a waiting phone stays cool.
+    pub fn frame_gap(&self) -> std::time::Duration {
+        let moving = self.recorder.is_some()
+            || self.telemetry.decks.iter().any(|d| d.playing)
+            || !self.drags.is_empty()
+            || self.view_at.is_some_and(|t| t.elapsed() < VIEW_FADE);
+        std::time::Duration::from_millis(if moving { 15 } else { 100 })
     }
 
     pub fn tick(&mut self) {
@@ -1427,6 +1446,42 @@ impl State {
         let change = l.phrases.iter().map(|p| p.start).find(|&s| s > at + 1e-3)?;
         let bar = l.grid?.beat_frames(l.track.rate) * 4.0 / f64::from(l.track.rate);
         Some((change - at) / bar)
+    }
+
+    /// Tracks of the collection that suit the selected one, best first: its artist's others, and those close in
+    /// tempo and key. Those already listed as `known` are left out.
+    pub fn alike(&self, known: &[u32]) -> Vec<u32> {
+        let Some(at) = self.selected.map(|i| i as usize).filter(|&i| i < self.entries.len()) else { return Vec::new() };
+        let facts = |i: usize| {
+            let m = self.meta.get(i).copied().flatten().unwrap_or_default();
+            (self.entries[i].artist.to_lowercase(), m.bpm, m.key)
+        };
+        let of = facts(at);
+        let mut found: Vec<(f32, u32)> = (0..self.entries.len())
+            .filter(|&i| i != at && !known.contains(&(i as u32)))
+            .filter_map(|i| {
+                let f = facts(i);
+                Some((crate::related::alike((&of.0, of.1, of.2), (&f.0, f.1, f.2))?, i as u32))
+            })
+            .collect();
+        found.sort_by(|a, b| b.0.total_cmp(&a.0));
+        found.truncate(crate::related::ALIKE);
+        found.into_iter().map(|f| f.1).collect()
+    }
+
+    /// Every track of the Related tab's collection rows, in the order they are listed.
+    pub fn related_rows(&self) -> Vec<u32> {
+        let (linked, played) = self.related();
+        let mut rows = [linked, played].concat();
+        rows.extend(self.alike(&rows.clone()));
+        rows
+    }
+
+    /// Asks the streaming service for what goes with the selected track, once a track.
+    pub fn suggest(&mut self) {
+        if let Some(e) = self.selected.and_then(|i| self.entries.get(i as usize)) {
+            self.hub.suggest(&e.artist, &e.title);
+        }
     }
 
     /// What goes with the selected track: the tracks linked to it, then the others it was played with.
@@ -2427,6 +2482,8 @@ impl State {
                     let row = (g.start.1 - self.library.y - 30.0 + self.scroll) / self.row_h;
                     self.shown.get(row as usize).copied().map(Carried::Track)
                 }
+                Some(Target::RelatedRow(n)) => self.related_rows().get(n).copied().map(Carried::Track),
+                Some(Target::SuggestRow(n)) => Some(Carried::Suggested(n)),
                 Some(Target::HubList) => {
                     let row = ((g.start.1 - self.hub_area.y + self.hub.scroll) / crate::sugar::HUB_ROW) as usize;
                     (row < self.hub.hits.len()).then_some(Carried::Hit(row))
@@ -2604,6 +2661,10 @@ impl State {
                     let r = f64::from(self.decks[d].rate) * self.settings.rate_range();
                     self.send(Command::Rate(d, r));
                 }
+            }
+            Opt::Log => {
+                crate::log::set(v != 0);
+                self.status = Some(if v != 0 { "Keeping a log" } else { "The log is off" }.into());
             }
             Opt::FourDecks if v == 0 => {
                 self.layer = [false; 2];
@@ -3169,11 +3230,12 @@ impl State {
                 crate::store::save_sidelist(&self.sidelist);
             }
             Target::RelatedLoad(n, d) => {
-                let (linked, played) = self.related();
-                if let Some(&i) = linked.iter().chain(&played).nth(n) {
+                if let Some(&i) = self.related_rows().get(n) {
                     self.load_deck(d, i as usize);
                 }
             }
+            Target::SuggestLoad(n, d) => self.hub.fetch_suggested(n, d),
+            Target::RelatedRow(_) | Target::SuggestRow(_) => {}
             Target::Unlink(n) => {
                 if let (Some(to), Some(&i)) = (self.selected, self.related().0.get(n)) {
                     let (a, b) = (entry_key(&self.entries[to as usize]), entry_key(&self.entries[i as usize]));
@@ -3239,6 +3301,20 @@ impl State {
             Target::TourSkip => self.tour = self.tour.map(|at| (at + 1).min(crate::tour::STEPS.len() - 1)),
             Target::Open(n) => {
                 self.app_menu = false;
+                if n == 4 {
+                    let text = crate::log::tail();
+                    self.status = Some(
+                        if text.is_empty() {
+                            "The log is empty. Switch on Keep a Log first"
+                        } else if crate::open::send(&text) {
+                            return;
+                        } else {
+                            "Nothing on this system opens that"
+                        }
+                        .into(),
+                    );
+                    return;
+                }
                 let what = match n {
                     0 => Some(crate::open::HOME.to_string()),
                     1 => Some(crate::open::ISSUES.to_string()),
@@ -3361,6 +3437,7 @@ impl State {
                 self.hub.again(usize::from(n));
             }
             Target::HubForget => self.hub.forget(),
+            Target::HubStop(n) => self.hub.stop(usize::from(n)),
             Target::HubLoad(hit, deck) => self.hub.fetch(hit, deck),
             Target::HubSignIn => self.hub.sign_in(),
             Target::HubSignOut => self.hub.sign_out(),
@@ -3897,6 +3974,7 @@ impl State {
             }
             (Carried::Track(i), Some(d)) => self.load_deck(d, i as usize),
             (Carried::Hit(i), Some(d)) if moved => self.hub.fetch(i, d),
+            (Carried::Suggested(i), Some(d)) if moved => self.hub.fetch_suggested(i, d),
             (Carried::Track(i), None) => {
                 let list = self.hits.iter().rev().find_map(|h| match h.target {
                     Target::Shelf(Shelf::Playlist(n)) if h.rect.hit(x, y) => Some(n),
@@ -3913,7 +3991,7 @@ impl State {
                     crate::store::save_playlists(&self.playlists);
                 }
             }
-            (Carried::Hit(_), _) => {}
+            (Carried::Hit(_) | Carried::Suggested(_), _) => {}
         }
     }
 

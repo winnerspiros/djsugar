@@ -70,7 +70,7 @@ pub fn hit(s: &mut State, r: Rect, target: Target) {
 
 /// The tracks being got, in a strip along the foot of the streaming page: each with its deck and a bar filling
 /// as it arrives. They stay there while other searches are made. Returns the height taken.
-fn downloads(p: &mut Painter, s: &State, r: Rect) -> f32 {
+fn downloads(p: &mut Painter, s: &mut State, r: Rect) -> f32 {
     let all = s.hub.downloads();
     if all.is_empty() {
         return 0.0;
@@ -84,6 +84,7 @@ fn downloads(p: &mut Painter, s: &State, r: Rect) -> f32 {
     let y0 = r.y + r.h - h;
     p.rect(r.x, y0, r.w, h, 0.0, theme::PANEL);
     p.rect(r.x, y0, r.w, 1.0, 0.0, EDGE);
+    let mut marks = Vec::new();
     for (n, (title, deck, f)) in all.iter().take(shown).enumerate() {
         let y = y0 + 1.0 + n as f32 * rh;
         let tint = DECK[(*deck).min(3)];
@@ -93,17 +94,25 @@ fn downloads(p: &mut Painter, s: &State, r: Rect) -> f32 {
         } else {
             format!("{:.0}%", f * 100.0)
         };
-        let pw = p.text_width(ARTIST, "100%  +88");
+        let pw = p.text_width(ARTIST, "100%  +88") + rh;
         p.rect(r.x + 12.0, y + rh * 0.5 - 4.0, 8.0, 8.0, 4.0, tint);
         p.text_in(r.x + 28.0, y + rh * 0.5 + 4.0, r.w - 52.0 - pw, ARTIST, title);
         p.text(
-            r.x + r.w - 12.0 - p.text_width(ARTIST, &pct),
+            r.x + r.w - 12.0 - rh - p.text_width(ARTIST, &pct),
             y + rh * 0.5 + 4.0,
             Style { colour: GREY, ..ARTIST },
             &pct,
         );
+        let x = Rect::new(r.x + r.w - 8.0 - rh, y, rh, rh - 3.0);
+        let c = (x.x + x.w * 0.5, x.y + x.h * 0.5);
+        p.line((c.0 - 3.5, c.1 - 3.5), (c.0 + 3.5, c.1 + 3.5), 1.5, GREY);
+        p.line((c.0 - 3.5, c.1 + 3.5), (c.0 + 3.5, c.1 - 3.5), 1.5, GREY);
+        marks.push((x, n as u8));
         p.rect(r.x + 12.0, y + rh - 3.0, r.w - 24.0, 2.0, 1.0, theme::RAISED);
         p.rect(r.x + 12.0, y + rh - 3.0, (r.w - 24.0) * f.clamp(0.0, 1.0), 2.0, 1.0, tint);
+    }
+    for (x, n) in marks {
+        hit(s, x, Target::HubStop(n));
     }
     h
 }
@@ -475,17 +484,26 @@ fn side_related(p: &mut Painter, s: &mut State, r: Rect) {
     let tw = p.text(x + 4.0, r.y + 21.0, Style { px: 15.0, ..TITLE }, "Related to");
     p.text_in(x + 12.0 + tw, r.y + 21.0, w - tw - 16.0, ARTIST, &title);
     p.rect(x, r.y + 37.0, w, 1.0, 0.0, EDGE);
+    s.suggest();
     let (linked, played) = s.related();
+    let alike = s.alike(&[linked.clone(), played.clone()].concat());
+    let online: Vec<(String, String)> = s.hub.suggested.iter().map(|h| (h.title.clone(), h.artist.clone())).collect();
     let mut y = r.y + 42.0;
-    if linked.is_empty() && played.is_empty() {
-        for line in ["Link a track to this one from its menu.", "Tracks played with it are listed too."] {
+    if linked.is_empty() && played.is_empty() && alike.is_empty() && online.is_empty() {
+        let wait =
+            if s.hub.suggesting { "Looking for tracks that go with it" } else { "Nothing found that goes with it." };
+        for line in [wait, "Link a track to this one from its menu."] {
             p.text_in(x + 4.0, y + 14.0, w - 8.0, ARTIST, line);
             y += 16.0;
         }
         return;
     }
+    // Each list gets its share of the panel, so the service's suggestions are not pushed off by the collection's.
+    let shares = [&linked, &played, &alike].iter().filter(|l| !l.is_empty()).count() + usize::from(!online.is_empty());
+    let most = (((r.y + r.h - y) / shares.max(1) as f32 - 18.0) / QUEUE_ROW).floor().max(1.0) as usize;
     let mut row = 0;
-    for (heading, tracks, unlink) in [("LINKED", &linked, true), ("PLAYED WITH", &played, false)] {
+    let lists = [("LINKED", &linked, true), ("PLAYED WITH", &played, false), ("FROM YOUR COLLECTION", &alike, false)];
+    for (heading, tracks, unlink) in lists {
         if tracks.is_empty() || y + 18.0 + QUEUE_ROW > r.y + r.h {
             row += tracks.len();
             continue;
@@ -493,15 +511,31 @@ fn side_related(p: &mut Painter, s: &mut State, r: Rect) {
         p.text(x + 4.0, y + 12.0, Style { colour: theme::FAINT, ..SMALL }, heading);
         y += 18.0;
         for (n, &t) in tracks.iter().enumerate() {
-            if y + QUEUE_ROW <= r.y + r.h {
+            if n < most && y + QUEUE_ROW <= r.y + r.h {
                 let e = &s.entries[t as usize];
                 let (title, artist) = (e.title.to_string(), e.artist.to_string());
                 let load = s.fore().map(|d| Target::RelatedLoad(row, d));
+                hit(s, Rect::new(x, y, w, 34.0), Target::RelatedRow(row));
                 side_row(p, s, Rect::new(x, y, w, 34.0), (&title, &artist), load, unlink.then_some(Target::Unlink(n)));
                 y += QUEUE_ROW;
             }
             row += 1;
         }
+    }
+    if online.is_empty() || y + 18.0 + QUEUE_ROW > r.y + r.h {
+        return;
+    }
+    let heading = format!("ON {}", s.hub.suggested_on().to_uppercase());
+    p.text(x + 4.0, y + 12.0, Style { colour: theme::FAINT, ..SMALL }, &heading);
+    y += 18.0;
+    for (n, (title, artist)) in online.iter().enumerate() {
+        if y + QUEUE_ROW > r.y + r.h {
+            break;
+        }
+        let load = s.fore().map(|d| Target::SuggestLoad(n, d));
+        hit(s, Rect::new(x, y, w, 34.0), Target::SuggestRow(n));
+        side_row(p, s, Rect::new(x, y, w, 34.0), (title, artist), load, None);
+        y += QUEUE_ROW;
     }
 }
 
@@ -1527,6 +1561,7 @@ fn carried(p: &mut Painter, s: &State) {
     let name = match what {
         crate::state::Carried::Track(i) => s.entries.get(i as usize).map(|e| (&*e.artist, &*e.title)),
         crate::state::Carried::Hit(i) => s.hub.hits.get(i).map(|h| (h.artist.as_str(), h.title.as_str())),
+        crate::state::Carried::Suggested(i) => s.hub.suggested.get(i).map(|h| (h.artist.as_str(), h.title.as_str())),
     };
     let Some((artist, title)) = name else { return };
     let label = if artist.is_empty() { title.to_string() } else { format!("{artist} - {title}") };

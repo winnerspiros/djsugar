@@ -44,7 +44,7 @@ impl Archive {
     }
 
     /// Downloads an item's first playable file into `dir`. Returns the file.
-    pub fn fetch(&self, id: &str, dir: &Path, progress: &(dyn Fn(u64, u64) + Sync)) -> Result<PathBuf> {
+    pub fn fetch(&self, id: &str, dir: &Path, progress: crate::Progress<'_>) -> Result<PathBuf> {
         if id.is_empty() || id.contains(['/', '\\']) || id.starts_with('.') {
             return Err(Error::Refused("Not an Archive item".into()));
         }
@@ -135,7 +135,7 @@ mod tests {
         let page = a.search("techno netlabel", None).unwrap();
         assert!(!page.hits.is_empty());
         let dir = std::env::temp_dir().join(format!("ia-{}", std::process::id()));
-        let got = page.hits.iter().take(5).find_map(|h| a.fetch(&h.id, &dir, &|_, _| {}).ok());
+        let got = page.hits.iter().take(5).find_map(|h| a.fetch(&h.id, &dir, &|_, _| true).ok());
         assert!(std::fs::metadata(got.expect("one of the first items downloads")).unwrap().len() > 100_000);
         let _ = std::fs::remove_dir_all(&dir);
     }

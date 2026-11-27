@@ -76,7 +76,7 @@ pub fn fetch(
     youtube: &YouTube,
     hit: &Hit,
     cache: &Path,
-    progress: &(dyn Fn(u64, u64) + Sync),
+    progress: sugar_net::Progress<'_>,
 ) -> Result<PathBuf> {
     let words = std::thread::spawn({
         let (d, id) = (dir.to_path_buf(), hit.id.clone());
@@ -86,7 +86,9 @@ pub fn fetch(
     let video = match std::fs::read_to_string(&known) {
         Ok(video) => video,
         Err(_) => {
+            let began = std::time::Instant::now();
             let found = youtube.search(&format!("{} {}", hit.artist, hit.title), None)?;
+            crate::log::note(&format!("spotify {}: matched in {} ms", hit.id, began.elapsed().as_millis()));
             let best = closest(&found.hits, hit.seconds).ok_or(Error::Refused("Nothing found".into()))?;
             let _ = std::fs::create_dir_all(cache);
             let _ = std::fs::write(&known, &best.id);
@@ -95,10 +97,13 @@ pub fn fetch(
     };
     let sound = youtube.fetch(&video, cache, progress)?;
     let lrc = sound.with_extension("lrc");
-    if !lrc.exists()
-        && let Ok(Some(text)) = words.join()
-    {
-        let _ = std::fs::write(lrc, text);
+    // The words may take longer than the sound; the deck does not wait for them.
+    if !lrc.exists() {
+        std::thread::spawn(move || {
+            if let Ok(Some(text)) = words.join() {
+                let _ = std::fs::write(lrc, text);
+            }
+        });
     }
     Ok(sound)
 }

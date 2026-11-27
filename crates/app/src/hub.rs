@@ -20,6 +20,8 @@ const THUMB: usize = 96;
 const FETCHERS: usize = 4;
 /// How many past searches are kept.
 const RECENT: usize = 8;
+/// The most tracks the service suggests for one.
+const SUGGESTED: usize = 8;
 
 /// `recent` with `query` moved to its front, the oldest dropped past [`RECENT`].
 fn remembered(recent: &[String], query: &str) -> Vec<String> {
@@ -149,7 +151,7 @@ impl Clients {
         sv: Service,
         hit: &Hit,
         dir: &std::path::Path,
-        progress: &(dyn Fn(u64, u64) + Sync),
+        progress: sugar_net::Progress<'_>,
     ) -> Result<PathBuf> {
         let id = hit.id.as_str();
         match sv {
@@ -208,6 +210,8 @@ pub enum Reply {
     /// A hit's picture, for the search it was asked in.
     Thumb(String, Art, u64),
     Failed(Option<String>, String),
+    /// What the service has that goes with the track asked about, named by its key.
+    Suggested(String, Service, Vec<Hit>),
 }
 
 #[derive(Debug)]
@@ -220,7 +224,14 @@ pub struct Hub {
     pub searching: bool,
     pub status: String,
     /// Downloads under way: video, deck, done 0..1.
+    /// What the service suggests for the track of the Related tab, the track it was asked for, and whether the
+    /// answer is still awaited.
+    pub suggested: Vec<Hit>,
+    suggested_for: (String, Service),
+    pub suggesting: bool,
     pub fetching: Vec<(String, usize, f32)>,
+    /// What calls each download off, by its id.
+    stops: Vec<(String, Arc<std::sync::atomic::AtomicBool>)>,
     /// What each track being got is called, by its id, for the list of downloads and for the library once the
     /// search that found it has gone.
     names: Vec<(String, String, String)>,
@@ -280,6 +291,10 @@ impl Hub {
             searching: false,
             status: String::new(),
             fetching: Vec::new(),
+            suggested: Vec::new(),
+            suggested_for: (String::new(), Service::YouTube),
+            suggesting: false,
+            stops: Vec::new(),
             names: Vec::new(),
             scroll: 0.0,
             thumbs: std::collections::HashMap::new(),
@@ -318,6 +333,26 @@ impl Hub {
     /// The tracks being got: title, deck and how far along, in the order asked for.
     pub fn downloads(&self) -> Vec<(String, usize, f32)> {
         self.fetching.iter().map(|(id, deck, f)| (self.named(id).0, *deck, *f)).collect()
+    }
+
+    /// Whether an answer is waited for, so the screen keeps looking for it.
+    pub fn busy(&self) -> bool {
+        self.searching || self.suggesting || !self.fetching.is_empty()
+    }
+
+    /// Calls off the nth download under way; its line goes at once, whatever the network is doing.
+    pub fn stop(&mut self, n: usize) {
+        if n >= self.fetching.len() {
+            return;
+        }
+        let (id, ..) = self.fetching.remove(n);
+        if let Some((_, stop)) = self.stops.iter().find(|s| s.0 == id) {
+            stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        self.stops.retain(|s| s.0 != id);
+        self.status = format!("Stopped \"{}\"", self.named(&id).0);
+        self.names.retain(|x| x.0 != id);
+        crate::log::note(&format!("stopped {id}"));
     }
 
     fn keep_recent(&self) {
@@ -573,8 +608,55 @@ impl Hub {
         });
     }
 
+    /// The service the suggestions come from: the one shown, or YouTube where that one only lists an account.
+    fn suggester(&self) -> Service {
+        if self.service == Service::Spotify { Service::YouTube } else { self.service }
+    }
+
+    pub fn suggested_on(&self) -> &'static str {
+        self.suggested_for.1.title()
+    }
+
+    /// Asks the service for tracks that go with one: more of its artist, the track itself left out.
+    pub fn suggest(&mut self, artist: &str, title: &str) {
+        let sv = self.suggester();
+        let key = format!("{artist}\n{title}");
+        if self.suggesting || (self.suggested_for.0 == key && self.suggested_for.1 == sv) {
+            return;
+        }
+        self.suggested_for = (key.clone(), sv);
+        self.suggested.clear();
+        let names = crate::lyrics::names(artist, title);
+        let Some((who, what)) = names.first().cloned() else { return };
+        self.suggesting = true;
+        let (c, tx) = (self.clients.clone(), self.tx.clone());
+        std::thread::spawn(move || {
+            let q = if who.is_empty() { what.clone() } else { who };
+            let found = c.search(sv, &q, None, false);
+            if let Err(e) = &found {
+                crate::log::note(&format!("related on {}: {e}", sv.title()));
+            }
+            let low = what.to_lowercase();
+            let mut hits = found.map(|p| p.hits).unwrap_or_default();
+            hits.retain(|h| !h.title.to_lowercase().contains(&low) && h.seconds < 1200);
+            hits.truncate(SUGGESTED);
+            let _ = tx.send(Reply::Suggested(key, sv, hits));
+        });
+    }
+
+    pub fn fetch_suggested(&mut self, n: usize, deck: usize) {
+        if let Some(h) = self.suggested.get(n).cloned() {
+            self.fetch_hit(&h, self.suggested_for.1, deck);
+        }
+    }
+
     pub fn fetch(&mut self, hit: usize, deck: usize) {
-        let Some(h) = self.hits.get(hit) else { return };
+        if let Some(h) = self.hits.get(hit).cloned() {
+            self.fetch_hit(&h, self.service, deck);
+        }
+    }
+
+    fn fetch_hit(&mut self, h: &Hit, sv: Service, deck: usize) {
         if self.fetching.iter().any(|(id, ..)| *id == h.id) {
             return;
         }
@@ -582,13 +664,20 @@ impl Hub {
             return;
         }
         let (id, art, wanted) = (h.id.clone(), h.art.clone(), h.clone());
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        self.stops.push((id.clone(), stop.clone()));
+        crate::log::note(&format!("get {} {id} for deck {deck}", sv.title()));
         self.fetching.push((id.clone(), deck, 0.0));
         self.names.push((id.clone(), h.title.clone(), h.artist.clone()));
         self.status = format!("Getting \"{}\" for deck {}", h.title, crate::sugar::NAMES[deck.min(3)]);
-        let (c, tx, dir, sv) = (self.clients.clone(), self.tx.clone(), self.cache.clone(), self.service);
+        let (c, tx, dir) = (self.clients.clone(), self.tx.clone(), self.cache.clone());
         std::thread::spawn(move || {
             let last = std::sync::Mutex::new(0u8);
+            let began = std::time::Instant::now();
             let progress = |done: u64, total: u64| {
+                if stop.load(std::sync::atomic::Ordering::Relaxed) {
+                    return false;
+                }
                 if let Some(pct) = (done * 100).checked_div(total) {
                     let pct = pct as u8;
                     let mut l = last.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -597,6 +686,7 @@ impl Hub {
                         let _ = tx.send(Reply::Progress(id.clone(), f32::from(pct) / 100.0));
                     }
                 }
+                true
             };
             let r = c.fetch(sv, &wanted, &dir, &progress);
             if let Ok(path) = &r {
@@ -611,6 +701,17 @@ impl Hub {
                 {
                     crate::skips::save(path, &parts);
                 }
+            }
+            let took = began.elapsed().as_millis();
+            match &r {
+                Ok(_) => crate::log::note(&format!("got {id} in {took} ms")),
+                Err(e) => crate::log::note(&format!("no {id} after {took} ms: {e}")),
+            }
+            if stop.load(std::sync::atomic::Ordering::Relaxed) {
+                if let Ok(path) = &r {
+                    let _ = std::fs::remove_file(path);
+                }
+                return;
             }
             let _ = tx.send(match r {
                 Ok(path) => Reply::Ready(id, path, deck, sv),
@@ -720,11 +821,18 @@ impl Hub {
                     }
                 }
                 Reply::Ready(id, path, deck, sv) => {
+                    self.stops.retain(|s| s.0 != id);
                     self.fetching.retain(|x| x.0 != id);
                     let (title, artist) = self.named(&id);
                     self.names.retain(|n| n.0 != id);
                     self.status = format!("Loaded \"{title}\" to deck {}", crate::sugar::NAMES[deck.min(3)]);
                     ready.push((path, title, artist, deck, sv.title()));
+                }
+                Reply::Suggested(key, sv, hits) => {
+                    self.suggesting = false;
+                    if self.suggested_for == (key, sv) {
+                        self.suggested = hits;
+                    }
                 }
                 Reply::Thumb(id, art, round) => {
                     if round == self.round.load(std::sync::atomic::Ordering::Acquire) {
@@ -734,6 +842,7 @@ impl Hub {
                 Reply::Failed(id, why) => {
                     self.searching = id.is_some() && self.searching;
                     if let Some(id) = id {
+                        self.stops.retain(|s| s.0 != id);
                         self.fetching.retain(|x| x.0 != id);
                         self.names.retain(|n| n.0 != id);
                     }

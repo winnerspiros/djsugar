@@ -28,13 +28,123 @@ impl Lyrics {
     }
 }
 
-/// Lyrics found online: LRCLIB's, or NetEase's when LRCLIB has none or only untimed words and NetEase has them timed.
-fn fetch(artist: &str, title: &str, seconds: f64) -> Option<String> {
-    let first = sugar_net::lrclib::find(artist, title, seconds).ok().flatten();
-    if first.as_ref().is_some_and(|t| t.contains('[')) {
-        return first;
+/// Words in a title's brackets that say which version of the song it is, and so stay.
+const VERSIONS: [&str; 8] = ["remix", "mix", "edit", "bootleg", "rework", "flip", "dub", "version"];
+
+/// A title without what a video adds to it: brackets that are not a version, guests, and what follows a bar.
+fn bare(title: &str) -> String {
+    let mut out = String::new();
+    let mut depth = 0u32;
+    let mut held = String::new();
+    for c in title.chars() {
+        match c {
+            '(' | '[' | '\u{3010}' => depth += 1,
+            ')' | ']' | '\u{3011}' if depth > 0 => {
+                depth -= 1;
+                if depth == 0 {
+                    let low = held.to_lowercase();
+                    if VERSIONS.iter().any(|v| low.split(|c: char| !c.is_alphanumeric()).any(|w| w == *v)) {
+                        out.push_str(&format!("({held})"));
+                    }
+                    held.clear();
+                }
+            }
+            c if depth > 0 => held.push(c),
+            c => out.push(c),
+        }
     }
-    sugar_net::netease::find(artist, title, seconds).ok().flatten().or(first)
+    let low = out.to_lowercase();
+    let cut =
+        [" ft.", " ft ", " feat.", " feat ", " featuring ", " | ", " // "].iter().filter_map(|m| low.find(m)).min();
+    // The lower-case copy can be longer or shorter in bytes; only cut where both agree.
+    let out = match cut {
+        Some(n) if low.len() == out.len() => &out[..n],
+        _ => &out,
+    };
+    out.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim_matches(|c: char| c == '-' || c.is_whitespace())
+        .to_string()
+}
+
+/// An artist without what a channel adds to the name.
+fn act(artist: &str) -> String {
+    let mut a = artist.trim();
+    for tail in [" - Topic", "VEVO", "Vevo", " Official", " Music", " TV"] {
+        a = a.strip_suffix(tail).unwrap_or(a).trim();
+    }
+    a.to_string()
+}
+
+/// The names to ask the services for, likeliest first: a video called "Artist - Song (Official Video)" on a channel
+/// of another name is asked for as that artist's song before it is asked for as the channel's.
+pub fn names(artist: &str, title: &str) -> Vec<(String, String)> {
+    let (a, t) = (act(artist), bare(title));
+    let mut out = Vec::new();
+    for dash in [" - ", " \u{2013} ", " \u{2014} ", ": "] {
+        if let Some((left, right)) = t.split_once(dash) {
+            let right = right.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace());
+            out.push((act(left), right.to_string()));
+            break;
+        }
+    }
+    out.push((a.clone(), t.clone()));
+    out.push((artist.trim().to_string(), title.trim().to_string()));
+    out.push((String::new(), t));
+    let mut seen: Vec<(String, String)> = Vec::new();
+    out.retain(|n| {
+        let low = (n.0.to_lowercase(), n.1.to_lowercase());
+        !n.1.is_empty() && !seen.contains(&low) && {
+            seen.push(low);
+            true
+        }
+    });
+    out
+}
+
+/// One service's lookup, by artist, title and length.
+type Finder = fn(&str, &str, f64) -> sugar_net::Result<Option<String>>;
+
+fn timed(text: &Option<String>) -> bool {
+    text.as_ref().is_some_and(|t| t.contains('['))
+}
+
+/// Lyrics found online. Every name the track may go by is asked of LRCLIB and NetEase, with its length and then
+/// without, until one has timed lines; plain words, from those or from lyrics.ovh, are the last resort.
+fn fetch(artist: &str, title: &str, seconds: f64) -> Option<String> {
+    let names = names(artist, title);
+    let mut plain: Option<String> = None;
+    let mut asked = 0;
+    for length in [seconds, 0.0] {
+        for (a, t) in &names {
+            let from: [(&str, Finder); 2] =
+                [("lrclib", sugar_net::lrclib::find), ("netease", sugar_net::netease::find)];
+            for (who, find) in from {
+                // NetEase takes its first hit when no length is given, which is too loose to trust.
+                if length <= 0.0 && (who == "netease" || seconds <= 0.0) {
+                    continue;
+                }
+                asked += 1;
+                let got = find(a, t, length);
+                if let Err(e) = &got {
+                    crate::log::note(&format!("lyrics {who} \"{a}\" \"{t}\": {e}"));
+                }
+                let got = got.ok().flatten();
+                if timed(&got) {
+                    crate::log::note(&format!("lyrics timed from {who} as \"{a}\" \"{t}\" after {asked} asks"));
+                    return got;
+                }
+                plain = plain.or(got);
+            }
+        }
+    }
+    if plain.is_none() {
+        plain = names.iter().find_map(|(a, t)| sugar_net::lyricsovh::find(a, t).ok().flatten());
+    }
+    let what = if plain.is_some() { "plain words only" } else { "nothing" };
+    crate::log::note(&format!("lyrics for \"{artist}\" \"{title}\": {what} after {asked} asks"));
+    plain
 }
 
 /// Lyrics for a file: its `.lrc` beside it, else what is found online, saved beside it for next time.
@@ -100,6 +210,24 @@ mod tests {
         let at: Vec<f64> = l.lines.iter().map(|l| l.start.unwrap()).collect();
         assert!(at.is_sorted() && at[0] < at[at.len() - 1], "{at:?}");
         println!("{at:?}");
+    }
+
+    #[test]
+    fn video_names_become_song_names() {
+        let n = names("DuaLipaVEVO", "Dua Lipa - Levitating (Official Video) [4K]");
+        assert_eq!(n[0], ("Dua Lipa".to_string(), "Levitating".to_string()));
+        assert!(n.contains(&(String::new(), "Dua Lipa - Levitating".to_string())));
+        let n = names("Daft Punk - Topic", "One More Time (Club Mix) ft. Romanthony");
+        assert_eq!(n[0], ("Daft Punk".to_string(), "One More Time (Club Mix)".to_string()));
+        let n = names("A", "Song");
+        assert_eq!(n, [("A".to_string(), "Song".to_string()), (String::new(), "Song".to_string())]);
+    }
+
+    #[test]
+    #[ignore = "network"]
+    fn finds_timed_words_for_a_video_name() {
+        let l = fetch("DuaLipaVEVO", "Dua Lipa - Levitating (Official Video)", 203.0).unwrap();
+        assert!(l.contains("[0"), "{l}");
     }
 
     #[test]

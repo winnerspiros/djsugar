@@ -81,7 +81,7 @@ public class SignIn extends Activity {
             }
         };
         frame = new FrameLayout(this);
-        final WebView view = page();
+        final WebView view = page(wide);
         frame.addView(view);
         setContentView(frame);
         CookieManager cookies = CookieManager.getInstance();
@@ -119,7 +119,7 @@ public class SignIn extends Activity {
 
     /// The sign-in page, or a popup of it.
     @SuppressLint("SetJavaScriptEnabled")
-    private WebView page() {
+    private WebView page(boolean desk) {
         WebView view = new WebView(this);
         view.setLayoutParams(new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -131,7 +131,7 @@ public class SignIn extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         // Google turns down a sign-in from an app's page: the page says it is the browser it is built on.
         String agent = settings.getUserAgentString().replace("; wv)", ")").replace(" Version/4.0", "");
-        if (wide) {
+        if (desk) {
             // A phone site that only offers the service's app: the desktop site has the sign-in.
             agent = agent.replaceAll("\\(Linux; Android[^)]*\\)", "(X11; Linux x86_64)").replace(" Mobile", "");
             settings.setUseWideViewPort(true);
@@ -145,7 +145,9 @@ public class SignIn extends Activity {
         view.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onCreateWindow(WebView parent, boolean dialog, boolean gesture, Message result) {
-                WebView popup = page();
+                // Another service's sign-in opened from the page, Google's above all, is refused when the page
+                // says it is a desk's browser on what is plainly a phone.
+                WebView popup = page(false);
                 frame.addView(popup);
                 ((WebView.WebViewTransport) result.obj).setWebView(popup);
                 result.sendToTarget();

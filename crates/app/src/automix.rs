@@ -103,7 +103,7 @@ pub const PLAYED_AFTER: f64 = 5.0;
 pub type Fact = (f32, Option<sugar_analysis::Key>);
 
 /// Steps round the key wheel between two keys, one more across major and minor; far when either is unknown.
-fn key_steps(a: Option<sugar_analysis::Key>, b: Option<sugar_analysis::Key>) -> f32 {
+pub fn key_steps(a: Option<sugar_analysis::Key>, b: Option<sugar_analysis::Key>) -> f32 {
     let (Some(a), Some(b)) = (a, b) else { return 6.0 };
     let turn = (i32::from(a.camelot_number()) - i32::from(b.camelot_number())).rem_euclid(12);
     (turn.min(12 - turn) + i32::from(a.minor != b.minor)) as f32

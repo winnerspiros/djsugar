@@ -4,6 +4,7 @@ mod controllers;
 mod count;
 mod hub;
 mod library;
+mod log;
 mod lyrics;
 mod models;
 mod open;
@@ -43,6 +44,8 @@ pub struct Ui {
     device: f32,
     /// The window's size before the mini player shrank it.
     full: Option<(u32, u32)>,
+    /// Since when frames are counted for the log, and how many.
+    frames: (std::time::Instant, u32),
 }
 
 /// The mini player's window, in points.
@@ -50,6 +53,7 @@ const MINI: (f32, f32) = (400.0, 150.0);
 
 impl Ui {
     pub fn new(read: Reader) -> Self {
+        log::hook();
         stage("ui");
         let engine = crate::bridge::Bridge::start(read);
         let out_rate = engine.rate();
@@ -58,6 +62,7 @@ impl Ui {
         stage("audio open");
         crate::models::install();
         let mut state = State::new(engine, read, status, out_rate);
+        log::set(state.settings.on(settings::Opt::Log));
         state.scan();
         // The YouTube player script takes seconds to load; have it ready before the first download.
         std::thread::spawn(|| sugar_net::cipher::load().ok());
@@ -70,6 +75,7 @@ impl Ui {
             pixels: (1, 1),
             device: 1.0,
             full: None,
+            frames: (std::time::Instant::now(), 0),
         }
     }
 
@@ -106,7 +112,13 @@ impl Ui {
         self.state.animating()
     }
 
+    /// The least time between two frames.
+    pub fn frame_gap(&self) -> std::time::Duration {
+        self.state.frame_gap()
+    }
+
     pub fn render(&mut self, renderer: &mut sugar_ui::Renderer<'_>) {
+        self.count_frame();
         self.state.tick();
         self.fit();
         self.painter.begin(self.scale);
@@ -148,6 +160,20 @@ impl Ui {
     /// Closes the topmost menu or sheet, as Back does; false when none was open.
     pub fn back(&mut self) -> bool {
         self.state.dismiss()
+    }
+
+    /// Notes every ten seconds how many frames were drawn, when the log is on: a phone that runs hot shows here.
+    fn count_frame(&mut self) {
+        if !log::on() {
+            return;
+        }
+        self.frames.1 += 1;
+        let since = self.frames.0.elapsed();
+        if since.as_secs() >= 10 {
+            let playing = self.state.telemetry.decks.iter().filter(|d| d.playing).count();
+            log::note(&format!("{} frames in {:.1} s, {playing} decks playing", self.frames.1, since.as_secs_f32()));
+            self.frames = (std::time::Instant::now(), 0);
+        }
     }
 
     /// The deck shown on each side.
@@ -241,6 +267,7 @@ pub fn diag(msg: &str) {
     }
     #[cfg(not(target_os = "android"))]
     eprintln!("djsugar: {msg}");
+    log::note(msg);
 }
 
 /// Logs how long a startup stage took since the process began.

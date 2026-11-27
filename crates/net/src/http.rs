@@ -50,7 +50,7 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
     for (k, v) in headers {
         req = req.header(*k, *v);
     }
-    let resp = req.call().map_err(net)?;
+    let resp = req.config().timeout_global(Some(ANSWER)).build().call().map_err(net)?;
     let status = resp.status().as_u16();
     if status >= 400 {
         return Err(Error::Status(status));
@@ -58,6 +58,11 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
     let total = resp.headers().get("content-range").and_then(|v| v.to_str().ok()?.rsplit('/').next()?.parse().ok());
     Ok(total.or_else(|| resp.headers().get("content-length").and_then(|v| v.to_str().ok()?.parse().ok())))
 }
+
+/// How long a server may take to answer a request for a piece, and to send the piece. A piece that runs out of
+/// time is asked for again from where it stopped, so a slow line still gets there and a dead one gives up.
+const ANSWER: Duration = Duration::from_secs(15);
+const SENDING: Duration = Duration::from_secs(40);
 
 /// The most one request asks for; streaming hosts cut longer replies short.
 pub const PIECE: u64 = 1 << 20;
@@ -70,7 +75,7 @@ pub fn download(
     to: &Path,
     size: Option<u64>,
     workers: u64,
-    progress: &(dyn Fn(u64, u64) + Sync),
+    progress: crate::Progress<'_>,
 ) -> Result<u64> {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
     let part = to.with_extension(format!("{}.part", to.extension().and_then(|e| e.to_str()).unwrap_or("")));
@@ -94,8 +99,10 @@ pub fn download(
             for (k, v) in headers {
                 req = req.header(*k, *v);
             }
+            let before = at;
             let run = |at: &mut u64| -> Result<()> {
-                let mut resp = req.call().map_err(net)?;
+                let timed = req.config().timeout_recv_response(Some(ANSWER)).timeout_recv_body(Some(SENDING)).build();
+                let mut resp = timed.call().map_err(net)?;
                 let status = resp.status().as_u16();
                 if status >= 400 {
                     return Err(Error::Status(status));
@@ -117,15 +124,25 @@ pub fn download(
                     }
                     out.write_all(&buf[..n]).map_err(net)?;
                     *at += n as u64;
-                    progress(done.fetch_add(n as u64, Relaxed) + n as u64, total);
+                    if !progress(done.fetch_add(n as u64, Relaxed) + n as u64, total) {
+                        return Err(Error::Stopped);
+                    }
                 }
                 Ok(())
             };
             match run(&mut at) {
                 _ if at > end => return Ok(()),
                 Err(Error::Status(s)) if s < 500 => return Err(Error::Status(s)),
+                Err(Error::Stopped) => return Err(Error::Stopped),
+                // A piece that moved on is not a failed try.
+                _ if at > before => tries = 0,
                 r if tries >= 4 => return r.and(Err(Error::Parse("download ended early"))),
-                _ => tries += 1,
+                r => {
+                    if let Err(e) = r {
+                        crate::note(&format!("piece at {at} again: {e}"));
+                    }
+                    tries += 1;
+                }
             }
         }
     };
@@ -232,7 +249,7 @@ mod tests {
         let to = dir.join("a.bin");
         for size in [Some(data.len() as u64), None] {
             let _ = std::fs::remove_file(&to);
-            let n = download(&url, &[], &to, size, 4, &|_, _| {});
+            let n = download(&url, &[], &to, size, 4, &|_, _| true);
             assert!(n.is_ok(), "{n:?}");
             assert_eq!(std::fs::read(&to).unwrap(), data);
         }

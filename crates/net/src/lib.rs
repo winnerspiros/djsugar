@@ -7,6 +7,7 @@ pub mod botguard;
 pub mod cipher;
 pub mod http;
 pub mod lrclib;
+pub mod lyricsovh;
 pub mod netease;
 pub mod soundcloud;
 pub mod sponsorblock;
@@ -35,6 +36,24 @@ pub enum Error {
     Parse(&'static str),
     /// The service turned the request down; the message is for the DJ.
     Refused(String),
+    /// The DJ called the download off.
+    Stopped,
+}
+
+/// Told how much of a download has arrived, of how much; answers false to call it off.
+pub type Progress<'a> = &'a (dyn Fn(u64, u64) -> bool + Sync);
+
+static NOTES: std::sync::OnceLock<fn(&str)> = std::sync::OnceLock::new();
+
+/// Where the notes of what the services answered go: the app's log, when it keeps one.
+pub fn notes_to(sink: fn(&str)) {
+    let _ = NOTES.set(sink);
+}
+
+pub(crate) fn note(text: &str) {
+    if let Some(sink) = NOTES.get() {
+        sink(text);
+    }
 }
 
 impl std::fmt::Display for Error {
@@ -44,6 +63,7 @@ impl std::fmt::Display for Error {
             Self::Status(s) => write!(f, "HTTP {s}"),
             Self::Parse(what) => write!(f, "unexpected reply: {what}"),
             Self::Refused(why) => f.write_str(why),
+            Self::Stopped => f.write_str("stopped"),
         }
     }
 }

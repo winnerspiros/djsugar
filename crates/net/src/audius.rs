@@ -43,7 +43,7 @@ impl Audius {
     }
 
     /// Downloads a track into `dir` as `au<id>.mp3`. Returns the file.
-    pub fn fetch(&self, id: &str, dir: &Path, progress: &(dyn Fn(u64, u64) + Sync)) -> Result<PathBuf> {
+    pub fn fetch(&self, id: &str, dir: &Path, progress: crate::Progress<'_>) -> Result<PathBuf> {
         if id.is_empty() || !id.bytes().all(|b| b.is_ascii_alphanumeric()) {
             return Err(Error::Refused("Not an Audius track".into()));
         }
@@ -145,7 +145,7 @@ mod tests {
         let page = a.search("daft punk", None).unwrap();
         assert!(!page.hits.is_empty());
         let dir = std::env::temp_dir().join(format!("au-{}", std::process::id()));
-        let f = a.fetch(&page.hits[0].id, &dir, &|_, _| {}).unwrap();
+        let f = a.fetch(&page.hits[0].id, &dir, &|_, _| true).unwrap();
         assert!(std::fs::metadata(&f).unwrap().len() > 500_000);
         let _ = std::fs::remove_dir_all(&dir);
     }

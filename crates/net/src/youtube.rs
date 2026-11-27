@@ -361,6 +361,7 @@ impl YouTube {
                 };
                 // A bot check gates that client only; the next may still answer.
                 if let Some(why) = bot_check(status, &v, &raw) {
+                    crate::note(&format!("youtube {video} as {}: {why}", c.name));
                     refused += 1;
                     last = Error::Refused(why);
                     continue;
@@ -374,7 +375,11 @@ impl YouTube {
                 });
                 match formats.and_then(|f| take(f, c.agent)) {
                     Ok(t) => return Ok(t),
-                    Err(e) => last = e,
+                    Err(Error::Stopped) => return Err(Error::Stopped),
+                    Err(e) => {
+                        crate::note(&format!("youtube {video} as {}: {e}", c.name));
+                        last = e;
+                    }
                 }
             }
             // Every client refused: back off before asking again.
@@ -396,6 +401,7 @@ impl YouTube {
                     if !f.is_empty() {
                         match take(f, "") {
                             Ok(t) => return Ok(t),
+                            Err(Error::Stopped) => return Err(Error::Stopped),
                             Err(e) => last = e,
                         }
                     }
@@ -413,7 +419,7 @@ impl YouTube {
 
     /// Downloads a video's audio into `dir` as `<id>.m4a` or `<id>.webm`,
     /// trying each offered format until one arrives. Returns the file.
-    pub fn fetch(&self, video: &str, dir: &Path, progress: &(dyn Fn(u64, u64) + Sync)) -> Result<PathBuf> {
+    pub fn fetch(&self, video: &str, dir: &Path, progress: crate::Progress<'_>) -> Result<PathBuf> {
         for ext in ["m4a", "webm"] {
             let f = dir.join(format!("{video}.{ext}"));
             if f.is_file() {
@@ -421,7 +427,14 @@ impl YouTube {
             }
         }
         std::fs::create_dir_all(dir).map_err(net)?;
+        let began = std::time::Instant::now();
         let minted = self.mint(video);
+        match &minted {
+            Ok(_) => crate::note(&format!("youtube {video}: token in {} ms", began.elapsed().as_millis())),
+            Err(why) => {
+                crate::note(&format!("youtube {video}: no token after {} ms: {why}", began.elapsed().as_millis()))
+            }
+        }
         let tokens = minted.as_ref().ok().cloned();
         let out = self.each_source(video, tokens.as_ref(), |formats, ua| {
             let mut last = Error::Refused("No usable audio stream URL".into());
@@ -437,12 +450,21 @@ impl YouTube {
                 };
                 match download(&url, headers, &to, f.size, CHUNKS, progress) {
                     Ok(_) => return Ok(to),
+                    Err(Error::Stopped) => return Err(Error::Stopped),
                     Err(Error::Status(403)) => return Err(Error::Status(403)),
                     Err(e) => last = e,
                 }
             }
             Err(last)
         });
+        match &out {
+            Ok(to) => crate::note(&format!(
+                "youtube {video}: {} bytes after {} ms",
+                std::fs::metadata(to).map_or(0, |m| m.len()),
+                began.elapsed().as_millis()
+            )),
+            Err(e) => crate::note(&format!("youtube {video}: failed after {} ms: {e}", began.elapsed().as_millis())),
+        }
         // Without a token the real cause is usually the mint, so the DJ sees it.
         match (out, minted) {
             (Err(e), Err(why)) if PO_TOKEN_SOURCE.get().is_some() => Err(Error::Refused(format!("{e} (token: {why})"))),
@@ -766,7 +788,7 @@ mod tests {
         let hits = yt.search("daft punk one more time", None).unwrap().hits;
         assert!(!hits.is_empty());
         let dir = std::env::temp_dir().join(format!("djsugar-yt-{}", std::process::id()));
-        let got = yt.fetch(&hits[0].id, &dir, &|_, _| {});
+        let got = yt.fetch(&hits[0].id, &dir, &|_, _| true);
         let _ = std::fs::remove_dir_all(&dir);
         let file = got.unwrap();
         assert!(file.extension().is_some(), "{file:?}");

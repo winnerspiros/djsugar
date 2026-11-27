@@ -27,6 +27,7 @@ pub enum Opt {
     SampleRate,
     Buffer,
     FourDecks,
+    Log,
     TempoMatch,
     SyncOnPlay,
     EndWarning,
@@ -93,7 +94,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 39] = [
+pub const OPTIONS: [Spec; 40] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -271,6 +272,14 @@ pub const OPTIONS: [Spec; 39] = [
         default: 0,
     },
     Spec {
+        opt: Opt::Log,
+        key: "log",
+        title: "Keep a log",
+        detail: "Writes what the app does and what the services answer to a file, for reporting a problem.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
         opt: Opt::TempoMatch,
         key: "tempo_match_on_load",
         title: "Match tempo on load",
@@ -338,7 +347,7 @@ pub const OPTIONS: [Spec; 39] = [
         opt: Opt::LyricsOnline,
         key: "lyrics_online",
         title: "Find lyrics online",
-        detail: "Tracks without an .lrc file get synced lyrics from LRCLIB, saved beside the track.",
+        detail: "Tracks without an .lrc file get lyrics from LRCLIB, NetEase or lyrics.ovh, saved beside the track.",
         kind: Kind::Switch,
         default: 1,
     },
@@ -550,6 +559,7 @@ pub fn page(
         _ => vec![
             Row::Heading("DJ SUGAR"),
             Row::Info("Version", env!("CARGO_PKG_VERSION").into()),
+            Row::Opt(Opt::Log),
             Row::Info("Audio output", if rate > 0 { format!("{rate} Hz") } else { "Unavailable".into() }),
         ],
     }
