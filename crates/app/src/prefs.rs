@@ -174,8 +174,8 @@ pub fn overlay(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 fn row_h(row: &Row) -> f32 {
     match row {
         Row::Heading(_) => 34.0,
-        Row::Info(..) | Row::Device(..) => 44.0,
-        Row::Rescan | Row::Opt(_) => 52.0,
+        Row::Info(..) | Row::Device(..) | Row::Bind(..) => 44.0,
+        Row::Rescan | Row::Unbind | Row::Opt(_) => 52.0,
     }
 }
 
@@ -200,6 +200,29 @@ fn row_at(p: &mut Painter, s: &mut State, r: Rect, row: &Row) -> f32 {
         Row::Device(label, value) => info(p, r, title, small, label, value),
         Row::Info(label, value) => info(p, r, title, small, label, value),
 
+        Row::Bind(shipped, what) => {
+            let waiting = s.binding == Some(*shipped);
+            let key = settings::key_of(&s.binds, *shipped);
+            let cap = if waiting { "Press a key".to_owned() } else { key.to_ascii_uppercase().to_string() };
+            let w = if waiting { 96.0 } else { 40.0 };
+            let b = Rect::new(r.x + r.w - w, r.y + 8.0, w, 28.0);
+            let fill = if s.pressed(Target::Bind(*shipped)) { theme::PRESSED } else { theme::CONTROL };
+            let edge = if waiting || key != *shipped { theme::ACCENT } else { theme::BORDER };
+            p.text_in(r.x, r.y + 27.0, r.w - w - 12.0, title, what);
+            p.outlined(b.x, b.y, b.w, b.h, 6.0, fill, 1.0, edge);
+            theme::centred(p, b, Style::new(12.0, Weight::Semibold, theme::TEXT), &cap);
+            p.rect(r.x, r.y + 43.0, r.w, 1.0, 0.0, theme::SEPARATOR);
+            hit(s, b, Target::Bind(*shipped));
+            44.0
+        }
+        Row::Unbind => {
+            let b = Rect::new(r.x, r.y + 12.0, 170.0, 28.0);
+            let down = s.pressed(Target::BindReset);
+            p.outlined(b.x, b.y, b.w, b.h, 6.0, if down { theme::PRESSED } else { theme::CONTROL }, 1.0, theme::BORDER);
+            theme::centred(p, b, Style::new(12.0, Weight::Semibold, theme::TEXT), "Keys as shipped");
+            hit(s, b, Target::BindReset);
+            52.0
+        }
         Row::Rescan => {
             let b = Rect::new(r.x, r.y + 12.0, 170.0, 28.0);
             let down = s.pressed(Target::Rescan);

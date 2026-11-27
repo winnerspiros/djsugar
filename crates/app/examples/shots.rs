@@ -613,7 +613,7 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
 fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
     ui.key(Key::Escape, Mods::default());
     ui.render(r);
-    let steps: [(&str, &str); 9] = [
+    let steps: [(&str, &str); 11] = [
         ("AppMenu", ""),
         ("Submenu(1)", "appmenu"),
         ("Prefs(0)", "settings-audio"),
@@ -622,12 +622,21 @@ fn settings(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &
         ("PrefsClose", ""),
         ("Prefs(2)", "settings-mixer"),
         ("Prefs(3)", "settings-keyboard"),
+        ("Bind('d')", "settings-keys"),
+        ("Bind('d')", ""),
         ("Prefs(4)", "settings-controllers"),
     ];
     for (tap, shot) in steps {
         if !ui.tap(tap) {
             faults.push(format!("{name}: no {tap}"));
             return;
+        }
+        if tap.starts_with("Bind") {
+            let moved = shot.is_empty();
+            ui.key(Key::Char(if moved { 'd' } else { 'p' }), Mods::default());
+            if ui.moved_keys() == moved {
+                faults.push(format!("{name}: the key for play did not move {}", if moved { "back" } else { "to P" }));
+            }
         }
         ui.render(r);
         ui.render(r);

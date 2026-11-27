@@ -150,6 +150,11 @@ impl Ui {
         self.state.dismiss()
     }
 
+    /// Whether any key has been moved from where it shipped.
+    pub fn moved_keys(&self) -> bool {
+        !self.state.binds.is_empty()
+    }
+
     /// Whether a deck plays.
     pub fn playing(&self) -> bool {
         self.state.telemetry.decks.iter().any(|d| d.playing)

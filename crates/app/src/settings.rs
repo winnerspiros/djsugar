@@ -412,6 +412,10 @@ pub enum Row {
     /// A controller and what it runs.
     Device(String, String),
     Rescan,
+    /// A key that can be moved: the key it shipped on and what it does.
+    Bind(char, &'static str),
+    /// Puts every key back where it shipped.
+    Unbind,
 }
 
 pub const PAGES: [&str; 9] =
@@ -502,7 +506,12 @@ pub fn page(
             Row::Opt(Opt::DuckDepth),
         ],
         3 => {
-            let mut v = Vec::with_capacity(SHORTCUTS.len() + 3);
+            let mut v = Vec::with_capacity(64);
+            for (heading, keys) in BINDS {
+                v.push(Row::Heading(heading));
+                v.extend(keys.iter().map(|&(k, what)| Row::Bind(k, what)));
+            }
+            v.push(Row::Unbind);
             for (heading, keys) in SHORTCUTS {
                 v.push(Row::Heading(heading));
                 v.extend(keys.iter().map(|(k, what)| Row::Info(k, (*what).into())));
@@ -535,25 +544,97 @@ pub fn page(
     }
 }
 
-type Keys = &'static [(&'static str, &'static str)];
-
-/// Every keyboard shortcut, as the keyboard page lists them.
-const SHORTCUTS: [(&str, Keys); 5] = [
+/// The keys that can be moved, in three groups: deck A, deck B, the mixer. Each is the key as shipped and
+/// what it does.
+pub const BINDS: [(&str, &[(char, &str)]); 3] = [
     (
-        "DECK A / DECK B",
+        "DECK A",
         &[
-            ("D / L", "Play or pause; Shift sets the cue"),
-            ("F / ;", "Cue; Shift stops at the cue"),
-            ("A S / J K", "Beat jump back and forward; Shift by one beat"),
-            ("1 / 6", "Sync"),
-            ("T / Y", "Headphones"),
-            ("Z X C V / M , . /", "Hot cues 1 to 4; Shift clears"),
-            ("2 3 / 7 8", "Loop in and out; Shift jumps to them"),
-            ("4 Q / 9 U", "Loop on or off; Shift with 4 or 9 also stops"),
-            ("W E / I O", "Loop half or double"),
-            ("B / N", "Low kill"),
+            ('d', "Play or pause; Shift sets the cue"),
+            ('f', "Cue; Shift stops at the cue"),
+            ('a', "Beat jump back; Shift by one beat"),
+            ('s', "Beat jump forward; Shift by one beat"),
+            ('1', "Sync"),
+            ('t', "Headphones"),
+            ('z', "Hot cue 1; Shift clears"),
+            ('x', "Hot cue 2; Shift clears"),
+            ('c', "Hot cue 3; Shift clears"),
+            ('v', "Hot cue 4; Shift clears"),
+            ('2', "Loop in; Shift jumps to it"),
+            ('3', "Loop out; Shift jumps to it"),
+            ('4', "Loop on or off; Shift also stops"),
+            ('q', "Loop on or off"),
+            ('w', "Loop half"),
+            ('e', "Loop double"),
+            ('b', "Low kill"),
         ],
     ),
+    (
+        "DECK B",
+        &[
+            ('l', "Play or pause; Shift sets the cue"),
+            (';', "Cue; Shift stops at the cue"),
+            ('j', "Beat jump back; Shift by one beat"),
+            ('k', "Beat jump forward; Shift by one beat"),
+            ('6', "Sync"),
+            ('y', "Headphones"),
+            ('m', "Hot cue 1; Shift clears"),
+            (',', "Hot cue 2; Shift clears"),
+            ('.', "Hot cue 3; Shift clears"),
+            ('/', "Hot cue 4; Shift clears"),
+            ('7', "Loop in; Shift jumps to it"),
+            ('8', "Loop out; Shift jumps to it"),
+            ('9', "Loop on or off; Shift also stops"),
+            ('u', "Loop on or off"),
+            ('i', "Loop half"),
+            ('o', "Loop double"),
+            ('n', "Low kill"),
+        ],
+    ),
+    (
+        "MIXER",
+        &[('g', "Crossfader a step left; Shift a small step"), ('h', "Crossfader a step right; Shift a small step")],
+    ),
+];
+
+/// The key an action is on now, given the key it shipped on.
+pub fn key_of(binds: &[(char, char)], shipped: char) -> char {
+    binds.iter().find(|b| b.0 == shipped).map_or(shipped, |b| b.1)
+}
+
+/// The shipped key whose action `key` now runs; none when its action moved away and nothing took its place.
+pub fn resolve(binds: &[(char, char)], key: char) -> Option<char> {
+    match binds.iter().find(|b| b.1 == key) {
+        Some(b) => Some(b.0),
+        None => (!binds.iter().any(|b| b.0 == key)).then_some(key),
+    }
+}
+
+/// Puts the action shipped on `shipped` onto `key`. An action already there takes the key given up, so no two
+/// actions ever share a key.
+pub fn rebind(binds: &mut Vec<(char, char)>, shipped: char, key: char) {
+    let old = key_of(binds, shipped);
+    if old == key {
+        return;
+    }
+    let movable = |c: char| BINDS.iter().any(|g| g.1.iter().any(|k| k.0 == c));
+    let holder = resolve(binds, key).filter(|&h| h != shipped && movable(h));
+    let mut set = |action: char, to: char| {
+        binds.retain(|b| b.0 != action);
+        if action != to {
+            binds.push((action, to));
+        }
+    };
+    set(shipped, key);
+    if let Some(h) = holder {
+        set(h, old);
+    }
+}
+
+type Keys = &'static [(&'static str, &'static str)];
+
+/// The keyboard shortcuts that stay where they are, as the keyboard page lists them.
+const SHORTCUTS: [(&str, Keys); 4] = [
     (
         "TEMPO",
         &[
@@ -561,7 +642,7 @@ const SHORTCUTS: [(&str, Keys); 5] = [
             ("F3 F4 / F7 F8", "Slow down or speed up while held"),
         ],
     ),
-    ("MIXER", &[("G / H", "Crossfader a step left or right; Shift a small step"), ("Shift+F12", "Auto mix")]),
+    ("AUTO MIX", &[("Shift+F12", "Auto mix")]),
     (
         "LIBRARY",
         &[
@@ -707,6 +788,28 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_moved_key_swaps_with_the_action_it_lands_on_and_goes_back() {
+        let mut binds = Vec::new();
+        super::rebind(&mut binds, 'd', 'p');
+        assert_eq!(super::resolve(&binds, 'p'), Some('d'));
+        assert_eq!(super::resolve(&binds, 'd'), None);
+        super::rebind(&mut binds, 'f', 'p');
+        assert_eq!(super::resolve(&binds, 'p'), Some('f'));
+        assert_eq!(super::resolve(&binds, 'f'), Some('d'));
+        super::rebind(&mut binds, 'l', 'k');
+        assert_eq!((super::key_of(&binds, 'l'), super::key_of(&binds, 'k')), ('k', 'l'));
+        super::rebind(&mut binds, 'l', 'l');
+        super::rebind(&mut binds, 'f', 'f');
+        super::rebind(&mut binds, 'd', 'd');
+        assert!(binds.is_empty(), "{binds:?}");
+        let shipped: Vec<char> = super::BINDS.iter().flat_map(|g| g.1.iter().map(|k| k.0)).collect();
+        let mut once = shipped.clone();
+        once.sort_unstable();
+        once.dedup();
+        assert_eq!(once.len(), shipped.len());
+    }
+
     use super::*;
 
     #[test]

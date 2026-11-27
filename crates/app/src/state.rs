@@ -123,6 +123,9 @@ pub enum Target {
     /// A choice picked for a setting.
     PrefPick(crate::settings::Opt, u8),
     Rescan,
+    /// Waits for the key to put an action on, by the key it shipped on; and every key back as shipped.
+    Bind(char),
+    BindReset,
     PickerClose,
     /// Starts a take from the microphone for the pad being picked, or ends the one running.
     SoundRec,
@@ -837,6 +840,9 @@ pub struct State {
     pub mixes: usize,
     /// The collection's health, counted after each look through the folders and when the settings open.
     pub health: library::Health,
+    /// Keys moved from where they shipped, and the shipped key of the action now waiting for its new key.
+    pub binds: Vec<(char, char)>,
+    pub binding: Option<char>,
     /// The list track waiting or playing on each deck; it stays on the list until it has played.
     pub mix_held: [Option<String>; 2],
     pub order_menu: bool,
@@ -1008,6 +1014,8 @@ impl State {
             found: 0,
             mixes: 0,
             health: library::Health::default(),
+            binds: crate::store::load_keys(),
+            binding: None,
             mix_held: [None, None],
             order_menu: false,
             channel_menu: false,
@@ -1969,7 +1977,8 @@ impl State {
         match key {
             Key::F(n @ (3 | 4 | 7 | 8)) => self.send(Command::Nudge(usize::from(n > 4), 0.0)),
             Key::Char(c) => {
-                if let Some(Target::Cue(d)) = keymap(unshift(c)) {
+                let k = crate::settings::resolve(&self.binds, unshift(c).to_ascii_lowercase());
+                if let Some(Target::Cue(d)) = k.and_then(keymap) {
                     self.end_preview(d);
                 }
             }
@@ -2005,6 +2014,7 @@ impl State {
             return true;
         }
         if self.prefs.is_some() || self.app_menu {
+            self.binding = None;
             self.prefs = None;
             self.app_menu = false;
             self.submenu = None;
@@ -2090,6 +2100,13 @@ impl State {
                     self.name_buf.pop();
                 }
                 _ => {}
+            }
+            return;
+        }
+        if let Some(action) = self.binding.take() {
+            if let (Key::Char(c), false) = (key, m.ctrl) {
+                crate::settings::rebind(&mut self.binds, action, unshift(c).to_ascii_lowercase());
+                crate::store::save_keys(&self.binds);
             }
             return;
         }
@@ -2191,8 +2208,8 @@ impl State {
 
     /// The deck keys, each with its Shift action.
     fn deck_key(&mut self, c: char, m: Mods) {
-        let k = unshift(c);
-        let shift = m.shift || k != c;
+        let shift = m.shift || unshift(c) != c;
+        let Some(k) = crate::settings::resolve(&self.binds, unshift(c).to_ascii_lowercase()) else { return };
         if let 'b' | 'n' = k {
             let d = usize::from(k == 'n');
             self.decks[d].kills[0] = !self.decks[d].kills[0];
@@ -3227,7 +3244,14 @@ impl State {
                 self.pref_menu = None;
                 self.submenu = None;
             }
+            Target::Bind(action) => self.binding = (self.binding != Some(action)).then_some(action),
+            Target::BindReset => {
+                self.binds.clear();
+                self.binding = None;
+                crate::store::save_keys(&self.binds);
+            }
             Target::PrefsClose => {
+                self.binding = None;
                 if self.pref_menu.take().is_none() {
                     self.prefs = None;
                 }

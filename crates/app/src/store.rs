@@ -234,6 +234,17 @@ pub fn load_tags() -> Vec<(String, Vec<String>)> {
     load_lists("tags.tsv")
 }
 
+/// The keys moved from where they shipped: each the shipped key and the key its action is on now.
+pub fn save_keys(binds: &[(char, char)]) {
+    let lists: Vec<_> = binds.iter().map(|b| (b.0.to_string(), vec![b.1.to_string()])).collect();
+    save_lists("keys.tsv", &lists);
+}
+
+pub fn load_keys() -> Vec<(char, char)> {
+    let pair = |(a, b): (String, Vec<String>)| Some((a.chars().next()?, b.first()?.chars().next()?));
+    load_lists("keys.tsv").into_iter().filter_map(pair).collect()
+}
+
 /// Tracks got from the streaming services, each a file with its title, artist and service.
 pub fn save_streamed(tracks: &[(String, Vec<String>)]) {
     save_lists("streamed.tsv", tracks);
