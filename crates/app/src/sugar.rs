@@ -1332,6 +1332,18 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect, railed: bool) {
                 None,
             );
         }
+        let mixes = s.mixes;
+        if mixes > 0 {
+            row(
+                p,
+                s,
+                &mut y,
+                ("Recordings", Some(mixes)),
+                Target::Shelf(Shelf::Recordings),
+                lib && s.shelf == Shelf::Recordings,
+                None,
+            );
+        }
     }
     if head(p, s, &mut y, "PREPARATION", 4) {
         let counts = s.stage_counts();

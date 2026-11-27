@@ -31,6 +31,17 @@ pub fn name(kind: PhraseKind) -> &'static str {
     }
 }
 
+/// The colour a phrase is marked with along a track's overview.
+pub fn colour(kind: PhraseKind) -> u32 {
+    match kind {
+        PhraseKind::Intro | PhraseKind::Outro => 0x5a_8d_ff,
+        PhraseKind::Build => 0xf5_a0_2a,
+        PhraseKind::Drop | PhraseKind::Chorus => 0xff_4f_a8,
+        PhraseKind::Breakdown => 0x3c_cf_6e,
+        PhraseKind::Verse => 0x8e_8e_93,
+    }
+}
+
 /// The count at `frame` of a track with `grid`; phrases start on the bar nearest to their time.
 pub fn count(grid: &Grid, rate: u32, frame: f64, phrases: &[Phrase]) -> Option<Count> {
     let per = grid.beat_frames(rate);

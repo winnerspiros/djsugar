@@ -448,6 +448,13 @@ pub(crate) fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
                 p.rect(x0, r.y + 1.0, x1 - x0, r.h - 2.0, 0.0, fade(WELL, 0xc0));
             }
         }
+        // Each phrase as a line along the foot, a hair short of the next.
+        let secs = deck.seconds(len).max(0.001);
+        for (i, ph) in l.phrases.iter().enumerate() {
+            let end = l.phrases.get(i + 1).map_or(secs, |n| n.start);
+            let (x0, x1) = (r.x + r.w * (ph.start / secs) as f32, r.x + r.w * (end / secs).min(1.0) as f32);
+            p.rect(x0 + 1.0, r.y + r.h - 3.0, (x1 - x0 - 2.0).max(1.0), 2.0, 0.0, rgb(crate::count::colour(ph.kind)));
+        }
         if let Some((from, to)) = s.mix_span(d) {
             let (x0, x1) = (r.x + r.w * from, r.x + r.w * to);
             p.rect(x0, r.y + 1.0, x1 - x0, r.h - 2.0, 0.0, fade(crate::theme::AUTOMIX, 0x2e));

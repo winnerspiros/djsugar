@@ -146,11 +146,13 @@ fn counter(p: &mut Painter, s: &State, r: Rect, d: usize, u: f32) -> f32 {
         (n, None) => n.to_string(),
     };
     let st = bold((u * 0.95).round().max(8.0), if c.left == 1 { PINK } else { DIM });
-    let text = if r.w > u * 34.0 { p.text_width(st, "88 \u{203a} CHORUS") + u * 0.6 } else { 0.0 };
-    let width = squares + text + u * 0.8;
+    let room = if r.w > u * 34.0 { p.text_width(st, "88 \u{203a} CHORUS") + u * 0.6 } else { 0.0 };
+    let width = squares + room + u * 0.8;
     if r.w < width * 3.0 {
         return 0.0;
     }
+    // The label hugs the row's end, so a short one leaves no hole there.
+    let text = if room > 0.0 && !label.is_empty() { p.text_width(st, &label) + u * 0.6 } else { 0.0 };
     let x = if d == 1 { r.x } else { r.x + r.w - squares - text };
     let y = r.y + (r.h - cell - gap - 3.0) * 0.5;
     let playing = s.telemetry.decks[d].playing;

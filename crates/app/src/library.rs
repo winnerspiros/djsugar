@@ -136,6 +136,26 @@ pub fn samples() -> Vec<Entry> {
         .collect()
 }
 
+/// Where recorded mixes are written: beside the music when there is a Music folder, else with the app's files.
+pub fn recordings_dir() -> Option<PathBuf> {
+    let music = std::env::var_os("HOME").map(|h| Path::new(&h).join("Music"));
+    match music {
+        Some(m) if m.is_dir() => Some(m.join("DJ Sugar Recordings")),
+        _ => crate::store::dir().map(|d| d.join("recordings")),
+    }
+}
+
+/// The folders to look for tracks in, with the recordings folder when no other holds it.
+pub fn scan_roots() -> Vec<PathBuf> {
+    let mut v = roots();
+    if let Some(r) = recordings_dir()
+        && !v.iter().any(|root| r.starts_with(root))
+    {
+        v.push(r);
+    }
+    v
+}
+
 pub fn roots() -> Vec<PathBuf> {
     let mut v: Vec<PathBuf> =
         std::env::var_os("DJSUGAR_MUSIC").map(|p| std::env::split_paths(&p).collect()).unwrap_or_default();

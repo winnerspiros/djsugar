@@ -289,6 +289,8 @@ pub enum Shelf {
     #[default]
     Tracks,
     History,
+    /// The mixes recorded here.
+    Recordings,
     Playlist(usize),
     /// The tracks in one folder, by its place in `State::folders`.
     Folder(usize),
@@ -371,14 +373,6 @@ impl Default for Station {
             release: Release::Brake,
             bpm: 0.0,
         }
-    }
-}
-
-fn recordings_dir() -> Option<std::path::PathBuf> {
-    let music = std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join("Music"));
-    match music {
-        Some(m) if m.is_dir() => Some(m.join("DJ Sugar Recordings")),
-        _ => crate::store::dir().map(|d| d.join("recordings")),
     }
 }
 
@@ -836,6 +830,8 @@ pub struct State {
     pub streamed: Vec<(String, Vec<String>)>,
     /// How many tracks the last look through the music folders found.
     pub found: usize,
+    /// How many of the entries are mixes recorded here.
+    pub mixes: usize,
     /// The list track waiting or playing on each deck; it stays on the list until it has played.
     pub mix_held: [Option<String>; 2],
     pub order_menu: bool,
@@ -1005,6 +1001,7 @@ impl State {
             queue: crate::store::load_queue(),
             streamed: crate::store::load_streamed(),
             found: 0,
+            mixes: 0,
             mix_held: [None, None],
             order_menu: false,
             channel_menu: false,
@@ -1191,6 +1188,7 @@ impl State {
                         .filter(|t| !self.entries.iter().any(|e| entry_key(e) == entry_key(t)))
                         .collect();
                     self.entries.extend(kept);
+                    self.mixes = self.recorded().len();
                     self.selected = None;
                     let q = std::mem::take(&mut self.query);
                     self.search(q);
@@ -1644,7 +1642,7 @@ impl State {
     }
 
     pub fn scan(&mut self) {
-        let roots = library::roots();
+        let roots = library::scan_roots();
         if roots.is_empty() {
             return;
         }
@@ -1857,6 +1855,7 @@ impl State {
         let order: Vec<u32> = match self.shelf {
             Shelf::Tracks => (s..n).collect(),
             Shelf::History => self.history.clone(),
+            Shelf::Recordings => self.recorded(),
             Shelf::Tag(t) => {
                 let keys = self.tags.get(t).map(|(_, k)| k.as_slice()).unwrap_or_default();
                 (s..n).filter(|&i| keys.contains(&entry_key(&self.entries[i as usize]))).collect()
@@ -1905,6 +1904,14 @@ impl State {
     }
 
     /// The library's folders, sorted, each once.
+    /// The entries that are mixes recorded here.
+    fn recorded(&self) -> Vec<u32> {
+        let Some(dir) = library::recordings_dir() else { return Vec::new() };
+        let from = SAMPLES.len().min(self.entries.len());
+        let mix = |e: &library::Entry| matches!(&e.source, Source::File(p) if p.starts_with(&dir));
+        (from..self.entries.len()).filter(|&i| mix(&self.entries[i])).map(|i| i as u32).collect()
+    }
+
     pub fn folders(&self) -> Vec<&str> {
         let mut v: Vec<&str> = self.entries[SAMPLES.len().min(self.entries.len())..]
             .iter()
@@ -3456,11 +3463,12 @@ impl State {
                 if let Some(rec) = self.recorder.take() {
                     self.status = Some(format!("Recording saved: {}", rec.path.display()));
                     self.send(Command::Record(false));
+                    self.scan();
                     if let Some(c) = &mut self.control {
                         let mut rest = Vec::new();
                         c.drain_recording(&mut rest);
                     }
-                } else if let Some(dir) = recordings_dir()
+                } else if let Some(dir) = library::recordings_dir()
                     && let Ok(rec) = crate::record::Recorder::start(dir, self.out_rate)
                 {
                     self.recorder = Some(rec);
