@@ -250,6 +250,10 @@ impl Hub {
         accounts[Service::YouTube as usize] = youtube.signed_in().then(|| youtube.name());
         accounts[Service::SoundCloud as usize] = soundcloud.signed_in().then(|| name.to_owned());
         accounts[Service::Spotify as usize] = djsugar_spotify::logged_in(&spotify).then(String::new);
+        if accounts[Service::Spotify as usize].is_some() {
+            let dir = spotify.clone();
+            std::thread::spawn(move || djsugar_spotify::warm(&dir));
+        }
         let hub = Self {
             service: Service::YouTube,
             query: String::new(),
@@ -483,10 +487,15 @@ impl Hub {
         self.scroll = 0.0;
         let (c, tx, sv, era, signs) = (self.clients.clone(), self.tx.clone(), self.service, self.era, self.signs);
         let nameless = sv == Service::Spotify && self.account() == Some("");
+        if nameless {
+            let (c, tx) = (c.clone(), tx.clone());
+            std::thread::spawn(move || {
+                if let Some(name) = crate::spotify::name(&c.spotify) {
+                    let _ = tx.send(Reply::Account(sv, Ok(name), signs));
+                }
+            });
+        }
         std::thread::spawn(move || {
-            if nameless && let Some(name) = crate::spotify::name(&c.spotify) {
-                let _ = tx.send(Reply::Account(sv, Ok(name), signs));
-            }
             let _ = tx.send(match c.search(sv, &q, None, listed) {
                 Ok(p) => Reply::Page(p, false, era),
                 Err(e) => Reply::Failed(None, plain(sv, &e)),

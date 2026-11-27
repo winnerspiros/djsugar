@@ -112,7 +112,7 @@ const BEND_SMOOTH: f64 = 0.15;
 /// Seconds over which the needle's sound comes in under a hand and leaves after it.
 const NEEDLE_FADE: f64 = 0.02;
 /// How long a deck paused with vinyl stop on takes to wind down.
-const WIND_SECONDS: f64 = 0.8;
+const WIND_SECONDS: f64 = 0.25;
 /// Track seconds one rim tick moves a paused deck by.
 const BEND_PAUSED_SECONDS: f64 = 0.008;
 /// How long a clip lights a PeakIndicator, in seconds.
@@ -5209,11 +5209,11 @@ mod tests {
         run(&mut engine, 1.0);
         let paused = engine.decks[0].seconds();
         c("play").set_bool(false);
-        assert!(run(&mut engine, 0.3) > 0.01, "still heard as it slows");
-        run(&mut engine, 0.7);
+        assert!(run(&mut engine, 0.1) > 0.01, "still heard as it slows");
+        run(&mut engine, 0.3);
         let coast = engine.decks[0].seconds() - paused;
         // Slowing evenly to a stop covers half of what full speed would.
-        assert!((0.3..0.5).contains(&coast), "coasted {coast}");
+        assert!((0.09..0.16).contains(&coast), "coasted {coast}");
         let stopped = engine.decks[0].seconds();
         run(&mut engine, 0.2);
         assert_eq!(engine.decks[0].seconds(), stopped);

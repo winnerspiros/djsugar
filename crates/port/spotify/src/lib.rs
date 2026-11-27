@@ -8,7 +8,7 @@ mod lyrics;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
@@ -34,6 +34,9 @@ const WEB_API_SCOPES: &str = "streaming user-read-private user-library-read \
 playlist-read-private playlist-read-collaborative";
 /// Left by builds that browsed through the Web API; removed at logout
 const OLD_WEB_TOKEN_FILE: &str = "web_token.json";
+
+/// How long the steps after the browser wait for the network to come back
+const NETWORK_WAIT: Duration = Duration::from_secs(60);
 
 /// Stack of every thread running librespot (its futures are large)
 const WORK_STACK: usize = 16 * 1024 * 1024;
@@ -224,13 +227,14 @@ where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = Result<T, String>>,
 {
-    let mut attempt = 0;
+    let until = Instant::now() + NETWORK_WAIT;
+    let mut pause = Duration::from_millis(200);
     loop {
         match step().await {
             Ok(value) => return Ok(value),
-            Err(e) if attempt < 30 && is_network_error(&e) => {
-                attempt += 1;
-                tokio::time::sleep(Duration::from_secs(2)).await;
+            Err(e) if Instant::now() < until && is_network_error(&e) => {
+                tokio::time::sleep(pause).await;
+                pause = (pause * 2).min(Duration::from_secs(2));
             }
             Err(e) => return Err(e),
         }
@@ -415,6 +419,12 @@ pub fn logout(dir: &Path) {
     }
     let _ = std::fs::remove_file(dir.join("credentials.json"));
     let _ = std::fs::remove_file(dir.join(OLD_WEB_TOKEN_FILE));
+}
+
+/// Connects the stored account ahead of its first use, so the first list does not wait for the connection.
+pub fn warm(dir: &Path) {
+    let dir = dir.to_path_buf();
+    let _ = guarded(move || async move { session(&dir).await.map(drop) });
 }
 
 /// A list of the account: `request` is "profile" (`{"name"}`), "playlists",

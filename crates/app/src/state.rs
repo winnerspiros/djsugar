@@ -1969,7 +1969,7 @@ impl State {
     /// anywhere while a deck plays.
     pub fn ask_quit(&mut self) {
         let playing = self.telemetry.decks.iter().any(|d| d.playing);
-        if cfg!(any(target_os = "android", target_os = "ios")) || playing {
+        if quit_asks(cfg!(any(target_os = "android", target_os = "ios")), playing) {
             self.quit_ask = true;
         } else {
             self.quit = true;
@@ -3967,4 +3967,22 @@ fn auto_gain(frames: &[[f32; 2]], target: f32) -> f32 {
 
 pub fn knob_gain(v: f32) -> f32 {
     if v < 0.5 { (v * 2.0).powi(2) } else { 1.0 + (v - 0.5) * 2.0 }
+}
+
+/// Whether quitting asks first: always on a phone, elsewhere only while a deck plays.
+fn quit_asks(phone: bool, playing: bool) -> bool {
+    phone || playing
+}
+
+#[cfg(test)]
+mod tests {
+    use super::quit_asks;
+
+    #[test]
+    fn quitting_asks_on_a_phone_and_while_a_deck_plays() {
+        assert!(quit_asks(true, false), "a phone with silent decks");
+        assert!(quit_asks(true, true));
+        assert!(quit_asks(false, true), "a desk with a deck playing");
+        assert!(!quit_asks(false, false), "a silent desk quits at once");
+    }
 }

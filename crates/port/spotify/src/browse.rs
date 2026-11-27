@@ -2,7 +2,7 @@
 //! playlists, playlist tracks and search. Not the public Web API: its quota is per client id, and the client id
 //! librespot logs in with is shared by every librespot app, so it answers 429 (rate limited) nearly always.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Mutex, OnceLock};
 
 use futures_util::stream::{self, StreamExt};
@@ -24,9 +24,17 @@ const CONCURRENCY: usize = 12;
 const MAX_PAGES: usize = 200;
 const IMAGE_URL: &str = "https://i.scdn.co/image/";
 
-/// The track uris of the lists opened, so a next page needs no new lookup
-fn lists() -> &'static Mutex<HashMap<String, Vec<String>>> {
-    static LISTS: OnceLock<Mutex<HashMap<String, Vec<String>>>> = OnceLock::new();
+/// A list as far as it has been read: its track uris, the pages not asked for yet, and how many were.
+#[derive(Clone, Default)]
+struct Open {
+    uris: Vec<String>,
+    next: VecDeque<String>,
+    followed: usize,
+}
+
+/// The lists opened, so a next page goes on where the last one stopped
+fn lists() -> &'static Mutex<HashMap<String, Open>> {
+    static LISTS: OnceLock<Mutex<HashMap<String, Open>>> = OnceLock::new();
     LISTS.get_or_init(Default::default)
 }
 
@@ -89,36 +97,36 @@ fn page_track_uris(page: &ContextPage, out: &mut Vec<String>) {
     out.extend(page.tracks.iter().map(|t| t.uri().to_owned()).filter(|uri| uri.starts_with("spotify:track:")));
 }
 
-/// The track uris of a context (Liked Songs, search), following its pages
-async fn context_tracks(session: &Session, uri: &str) -> Result<Vec<String>, String> {
-    let spclient = session.spclient();
-    let context: Context = spclient.get_context(uri).await.map_err(|e| format!("Spotify: {e}"))?;
-    let mut uris = Vec::new();
-    let mut next: Vec<String> = Vec::new();
+/// The start of a context (Liked Songs, search): the tracks that came with it and the pages still to ask for.
+async fn context_start(session: &Session, uri: &str) -> Result<Open, String> {
+    let context: Context = session.spclient().get_context(uri).await.map_err(|e| format!("Spotify: {e}"))?;
+    let mut open = Open::default();
     for page in &context.pages {
-        page_track_uris(page, &mut uris);
+        page_track_uris(page, &mut open.uris);
         if page.tracks.is_empty() && !page.page_url().is_empty() {
-            next.push(page.page_url().to_owned());
+            open.next.push_back(page.page_url().to_owned());
         } else if !page.next_page_url().is_empty() {
-            next.push(page.next_page_url().to_owned());
+            open.next.push_back(page.next_page_url().to_owned());
         }
     }
-    let mut followed = 0;
-    while let Some(url) = next.pop() {
-        followed += 1;
-        if followed > MAX_PAGES {
-            break;
-        }
-        let bytes = spclient.get_next_page(&url).await.map_err(|e| format!("Spotify: {e}"))?;
+    Ok(open)
+}
+
+/// Asks for further pages of `open` until it holds more than `wanted` tracks or has no page left.
+async fn follow(session: &Session, open: &mut Open, wanted: usize) -> Result<(), String> {
+    while open.uris.len() <= wanted && open.followed < MAX_PAGES {
+        let Some(url) = open.next.pop_front() else { break };
+        open.followed += 1;
+        let bytes = session.spclient().get_next_page(&url).await.map_err(|e| format!("Spotify: {e}"))?;
         let text = String::from_utf8_lossy(&bytes);
         let page: ContextPage = protobuf_json_mapping::parse_from_str_with_options(&text, &lenient())
             .map_err(|e| format!("Spotify page: {e}"))?;
-        page_track_uris(&page, &mut uris);
+        page_track_uris(&page, &mut open.uris);
         if !page.next_page_url().is_empty() {
-            next.push(page.next_page_url().to_owned());
+            open.next.push_front(page.next_page_url().to_owned());
         }
     }
-    Ok(uris)
+    Ok(())
 }
 
 fn lenient() -> protobuf_json_mapping::ParseOptions {
@@ -216,26 +224,31 @@ pub async fn browse(session: &Session, request: &str, offset: usize, limit: usiz
         _ => {}
     }
     let cached = (offset > 0).then(|| lists().lock().unwrap().get(request).cloned()).flatten();
-    let uris = match cached {
-        Some(uris) => uris,
+    let mut open = match cached {
+        Some(open) => open,
+        None if request == "liked" => {
+            let user = session.username();
+            context_start(session, &format!("spotify:user:{user}:collection")).await?
+        }
         None => {
-            let uris = if request == "liked" {
-                let user = session.username();
-                context_tracks(session, &format!("spotify:user:{user}:collection")).await?
-            } else if let Some(id) = request.strip_prefix("playlist:") {
-                playlist_tracks(session, id).await?
+            if let Some(id) = request.strip_prefix("playlist:") {
+                Open { uris: playlist_tracks(session, id).await?, ..Open::default() }
             } else if let Some(query) = request.strip_prefix("search:") {
                 let words: Vec<String> = query.split_whitespace().map(search_word).collect();
-                context_tracks(session, &format!("spotify:search:{}", words.join("+"))).await?
+                context_start(session, &format!("spotify:search:{}", words.join("+"))).await?
             } else {
                 return Err(format!("Unknown list: {request}"));
-            };
-            let mut lists = lists().lock().unwrap();
-            lists.clear(); // one list open at a time
-            lists.insert(request.to_owned(), uris.clone());
-            uris
+            }
         }
     };
+    // Only as far as this page and a track beyond it, which tells whether a next page exists.
+    follow(session, &mut open, offset + limit).await?;
+    let uris = open.uris.clone();
+    {
+        let mut lists = lists().lock().unwrap();
+        lists.clear(); // one list open at a time
+        lists.insert(request.to_owned(), open);
+    }
     let end = uris.len().min(offset + limit);
     let page = uris.get(offset..end).unwrap_or_default();
     let next = if end < uris.len() { end as i64 } else { -1 };

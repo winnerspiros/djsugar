@@ -120,13 +120,63 @@ fn title(p: &mut Painter, s: &mut State, r: Rect, d: usize, u: f32) {
     }
     let big = bold(u * 1.35, ink);
     let small = Style::new((u * 1.05).round().max(8.0), Weight::Regular, DIM);
-    let w = r.w - b - u * 0.6;
+    let counter = counter(p, s, r, d, u);
+    let w = r.w - b - u * 0.6 - counter;
     let top = if artist.is_empty() { r.y + (r.h - big.px) * 0.5 - u * 0.15 } else { r.y };
     for (st, text, base) in [(big, &name, top + big.px), (small, &artist, top + big.px + small.px + u * 0.4)] {
         let tw = p.text_width(st, text).min(w);
-        let x = if mirrored { r.x + w - tw } else { r.x + b + u * 0.6 };
+        let x = if mirrored { r.x + counter + w - tw } else { r.x + b + u * 0.6 };
         p.text_in(x, base, w, st, text);
     }
+}
+
+/// The beat counter at the inner end of the title row: four squares lit beat by beat over four bars filling
+/// through each four bars, and beside them the bars left to the next phrase. Returns the width it took.
+fn counter(p: &mut Painter, s: &State, r: Rect, d: usize, u: f32) -> f32 {
+    let deck = &s.decks[d];
+    let Some(l) = &deck.loaded else { return 0.0 };
+    let at = s.telemetry.decks[d].position;
+    let Some(c) = l.grid.and_then(|g| crate::count::count(&g, l.track.rate, at, &l.phrases)) else { return 0.0 };
+    let cell = (u * 0.9).round().max(7.0);
+    let gap = (cell * 0.3).round().max(2.0);
+    let squares = 4.0 * cell + 3.0 * gap;
+    let label = match (c.left, c.next) {
+        (0, _) => String::new(),
+        (n, Some(kind)) => format!("{n} \u{203a} {}", crate::count::name(kind)),
+        (n, None) => n.to_string(),
+    };
+    let st = bold((u * 0.95).round().max(8.0), if c.left == 1 { PINK } else { DIM });
+    let text = if r.w > u * 34.0 { p.text_width(st, "88 \u{203a} CHORUS") + u * 0.6 } else { 0.0 };
+    let width = squares + text + u * 0.8;
+    if r.w < width * 3.0 {
+        return 0.0;
+    }
+    let x = if d == 1 { r.x } else { r.x + r.w - squares - text };
+    let y = r.y + (r.h - cell - gap - 3.0) * 0.5;
+    let playing = s.telemetry.decks[d].playing;
+    for i in 0..4u8 {
+        let cx = x + f32::from(i) * (cell + gap);
+        let lit = if i != c.beat {
+            RAISED
+        } else if i == 0 {
+            TEXT
+        } else {
+            DECK[d]
+        };
+        p.rect(cx, y, cell, cell, 2.0, if playing || i != c.beat { lit } else { DIM });
+        let bar = if c.left == 1 {
+            PINK
+        } else if i <= c.bar {
+            DECK[d]
+        } else {
+            RAISED
+        };
+        p.rect(cx, y + cell + gap, cell, 3.0, 1.0, bar);
+    }
+    if text > 0.0 {
+        p.text_in(x + squares + u * 0.6, r.y + r.h * 0.5 + st.px * 0.36, text - u * 0.6, st, &label);
+    }
+    width
 }
 
 /// The time left, large, then the tempo and key chips and the key shift.
