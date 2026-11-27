@@ -10,6 +10,7 @@ mod prefs;
 mod record;
 mod related;
 mod settings;
+mod signin;
 mod skips;
 mod sounds;
 mod spotify;

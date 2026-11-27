@@ -19,11 +19,15 @@
 
     <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:label="DJ Sugar"
-        android:hasCode="false"
+        android:hasCode="true"
         android:resizeableActivity="true"
         android:extractNativeLibs="true">
         <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
         <meta-data android:name="com.samsung.android.keepalive.density" android:value="true" />
+        <activity
+            android:name="app.djsugar.SignIn"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
         <activity
             android:name="android.app.NativeActivity"
             android:exported="true"

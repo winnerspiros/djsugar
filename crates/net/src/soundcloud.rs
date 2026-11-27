@@ -29,7 +29,12 @@ pub struct SoundCloud {
     client: Mutex<String>,
     /// The signed in account's token; Go+ tracks play in full with it.
     token: Mutex<String>,
+    /// The account's own number, once asked for.
+    user: Mutex<String>,
 }
+
+/// Where the sign-in starts, the host whose cookies it leaves, and the cookie that is the account's token.
+pub const SIGN_IN: (&str, &str, &str) = ("https://soundcloud.com/signin", "soundcloud.com", "oauth_token");
 
 impl SoundCloud {
     pub fn new() -> Self {
@@ -38,6 +43,49 @@ impl SoundCloud {
 
     pub fn sign_in(&self, token: &str) {
         token.trim().clone_into(&mut self.token.lock().unwrap_or_else(PoisonError::into_inner));
+        self.user.lock().unwrap_or_else(PoisonError::into_inner).clear();
+    }
+
+    pub fn sign_out(&self) {
+        self.sign_in("");
+    }
+
+    pub fn signed_in(&self) -> bool {
+        !self.token.lock().unwrap_or_else(PoisonError::into_inner).is_empty()
+    }
+
+    /// Whose account the token is: its number and its name. A token SoundCloud refuses is dropped.
+    pub fn me(&self) -> Result<(String, String)> {
+        match self.api(&format!("{API}/me")) {
+            Ok(v) => {
+                let id = v["id"].as_u64().map(|n| n.to_string()).ok_or(Error::Parse("no account"))?;
+                self.user.lock().unwrap_or_else(PoisonError::into_inner).clone_from(&id);
+                Ok((id, v["username"].as_str().unwrap_or_default().to_string()))
+            }
+            Err(Error::Status(401 | 403)) => {
+                self.sign_out();
+                Err(Error::Refused("SoundCloud did not accept the sign-in. Sign in again".into()))
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// The tracks the account likes, newest first; `more` continues a page.
+    pub fn likes(&self, more: Option<&str>) -> Result<Page> {
+        let url = match more {
+            Some(next) => next.to_string(),
+            None => {
+                let mut user = self.user.lock().unwrap_or_else(PoisonError::into_inner).clone();
+                if user.is_empty() {
+                    user = self.me()?.0;
+                }
+                format!("{API}/users/{user}/track_likes?limit={PAGE}&linked_partitioning=1")
+            }
+        };
+        let v = self.api(&url)?;
+        let hits = v["collection"].as_array().map(|a| a.iter().filter_map(|l| hit(&l["track"])).collect());
+        let more = v["next_href"].as_str().filter(|s| !s.is_empty()).map(str::to_string);
+        Ok(Page { hits: hits.unwrap_or_default(), more })
     }
 
     pub fn search(&self, query: &str, more: Option<&str>) -> Result<Page> {
@@ -84,7 +132,8 @@ impl SoundCloud {
             let sep = if url.contains('?') { '&' } else { '?' };
             let mut req = agent().get(format!("{url}{sep}client_id={id}")).header("User-Agent", AGENT);
             let token = self.token.lock().unwrap_or_else(PoisonError::into_inner).clone();
-            if !token.is_empty() {
+            // The token is the account: it goes to the API and nowhere else.
+            if !token.is_empty() && url.starts_with(API) {
                 req = req.header("Authorization", &format!("OAuth {token}"));
             }
             let (status, body) = read(req.config().timeout_global(Some(TIMEOUT)).build().call())?;

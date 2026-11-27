@@ -149,11 +149,14 @@ pub enum Target {
     HubSearch,
     HubList,
     HubLoad(usize, usize),
-    /// Signs in to Spotify, or gives up waiting for its page.
+    /// Signs in to the shown service, or gives up waiting for its page.
     HubSignIn,
     HubSignOut,
-    /// One of the Spotify account's lists: liked songs, then the playlists.
+    /// One of the account's lists: liked songs, then the playlists.
     HubShow(u8),
+    /// The menu of the YouTube account's channels, and one of them.
+    HubChannels,
+    HubChannel(u8),
     /// Opens the playlist among the hits.
     HubOpen(usize),
     LoadSelected(usize),
@@ -836,6 +839,8 @@ pub struct State {
     /// The list track waiting or playing on each deck; it stays on the list until it has played.
     pub mix_held: [Option<String>; 2],
     pub order_menu: bool,
+    /// The menu of the YouTube account's channels is open.
+    pub channel_menu: bool,
     /// Which of Automix's settings has its choices open.
     pub mix_menu: Option<crate::settings::Opt>,
     /// The row of Automix's list being dragged, and where the finger is.
@@ -1002,6 +1007,7 @@ impl State {
             found: 0,
             mix_held: [None, None],
             order_menu: false,
+            channel_menu: false,
             mix_menu: None,
             queue_drag: None,
             track_menu: None,
@@ -1987,6 +1993,7 @@ impl State {
         let open = self.track_menu.is_some()
             || self.column_menu
             || self.order_menu
+            || self.channel_menu
             || self.mix_menu.is_some()
             || self.chip_menu.is_some()
             || self.tag_menu.is_some()
@@ -1999,6 +2006,7 @@ impl State {
         self.track_menu = None;
         self.column_menu = false;
         self.order_menu = false;
+        self.channel_menu = false;
         self.mix_menu = None;
         self.chip_menu = None;
         self.tag_menu = None;
@@ -3260,6 +3268,14 @@ impl State {
             Target::HubSignOut => self.hub.sign_out(),
             Target::HubShow(n) => self.hub.show([crate::spotify::LIKED, crate::spotify::LISTS][usize::from(n.min(1))]),
             Target::HubOpen(hit) => self.hub.open(hit),
+            Target::HubChannels => {
+                self.channel_menu = true;
+                self.menu_at = self.rect_of(t).map_or((x, y), |r| (r.x, r.y + r.h + 2.0));
+            }
+            Target::HubChannel(n) => {
+                self.channel_menu = false;
+                self.hub.choose(usize::from(n));
+            }
             Target::Shelf(sh) => {
                 if self.view == View::Stream {
                     self.view = View::Lib;
@@ -3417,6 +3433,7 @@ impl State {
             Target::MenuClose => {
                 self.column_menu = false;
                 self.order_menu = false;
+                self.channel_menu = false;
                 self.mix_menu = None;
                 self.chip_menu = None;
                 self.tag_menu = None;

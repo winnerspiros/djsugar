@@ -145,6 +145,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     list_menu(p, s, w, h);
     column_menu(p, s, w, h);
     order_menu(p, s, w, h);
+    channel_menu(p, s, w, h);
     mix_menu(p, s, w, h);
     chip_menu(p, s, w, h);
     tag_menu(p, s, w, h);
@@ -1537,6 +1538,23 @@ fn mix_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     theme::menu(p, s, s.menu_at, screen, &lines);
 }
 
+/// The channels of the YouTube account; its lists are those of the one ticked.
+fn channel_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    if !s.channel_menu {
+        return;
+    }
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let lines: Vec<Line> = (s.hub.channels.iter().zip(0u8..))
+        .map(|(c, n)| {
+            let ticked = theme::Mark::Check(s.hub.chosen(usize::from(n)));
+            Line::item(c.name.clone(), Target::HubChannel(n)).hint(c.handle.clone()).mark(ticked)
+        })
+        .collect();
+    theme::menu(p, s, s.menu_at, screen, &lines);
+}
+
 /// The orders Automix's list can be put in, and a way to empty it.
 fn order_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     if !s.order_menu {
@@ -2314,10 +2332,22 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
         Target::HubSearch,
     );
     let spotify = s.hub.service == Service::Spotify;
-    let green = rgb(Service::Spotify.colour());
-    // Spotify's own row: the account's lists on the left, whose account it is on the right.
-    let account_h = if spotify && s.hub.account.is_some() { 34.0 } else { 0.0 };
-    if account_h > 0.0 {
+    let green = rgb(s.hub.service.colour());
+    let signed = s.hub.account().is_some();
+    // A service that is searched without an account offers the sign-in beside its search.
+    let offered = !signed && !spotify && s.hub.can_sign_in();
+    let account_h = if signed || offered { 34.0 } else { 0.0 };
+    if offered {
+        let y = r.y + bar + 5.0;
+        let waiting = s.hub.signing();
+        let b = Rect::new(r.x + r.w - 110.0, y, 100.0, 24.0);
+        button(p, s, b, if waiting { "STOP WAITING" } else { "SIGN IN" }, waiting, green, Target::HubSignIn);
+        let msg = "Sign in for the songs you like and your playlists.";
+        p.text_in(r.x + 12.0, y + 16.0, b.x - r.x - 24.0, Style { colour: GREY, ..ARTIST }, msg);
+        p.rect(r.x, r.y + bar + account_h - 1.0, r.w, 1.0, 0.0, EDGE);
+    }
+    // The account's own row: its lists on the left, whose account it is on the right.
+    if signed {
         let y = r.y + bar + 5.0;
         let list = s.hub.list.clone();
         let lists = list == crate::spotify::LISTS || list.starts_with(crate::spotify::LIST);
@@ -2330,12 +2360,19 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             green,
             Target::HubShow(0),
         );
-        button(p, s, Rect::new(r.x + 112.0, y, 84.0, 24.0), "PLAYLISTS", lists, green, Target::HubShow(1));
+        if s.hub.service != Service::SoundCloud {
+            button(p, s, Rect::new(r.x + 112.0, y, 84.0, 24.0), "PLAYLISTS", lists, green, Target::HubShow(1));
+        }
         let out = Rect::new(r.x + r.w - 82.0, y, 72.0, 24.0);
         button(p, s, out, "SIGN OUT", false, ACCENT, Target::HubSignOut);
-        let name = s.hub.account.clone().unwrap_or_default();
-        let nw = p.text_width(ARTIST, &name).min(out.x - r.x - 220.0).max(0.0);
-        p.text_in(out.x - 10.0 - nw, y + 16.0, nw, ARTIST, &name);
+        let mut right = out.x;
+        if !s.hub.channels.is_empty() && s.hub.service == Service::YouTube {
+            right -= 84.0;
+            button(p, s, Rect::new(right, y, 76.0, 24.0), "CHANNEL", s.channel_menu, green, Target::HubChannels);
+        }
+        let name = s.hub.account().unwrap_or_default().to_owned();
+        let nw = p.text_width(ARTIST, &name).min(right - r.x - 220.0).max(0.0);
+        p.text_in(right - 10.0 - nw, y + 16.0, nw, ARTIST, &name);
         p.rect(r.x, r.y + bar + account_h - 1.0, r.w, 1.0, 0.0, EDGE);
     }
     let status_h = if s.hub.status.is_empty() { 0.0 } else { 24.0 };
@@ -2346,7 +2383,7 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     let top = bar + account_h + status_h;
     let list = Rect::new(r.x, r.y + top, r.w, r.h - top);
     s.hub_area = list;
-    if spotify && s.hub.account.is_none() {
+    if spotify && !signed {
         let msg = "Sign in to Spotify for your liked songs, your playlists and its search.";
         p.text_in(
             list.x + ((list.w - p.text_width(ARTIST, msg)) * 0.5).max(12.0),
@@ -2355,7 +2392,7 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             Style { colour: GREY, ..ARTIST },
             msg,
         );
-        let waiting = s.hub.signing;
+        let waiting = s.hub.signing();
         let b = Rect::new(list.x + (list.w - 150.0) * 0.5, list.y + 58.0, 150.0, 30.0);
         button(p, s, b, if waiting { "STOP WAITING" } else { "SIGN IN" }, waiting, green, Target::HubSignIn);
         return;
@@ -2363,7 +2400,7 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     if s.hub.hits.is_empty() {
         let msg = if busy {
             "Searching".to_string()
-        } else if spotify {
+        } else if spotify || (signed && !s.hub.list.is_empty()) {
             "Nothing in this list yet.".to_string()
         } else {
             format!(

@@ -11,6 +11,7 @@ pub mod netease;
 pub mod soundcloud;
 pub mod sponsorblock;
 pub mod youtube;
+pub mod ytmusic;
 
 /// One search result.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

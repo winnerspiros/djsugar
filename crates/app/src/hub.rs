@@ -9,6 +9,7 @@ use sugar_net::archive::Archive;
 use sugar_net::audius::Audius;
 use sugar_net::soundcloud::SoundCloud;
 use sugar_net::youtube::YouTube;
+use sugar_net::ytmusic::{self, Channel};
 use sugar_net::{Hit, Result};
 
 use crate::state::Art;
@@ -60,6 +61,24 @@ impl Service {
         }
     }
 
+    /// The first list of the service's account; none where the tab starts with a search.
+    const fn first(self) -> &'static str {
+        match self {
+            Self::Spotify => crate::spotify::LIKED,
+            _ => "",
+        }
+    }
+
+    /// The service's sign-in page, where it has one inside the app.
+    fn form(self) -> Option<crate::signin::Form> {
+        let ((url, host, cookie), wide) = match self {
+            Self::YouTube => (ytmusic::SIGN_IN, false),
+            Self::SoundCloud => (sugar_net::soundcloud::SIGN_IN, true),
+            _ => return None,
+        };
+        Some(crate::signin::Form { url, host, cookie, wide })
+    }
+
     /// The tab's underline.
     pub const fn colour(self) -> u32 {
         match self {
@@ -88,11 +107,26 @@ struct Clients {
     archive: Archive,
     /// Where the Spotify account is kept.
     spotify: PathBuf,
+    /// The YouTube Music account, and the file SoundCloud's token and name are kept in.
+    ytmusic: ytmusic::Account,
+    soundcloud_file: PathBuf,
+    /// Where a sign-in page leaves its answer.
+    answer: PathBuf,
 }
 
 impl Clients {
-    fn search(&self, sv: Service, q: &str, more: Option<&str>) -> Result<Page> {
+    /// A page of a search, or of the account's list `q` when `listed`.
+    fn search(&self, sv: Service, q: &str, more: Option<&str>, listed: bool) -> Result<Page> {
         match sv {
+            Service::YouTube if listed => self.ytmusic.list(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::SoundCloud if listed => match self.soundcloud.likes(more) {
+                Ok(p) => Ok(Page { hits: p.hits, more: p.more }),
+                // Asking whose account it is tells a token that ran out from a bad day at SoundCloud.
+                Err(sugar_net::Error::Status(401 | 403)) => {
+                    Err(self.soundcloud.me().err().unwrap_or(sugar_net::Error::Status(401)))
+                }
+                Err(e) => Err(e),
+            },
             Service::YouTube => self.youtube.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::SoundCloud => self.soundcloud.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Audius => self.audius.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
@@ -119,6 +153,34 @@ impl Clients {
     }
 }
 
+impl Clients {
+    /// Takes the cookies a sign-in page left; the account's name, or nothing when they are no sign-in.
+    fn signed(&self, sv: Service, cookies: &str) -> Option<String> {
+        if sv == Service::YouTube {
+            return self.ytmusic.sign_in(cookies).then(|| self.ytmusic.whose().unwrap_or_default());
+        }
+        let token = cookies.split(';').find_map(|p| p.trim().strip_prefix("oauth_token="))?;
+        self.soundcloud.sign_in(token);
+        let Ok((_, name)) = self.soundcloud.me() else {
+            self.soundcloud.sign_out();
+            return None;
+        };
+        keep(&self.soundcloud_file, &format!("{token}\n{name}"));
+        Some(name)
+    }
+}
+
+/// Writes an account's file, for the user's eyes only.
+fn keep(file: &std::path::Path, text: &str) {
+    if std::fs::write(file, text).is_ok() {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(file, std::fs::Permissions::from_mode(0o600));
+        }
+    }
+}
+
 /// Why a list did not come, for the DJ: Spotify's own reasons are not for reading.
 fn plain(sv: Service, e: &sugar_net::Error) -> String {
     if sv == Service::Spotify { "Spotify did not answer. Try again".into() } else { e.to_string() }
@@ -128,8 +190,10 @@ fn plain(sv: Service, e: &sugar_net::Error) -> String {
 pub enum Reply {
     /// A page, whether it follows the one shown, and the era it was asked in.
     Page(Page, bool, u64),
-    /// The Spotify login ended: the account's name, or why not.
-    Account(std::result::Result<String, String>, u64),
+    /// A sign-in ended: the account's name, or why not; then the count of sign-outs it was started in.
+    Account(Service, std::result::Result<String, String>, u64),
+    /// The YouTube account's channels.
+    Channels(Vec<Channel>, u64),
     Progress(String, f32),
     Ready(String, PathBuf, usize, Service),
     /// A hit's picture, for the search it was asked in.
@@ -151,12 +215,17 @@ pub struct Hub {
     pub scroll: f32,
     /// The hits' pictures by ID, fetched as soon as a search answers.
     pub thumbs: std::collections::HashMap<String, Art>,
-    /// The Spotify account's name once signed in; empty until Spotify has told it.
-    pub account: Option<String>,
-    /// The Spotify login page is open.
-    pub signing: bool,
-    /// The Spotify list shown: liked songs, the playlists, one playlist or a search.
+    /// Each service's account by `Service as usize`: its name once signed in, empty until the service has told it.
+    accounts: [Option<String>; 5],
+    /// The service whose sign-in page is open, and what ends the wait for it.
+    signing: Option<Service>,
+    stop: Arc<std::sync::atomic::AtomicBool>,
+    /// The account's list shown: liked songs, the playlists, one playlist or a Spotify search; none for a search.
     pub list: String,
+    /// The YouTube account's channels, when it has more than its own.
+    pub channels: Vec<Channel>,
+    /// Counts sign-outs, so the answer to an earlier sign-in is dropped.
+    signs: u64,
     /// Counts service switches and sign-outs, so answers to an earlier one are dropped.
     era: u64,
     /// Counts searches, so pictures for an old one are dropped.
@@ -171,7 +240,17 @@ impl Hub {
     pub fn new(cache: PathBuf) -> Self {
         let (tx, rx) = channel();
         let spotify = cache.with_file_name("spotify");
-        Self {
+        let youtube = ytmusic::Account::open(cache.with_file_name("youtube_account"));
+        let soundcloud_file = cache.with_file_name("soundcloud_account");
+        let soundcloud = SoundCloud::new();
+        let kept = std::fs::read_to_string(&soundcloud_file).unwrap_or_default();
+        let (token, name) = kept.split_once('\n').unwrap_or((&kept, ""));
+        soundcloud.sign_in(token);
+        let mut accounts = [const { None }; 5];
+        accounts[Service::YouTube as usize] = youtube.signed_in().then(|| youtube.name());
+        accounts[Service::SoundCloud as usize] = soundcloud.signed_in().then(|| name.to_owned());
+        accounts[Service::Spotify as usize] = djsugar_spotify::logged_in(&spotify).then(String::new);
+        let hub = Self {
             service: Service::YouTube,
             query: String::new(),
             focus: false,
@@ -182,56 +261,175 @@ impl Hub {
             fetching: Vec::new(),
             scroll: 0.0,
             thumbs: std::collections::HashMap::new(),
-            account: djsugar_spotify::logged_in(&spotify).then(String::new),
-            signing: false,
-            list: crate::spotify::LIKED.to_owned(),
+            accounts,
+            signing: None,
+            stop: Arc::default(),
+            list: String::new(),
+            channels: Vec::new(),
+            signs: 0,
             era: 0,
             round: Arc::default(),
             clients: Arc::new(Clients {
                 youtube: YouTube::new("US", ""),
-                soundcloud: SoundCloud::new(),
+                soundcloud,
                 audius: Audius::new(),
                 archive: Archive,
                 spotify,
+                ytmusic: youtube,
+                soundcloud_file,
+                answer: cache.with_file_name("signin_answer"),
             }),
             cache,
             tx,
             rx,
+        };
+        hub.ask_channels();
+        hub
+    }
+
+    /// The shown service's account: its name, empty until the service has told it.
+    pub fn account(&self) -> Option<&str> {
+        self.accounts[self.service as usize].as_deref()
+    }
+
+    /// The shown service's sign-in page is open.
+    pub fn signing(&self) -> bool {
+        self.signing == Some(self.service)
+    }
+
+    /// Whether the shown service can be signed in to here.
+    pub fn can_sign_in(&self) -> bool {
+        self.service == Service::Spotify || (crate::signin::HERE && self.service.form().is_some())
+    }
+
+    /// Gives up the wait for a sign-in page.
+    fn stop_waiting(&mut self) {
+        match self.signing {
+            Some(Service::Spotify) => djsugar_spotify::cancel_login(),
+            Some(_) => self.stop.store(true, std::sync::atomic::Ordering::Release),
+            None => {}
         }
     }
 
-    /// Opens Spotify's login page and waits for it; a second call gives the wait up.
+    /// Opens the service's sign-in page and waits for it; a second call gives the wait up.
     pub fn sign_in(&mut self) {
-        if self.signing {
-            djsugar_spotify::cancel_login();
+        if self.signing.is_some() {
+            self.stop_waiting();
             return;
         }
-        self.signing = true;
-        self.status = "Sign in on the page that opened".into();
-        let (c, tx, era) = (self.clients.clone(), self.tx.clone(), self.era);
-        std::thread::spawn(move || {
-            let r = djsugar_spotify::login(&c.spotify, |url| {
-                crate::open::open(url);
+        let (sv, c, tx, signs) = (self.service, self.clients.clone(), self.tx.clone(), self.signs);
+        if sv == Service::Spotify {
+            self.signing = Some(sv);
+            self.status = "Sign in on the page that opened".into();
+            std::thread::spawn(move || {
+                let r = djsugar_spotify::login(&c.spotify, |url| {
+                    crate::open::open(url);
+                });
+                let _ = tx.send(Reply::Account(sv, r, signs));
             });
-            let _ = tx.send(Reply::Account(r, era));
+            return;
+        }
+        let Some(form) = sv.form() else { return };
+        let _ = std::fs::remove_file(&c.answer);
+        if !crate::signin::open(form, &c.answer) {
+            self.status = format!("The sign-in page for {} did not open", sv.title());
+            return;
+        }
+        self.signing = Some(sv);
+        self.status = String::new();
+        self.stop = Arc::default();
+        let stop = self.stop.clone();
+        std::thread::spawn(move || {
+            let r = match crate::signin::wait(&c.answer, &stop) {
+                Some(cookies) if !cookies.trim().is_empty() => c.signed(sv, &cookies).ok_or_else(String::new),
+                _ => Err("cancelled".to_owned()),
+            };
+            let _ = tx.send(Reply::Account(sv, r, signs));
         });
     }
 
     pub fn sign_out(&mut self) {
-        djsugar_spotify::cancel_login();
-        djsugar_spotify::logout(&self.clients.spotify);
-        self.account = None;
+        let sv = self.service;
+        if self.signing == Some(sv) {
+            self.stop_waiting();
+        }
+        match sv {
+            Service::Spotify => djsugar_spotify::logout(&self.clients.spotify),
+            Service::YouTube => {
+                self.clients.ytmusic.sign_out();
+                self.channels.clear();
+            }
+            Service::SoundCloud => {
+                self.clients.soundcloud.sign_out();
+                let _ = std::fs::remove_file(&self.clients.soundcloud_file);
+            }
+            _ => return,
+        }
+        self.accounts[sv as usize] = None;
+        self.signs += 1;
         self.era += 1;
         self.searching = false;
         self.hits.clear();
         self.more = None;
         self.status = String::new();
-        self.list = crate::spotify::LIKED.to_owned();
+        sv.first().clone_into(&mut self.list);
     }
 
-    /// Shows one of the Spotify account's lists.
+    /// Asks which channels the YouTube account has; the menu to choose one shows when there are several.
+    fn ask_channels(&self) {
+        if self.accounts[Service::YouTube as usize].is_none() {
+            return;
+        }
+        let (c, tx, signs) = (self.clients.clone(), self.tx.clone(), self.signs);
+        std::thread::spawn(move || {
+            if let Ok(all) = c.ytmusic.channels() {
+                let _ = tx.send(Reply::Channels(all, signs));
+            }
+        });
+    }
+
+    /// Whether the YouTube account is asked as its `n`th channel.
+    pub fn chosen(&self, n: usize) -> bool {
+        self.channels.get(n).is_some_and(|c| c.page == self.clients.ytmusic.page())
+    }
+
+    /// Asks YouTube as the account's `n`th channel from now on, and shows the list again as that one.
+    pub fn choose(&mut self, n: usize) {
+        let Some(channel) = self.channels.get(n) else { return };
+        self.clients.ytmusic.choose(channel);
+        self.accounts[Service::YouTube as usize] = Some(channel.name.clone());
+        if self.service == Service::YouTube && !self.list.is_empty() {
+            // A playlist belongs to the channel it was opened as.
+            let list =
+                if self.list.starts_with(crate::spotify::LIST) { crate::spotify::LISTS } else { &self.list }.to_owned();
+            self.show(&list);
+        }
+    }
+
+    /// An account the service no longer takes is signed out here too.
+    fn dropped(&mut self) {
+        let c = self.clients.clone();
+        for (sv, signed) in [(Service::YouTube, c.ytmusic.signed_in()), (Service::SoundCloud, c.soundcloud.signed_in())]
+        {
+            if !signed && self.accounts[sv as usize].take().is_some() {
+                self.signs += 1;
+                if sv == Service::SoundCloud {
+                    let _ = std::fs::remove_file(&c.soundcloud_file);
+                } else {
+                    self.channels.clear();
+                }
+                if sv == self.service {
+                    self.list.clear();
+                    self.hits.clear();
+                    self.more = None;
+                }
+            }
+        }
+    }
+
+    /// Shows one of the account's lists.
     pub fn show(&mut self, list: &str) {
-        if self.account.is_none() || self.service != Service::Spotify {
+        if self.account().is_none() {
             return;
         }
         self.list = list.to_owned();
@@ -250,40 +448,46 @@ impl Hub {
         }
     }
 
-    /// What a search asks the service: the words, or for Spotify the list they stand for.
-    fn request(&mut self) -> String {
+    /// What a search asks the service, and whether that is a list of the account: the words, the list shown when
+    /// there are none, or for Spotify the list the words stand for.
+    fn request(&mut self) -> (String, bool) {
         let q = self.query.trim().to_string();
-        if self.service != Service::Spotify {
-            return q;
+        let spotify = self.service == Service::Spotify;
+        if self.account().is_none() {
+            return (if spotify { String::new() } else { q }, false);
         }
-        if self.account.is_none() {
-            return String::new();
+        if spotify {
+            if !q.is_empty() {
+                self.list = crate::spotify::search(&q);
+            }
+            return (self.list.clone(), true);
         }
         if !q.is_empty() {
-            self.list = crate::spotify::search(&q);
+            self.list.clear();
+            return (q, false);
         }
-        self.list.clone()
+        (self.list.clone(), true)
     }
 
     pub fn search(&mut self) {
-        let q = self.request();
+        let (q, listed) = self.request();
         if q.is_empty() || self.searching {
             return;
         }
         self.searching = true;
-        self.status = if self.service == Service::Spotify && self.query.trim().is_empty() {
+        self.status = if self.query.trim().is_empty() {
             String::new()
         } else {
             format!("Searching {} for \"{}\"", self.service.title(), self.query.trim())
         };
         self.scroll = 0.0;
-        let (c, tx, sv, era) = (self.clients.clone(), self.tx.clone(), self.service, self.era);
-        let nameless = sv == Service::Spotify && self.account.as_deref() == Some("");
+        let (c, tx, sv, era, signs) = (self.clients.clone(), self.tx.clone(), self.service, self.era, self.signs);
+        let nameless = sv == Service::Spotify && self.account() == Some("");
         std::thread::spawn(move || {
             if nameless && let Some(name) = crate::spotify::name(&c.spotify) {
-                let _ = tx.send(Reply::Account(Ok(name), era));
+                let _ = tx.send(Reply::Account(sv, Ok(name), signs));
             }
-            let _ = tx.send(match c.search(sv, &q, None) {
+            let _ = tx.send(match c.search(sv, &q, None, listed) {
                 Ok(p) => Reply::Page(p, false, era),
                 Err(e) => Reply::Failed(None, plain(sv, &e)),
             });
@@ -298,9 +502,10 @@ impl Hub {
             return;
         }
         self.searching = true;
-        let (c, tx, q, sv, era) = (self.clients.clone(), self.tx.clone(), self.request(), self.service, self.era);
+        let (q, listed) = self.request();
+        let (c, tx, sv, era) = (self.clients.clone(), self.tx.clone(), self.service, self.era);
         std::thread::spawn(move || {
-            let _ = tx.send(match c.search(sv, &q, Some(&token)) {
+            let _ = tx.send(match c.search(sv, &q, Some(&token), listed) {
                 Ok(p) => Reply::Page(p, true, era),
                 Err(e) => Reply::Failed(None, plain(sv, &e)),
             });
@@ -393,6 +598,7 @@ impl Hub {
             return;
         }
         self.service = sv;
+        sv.first().clone_into(&mut self.list);
         self.hits.clear();
         self.more = None;
         self.searching = false;
@@ -405,20 +611,31 @@ impl Hub {
         let mut ready = Vec::new();
         while let Ok(r) = self.rx.try_recv() {
             match r {
-                Reply::Page(_, _, era) | Reply::Account(Ok(_), era) if era != self.era => {}
-                Reply::Account(r, _) => {
-                    let fresh = self.signing;
-                    self.signing = false;
+                Reply::Page(_, _, era) if era != self.era => {}
+                Reply::Account(sv, r, signs) => {
+                    let fresh = self.signing == Some(sv);
+                    if fresh {
+                        self.signing = None;
+                    }
                     match r {
+                        Ok(_) if signs != self.signs => {}
                         Ok(name) => {
-                            self.account = Some(name);
-                            if fresh {
+                            self.accounts[sv as usize] = Some(name);
+                            if fresh && sv == Service::YouTube {
+                                self.ask_channels();
+                            }
+                            if fresh && sv == self.service {
                                 self.status = String::new();
                                 self.show(crate::spotify::LIKED);
                             }
                         }
                         Err(why) if why == "cancelled" => self.status = String::new(),
                         Err(_) => self.status = "Sign-in did not finish. Try again".into(),
+                    }
+                }
+                Reply::Channels(all, signs) => {
+                    if signs == self.signs {
+                        self.channels = if all.len() > 1 { all } else { Vec::new() };
                     }
                 }
                 Reply::Page(p, append, _) => {
@@ -459,6 +676,7 @@ impl Hub {
                         self.fetching.retain(|x| x.0 != id);
                     }
                     self.status = why;
+                    self.dropped();
                 }
             }
         }

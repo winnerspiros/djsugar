@@ -19,6 +19,12 @@ cp "target/$TARGET/release/libdjsugar.so" "$OUT/lib/$ABI/"
 llvm-strip --strip-unneeded "$OUT/lib/$ABI/libdjsugar.so"
 "$BT/aapt2" compile --dir platform/android/res -o "$OUT/res.zip"
 "$BT/aapt2" link "$OUT/res.zip" -o "$OUT/base.apk" --manifest platform/android/AndroidManifest.xml -A "$OUT/assets" -I "$(ls -d "$SDK"/platforms/* | sort -V | tail -1)/android.jar"
+# The one screen that is not drawn by the app itself: a service's sign-in page.
+JAR=$(ls -d "$SDK"/platforms/* | sort -V | tail -1)/android.jar
+mkdir -p "$OUT/classes"
+javac -nowarn --release 11 -cp "$JAR" -d "$OUT/classes" platform/android/java/app/djsugar/*.java
+find "$OUT/classes" -name '*.class' -print0 | xargs -0 "$BT/d8" --release --min-api 29 --lib "$JAR" --output "$OUT"
+(cd "$OUT" && zip -q -9 base.apk classes.dex)
 # Packed small: the download is about half, and the phone unpacks the library when it installs the app.
 (cd "$OUT" && zip -q -9 base.apk "lib/$ABI/libdjsugar.so")
 "$BT/zipalign" -f -P 16 4 "$OUT/base.apk" "$OUT/aligned.apk"
