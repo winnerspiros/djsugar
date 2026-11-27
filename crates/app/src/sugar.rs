@@ -2666,6 +2666,23 @@ fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
     let has = |d: usize| s.decks[d].loaded.as_ref().is_some_and(|l| !l.lyrics.lines.is_empty());
     let Some(d) = (0..2).find(|&d| s.telemetry.decks[d].playing && has(d)).or_else(|| (0..2).find(|&d| has(d))) else {
         p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, "No lyrics for the loaded tracks");
+        // A track on file can be listened to, and its words written down.
+        let file = |d: usize| {
+            s.decks[d].loaded.as_ref().is_some_and(|l| matches!(l.entry.source, crate::library::Source::File(_)))
+        };
+        let heard = (0..2).find(|&d| s.telemetry.decks[d].playing && file(d)).or_else(|| (0..2).find(|&d| file(d)));
+        if let Some(d) = s.hearing.or(heard) {
+            let on = s.hearing.is_some();
+            button(
+                p,
+                s,
+                Rect::new(r.x + r.w - 72.0, r.y + 6.0, 62.0, 22.0),
+                "LISTEN",
+                on,
+                ACCENT,
+                Target::TimeLyrics(d),
+            );
+        }
         return;
     };
     if s.decks[d]
@@ -2673,7 +2690,8 @@ fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
         .as_ref()
         .is_some_and(|l| l.lyrics.untimed() && matches!(l.entry.source, crate::library::Source::File(_)))
     {
-        button(p, s, Rect::new(r.x + r.w - 62.0, r.y + 6.0, 52.0, 22.0), "TIME", false, ACCENT, Target::TimeLyrics(d));
+        let on = s.hearing == Some(d);
+        button(p, s, Rect::new(r.x + r.w - 62.0, r.y + 6.0, 52.0, 22.0), "TIME", on, ACCENT, Target::TimeLyrics(d));
     }
     let Some(l) = &s.decks[d].loaded else { return };
     let at = s.decks[d].seconds(s.telemetry.decks[d].position);

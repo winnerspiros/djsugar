@@ -393,6 +393,8 @@ impl Default for Station {
 pub const LONG_PRESS_MS: u128 = 450;
 /// What the status line says once lyrics have their times.
 const TIMED: &str = "The lyrics follow the vocals now";
+/// And once a track without lyrics has had its words written down.
+const WRITTEN: &str = "The words were written down by ear, and may be off here and there";
 /// How far a list at its top is pulled down, in pixels, for letting go to refresh it.
 pub const PULL: f32 = 72.0;
 /// The pointer a right click stands in for.
@@ -743,6 +745,8 @@ enum Job {
     Failed(String),
     /// Lyrics found online for the track now on a deck, by its file.
     Lyrics(usize, std::sync::Arc<std::path::Path>, crate::lyrics::Lyrics),
+    /// Listening to a track for its words has ended.
+    Heard,
 }
 
 struct Drag {
@@ -791,6 +795,8 @@ pub struct State {
     read: Reader,
     jobs: (Sender<Done>, Receiver<Done>),
     pub status: Option<String>,
+    /// The deck whose track is being listened to for its words.
+    pub hearing: Option<usize>,
     /// The message on screen, and when it came.
     pub toast: Option<(String, std::time::Instant)>,
     /// Only the mini player is shown.
@@ -1014,6 +1020,7 @@ impl State {
             jobs: channel(),
             status,
             toast: None,
+            hearing: None,
             tour: None,
             mini: false,
             last_msgs: Default::default(),
@@ -1140,6 +1147,7 @@ impl State {
             || self.view_at.is_some_and(|t| t.elapsed() < VIEW_FADE)
             || self.toast.as_ref().is_some_and(|t| t.1.elapsed() < TOAST)
             || self.hub.busy()
+            || self.hearing.is_some()
     }
 
     /// The least time between two frames: short while something on screen moves, long while the screen only
@@ -1228,6 +1236,7 @@ impl State {
                 }
                 (Job::Sample(..), None) => {}
                 (Job::Failed(why), _) => self.status = Some(why),
+                (Job::Heard, _) => self.hearing = None,
                 (Job::Lyrics(d, path, ly), _) => {
                     if let Some(l) = &mut self.decks[d].loaded
                         && matches!(&l.entry.source, Source::File(p) if *p == path)
@@ -3168,19 +3177,34 @@ impl State {
             Target::CutClose => self.cut_close(),
             Target::AutoDj => self.toggle_auto(),
             Target::TimeLyrics(d) => {
-                let Some(l) = &mut self.decks[d].loaded else { return };
+                let Some(l) = &self.decks[d].loaded else { return };
                 let Source::File(path) = l.entry.source.clone() else { return };
-                let lyrics = std::mem::take(&mut l.lyrics);
+                if self.hearing.is_some() {
+                    return;
+                }
+                let lyrics = crate::lyrics::Lyrics { lines: l.lyrics.lines.clone() };
                 let tx = self.jobs.0.clone();
-                self.status = Some("Listening for the vocals to time the lyrics".into());
+                self.hearing = Some(d);
+                self.status = Some("Listening to the track for its words".into());
                 std::thread::spawn(move || {
-                    let back = crate::lyrics::Lyrics { lines: lyrics.lines.clone() };
-                    let (ly, said) = match crate::lyrics::time(&path, lyrics) {
-                        Ok(ly) => (ly, TIMED.to_string()),
-                        Err(why) => (back, why),
+                    let line = tx.clone();
+                    let said: crate::lyrics::Said = std::sync::Arc::new(move |now| {
+                        let _ = line.send((Job::Failed(now), None));
+                    });
+                    let heard = if lyrics.lines.is_empty() {
+                        crate::lyrics::write(&path, said).map(|ly| (ly, WRITTEN))
+                    } else {
+                        crate::lyrics::time(&path, lyrics, said).map(|ly| (ly, TIMED))
                     };
-                    let _ = tx.send((Job::Lyrics(d, path, ly), None));
+                    let said = match heard {
+                        Ok((ly, done)) => {
+                            let _ = tx.send((Job::Lyrics(d, path, ly), None));
+                            done.to_owned()
+                        }
+                        Err(why) => why,
+                    };
                     let _ = tx.send((Job::Failed(said), None));
+                    let _ = tx.send((Job::Heard, None));
                 });
             }
             Target::MenuQueue => {

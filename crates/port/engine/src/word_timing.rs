@@ -1,20 +1,17 @@
-//! Times each word of a track's lyrics by listening to it: Whisper (whisper.cpp, through whisper-rs) hears the vocals, word by word with times, and the lyrics the DJ has are lined
-//! up with what it heard. Words it heard well take its times; the words between are spread over the gap by their length. A track with no lyrics can be transcribed instead: the
-//! words heard, grouped into lines. The model (OpenAI Whisper large-v3-turbo, quantized, MIT) is downloaded the first time it is needed, like the stem separation models.
+//! Times each word of a track's lyrics by listening to it: Whisper hears the words with their times, and the lyrics the DJ has
+//! are lined up with what it heard. Words heard well take its times; those between are spread over the gap by their length. A
+//! track with no lyrics is written down instead. The model (OpenAI Whisper base, MIT) is downloaded when first needed.
 
 use std::path::Path;
 
 use crate::lyrics::{Line, Word};
 
-/// The Whisper weights: large-v3-turbo, 5-bit, about 550 MB.
-pub const MODEL: &str = "ggml-large-v3-turbo-q5_0.bin";
-
-/// The model file and its SHA-1, as whisper.cpp publishes it (the
-/// `stem-models` release of DJ Sugar carries the same bytes).
-pub const MODELS: [(&str, &str); 1] = [(MODEL, "e050f7970618a659205450ad97eb95a18d69c9ee")];
-
-/// Whisper listens at 16 kHz, mono.
-const RATE: u32 = 16_000;
+/// The model: what hears the sound, what writes the words, and the words it knows. About 290 MB together.
+pub const MODELS: [(&str, &str); 3] = [
+    ("whisper-base-encoder.onnx", "7fcea817bb2be4d86729b521e5a7fcbec28fa743edfed67e882b33ff15852540"),
+    ("whisper-base-decoder.onnx", "cec3e1ce94220497665b629710fb24f049025d4f88673563f38e475af6b8a06d"),
+    ("whisper-base-tokens.json", "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566"),
+];
 
 /// The share of the lyrics' words Whisper must have heard for the times
 /// to be trusted.
@@ -26,6 +23,8 @@ pub struct Heard {
     pub start: f64,
     pub end: f64,
     pub text: String,
+    /// Whether Whisper began a line with it.
+    pub opens: bool,
 }
 
 /// What [`time_words`] is doing, for the DJ to see.
@@ -33,8 +32,6 @@ pub struct Heard {
 pub enum Stage {
     /// Downloading the model, the first time.
     Downloading,
-    /// Separating the vocals from the track, when it has no stems yet.
-    Separating,
     /// Listening, 0 to 100 percent.
     Listening(i32),
 }
@@ -42,9 +39,8 @@ pub enum Stage {
 /// Where [`time_words`] reports its [`Stage`].
 pub type Report = std::sync::Arc<dyn Fn(Stage) + Send + Sync>;
 
-/// Times each word of `lines` by listening to the track at `path`: its vocal stem
-/// when it has one (separated with HTDemucs first when it doesn't, if that works),
-/// else the whole mix. Lines keep their text; each sung line gets its words' times.
+/// Times each word of `lines` by listening to the track at `path`: its vocal stem when it has one, else the whole
+/// mix. Lines keep their text; each sung line gets its words' times.
 pub fn time_words(path: &Path, lines: &[Line], report: Report) -> Result<Vec<Line>, String> {
     let heard = hear(path, report)?;
     align(lines, &heard)
@@ -52,38 +48,37 @@ pub fn time_words(path: &Path, lines: &[Line], report: Report) -> Result<Vec<Lin
 
 /// The words Whisper hears in the track at `path`.
 pub fn hear(path: &Path, report: Report) -> Result<Vec<Heard>, String> {
-    if crate::separation::model(MODEL).is_none() {
+    if MODELS.iter().any(|(name, _)| crate::separation::model(name).is_none()) {
         report(Stage::Downloading);
     }
-    let model = crate::separation::model_or_fetch(MODEL, &MODELS)?;
-    let samples = vocals(path, &report)?;
+    let mut files = Vec::new();
+    for (name, _) in MODELS {
+        files.push(crate::separation::model_or_fetch(name, &MODELS)?);
+    }
+    let samples = vocals(path)?;
     report(Stage::Listening(0));
+    if crate::background::is_low() {
+        crate::background::lower_rten_priority();
+    }
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        listen(&model, &samples, move |p| report(Stage::Listening(p)))
+        crate::whisper::hear(&files[0], &files[1], &files[2], &samples, &|p| {
+            report(Stage::Listening(p));
+            true
+        })
     }));
-    result.unwrap_or_else(|_| Err("Whisper crashed".into()))
+    result.unwrap_or_else(|_| Err("the listening model crashed".into()))
 }
 
-/// The track's vocals at 16 kHz, mono.
-fn vocals(path: &Path, report: &Report) -> Result<Vec<f32>, String> {
+/// The track's vocals, mono, at the rate the model listens at.
+fn vocals(path: &Path) -> Result<Vec<f32>, String> {
     use crate::stems::StemSource;
-    let stems = crate::stems::find(path).or_else(|| {
-        report(Stage::Separating);
-        crate::separation::separate_hq(path).ok()
-    });
-    let source = match stems {
+    let source = match crate::stems::find(path) {
         Some(StemSource::Files(files)) if files.len() == 4 => files[3].clone(),
         _ => path.to_owned(),
     };
     let audio = crate::decode::decode(&source)?;
     let mono: Vec<f32> = audio.decoded_chunks().flatten().map(|f| (f[0] + f[1]) * 0.5).collect();
-    djsugar_separation::resample(&mono, audio.sample_rate, RATE)
-}
-
-fn listen(model: &Path, samples: &[f32], mut progress: impl FnMut(i32) + 'static) -> Result<Vec<Heard>, String> {
-    // Speech recognition needs a pure-Rust model runtime; until then nothing is heard.
-    let _ = (model, samples, &mut progress);
-    Err("word timing is not available yet".into())
+    djsugar_separation::resample(&mono, audio.sample_rate, crate::whisper::RATE as u32)
 }
 
 fn plain(word: &str) -> String {
@@ -284,7 +279,7 @@ const LINE_GAP: f64 = 0.8;
 /// A pause this long leaves a break between verses.
 const VERSE_GAP: f64 = 5.0;
 /// A line this long breaks at its next word.
-const LINE_CHARS: usize = 42;
+const LINE_CHARS: usize = 64;
 
 /// Groups heard words into lines: at a pause, after a sentence ends, or
 /// when a line runs long; a long pause leaves an empty line between verses.
@@ -313,7 +308,7 @@ pub fn lines_from(heard: &[Heard]) -> Vec<Line> {
         if !words.is_empty() {
             let gap = h.start - end;
             let sentence = words.last().is_some_and(|w| w.text.trim_end().ends_with(['.', '?', '!']));
-            if gap >= LINE_GAP || sentence || chars >= LINE_CHARS {
+            if gap >= LINE_GAP || sentence || h.opens || chars >= LINE_CHARS {
                 close(&mut lines, &mut words, end);
                 chars = 0;
                 if gap >= VERSE_GAP {
@@ -341,7 +336,7 @@ mod tests {
     }
 
     fn heard(words: &[(&str, f64)]) -> Vec<Heard> {
-        words.iter().map(|(w, t)| Heard { start: *t, end: t + 0.4, text: (*w).into() }).collect()
+        words.iter().map(|(w, t)| Heard { start: *t, end: t + 0.4, text: (*w).into(), opens: false }).collect()
     }
 
     #[test]

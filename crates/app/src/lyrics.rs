@@ -180,7 +180,9 @@ fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option
 pub fn find(path: &std::path::Path, artist: &str, title: &str, seconds: f64, online: bool) -> Lyrics {
     let lrc = path.with_extension("lrc");
     let kept = std::fs::read_to_string(&lrc).ok();
-    if !online || timed(&kept) {
+    // Words this app wrote down by ear give way to a person's, once those are found with times.
+    let ours = kept.as_deref().is_some_and(lrc::is_auto);
+    if !online || (timed(&kept) && !ours) {
         return kept.map(|t| Lyrics::parse(&t)).unwrap_or_default();
     }
     let found = fetch(video(path), artist, title, seconds);
@@ -210,14 +212,46 @@ pub fn spread(lines: &mut [Line], levels: &[u8], rate: f64) -> bool {
     true
 }
 
-/// Times a file's untimed lyrics by listening for its vocals, and keeps them beside it as an `.lrc`.
-pub fn time(path: &std::path::Path, mut lyrics: Lyrics) -> Result<Lyrics, String> {
-    let levels = djsugar_engine::vocals::analyse(path, None, || true)?;
-    if !spread(&mut lyrics.lines, &levels, djsugar_engine::vocals::RATE) {
-        return Err("No vocals were heard to time the lyrics by".into());
+/// Where listening to a track says how far along it is.
+pub type Said = std::sync::Arc<dyn Fn(String) + Send + Sync>;
+
+fn report(said: Said) -> djsugar_engine::word_timing::Report {
+    use djsugar_engine::word_timing::Stage;
+    std::sync::Arc::new(move |stage| {
+        said(match stage {
+            Stage::Downloading => "Downloading what listens for the words, 290 MB, this once".to_owned(),
+            Stage::Listening(part) => format!("Listening for the words: {part}%"),
+        });
+    })
+}
+
+/// Times a file's untimed lyrics and keeps them beside it as an `.lrc`: each word where it is heard sung, or, when
+/// the words can't be made out, the lines spread over the sung stretches.
+pub fn time(path: &std::path::Path, mut lyrics: Lyrics, said: Said) -> Result<Lyrics, String> {
+    let began = std::time::Instant::now();
+    match djsugar_engine::word_timing::time_words(path, &lyrics.lines, report(said)) {
+        Ok(lines) => lyrics.lines = lines,
+        Err(why) => {
+            crate::log::note(&format!("lyrics not timed by word: {why}"));
+            let levels = djsugar_engine::vocals::analyse(path, None, || true)?;
+            if !spread(&mut lyrics.lines, &levels, djsugar_engine::vocals::RATE) {
+                return Err("No vocals were heard to time the lyrics by".into());
+            }
+        }
     }
+    crate::log::note(&format!("lyrics timed in {:.0} s", began.elapsed().as_secs_f64()));
     let _ = std::fs::write(path.with_extension("lrc"), lrc::to_lrc(&lyrics.lines));
     Ok(lyrics)
+}
+
+/// Writes down the words sung in a file that has no lyrics, timed by word, and keeps them beside it as an `.lrc`
+/// marked as written by ear.
+pub fn write(path: &std::path::Path, said: Said) -> Result<Lyrics, String> {
+    let began = std::time::Instant::now();
+    let lines = djsugar_engine::word_timing::transcribe(path, report(said))?;
+    crate::log::note(&format!("{} lines written by ear in {:.0} s", lines.len(), began.elapsed().as_secs_f64()));
+    let _ = std::fs::write(path.with_extension("lrc"), format!("{}\n{}", lrc::AUTO, lrc::to_lrc(&lines)));
+    Ok(Lyrics { lines })
 }
 
 #[cfg(test)]
@@ -232,10 +266,21 @@ mod tests {
         crate::models::install();
         let l = find(&path, "", "", 0.0, false);
         assert!(l.untimed());
-        let l = time(&path, l).unwrap();
+        let l = time(&path, l, std::sync::Arc::new(|now| println!("{now}"))).unwrap();
         let at: Vec<f64> = l.lines.iter().map(|l| l.start.unwrap()).collect();
         assert!(at.is_sorted() && at[0] < at[at.len() - 1], "{at:?}");
-        println!("{at:?}");
+        println!("{}", lrc::to_lrc(&l.lines));
+    }
+
+    /// Run with `DJSUGAR_TRACK` naming a sung track.
+    #[test]
+    #[ignore = "network, a model download and a track of one's own"]
+    fn writes_a_real_track_down() {
+        let Some(path) = std::env::var_os("DJSUGAR_TRACK").map(std::path::PathBuf::from) else { return };
+        crate::models::install();
+        let l = write(&path, std::sync::Arc::new(|_| ())).unwrap();
+        println!("{}", lrc::to_lrc(&l.lines));
+        assert!(l.lines.len() > 4 && !l.untimed());
     }
 
     #[test]

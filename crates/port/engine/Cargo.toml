@@ -32,17 +32,13 @@ flacenc = { version = "0.5", default-features = false }
 fastrand = "2.0"
 # Beat and downbeat tracking (Beat This!, MIT) on the pure-Rust rten runtime.
 beat-this = { version = "1.1", default-features = false }
-# Beat This!'s thread pool, to put its threads at low priority.
+# Runs Whisper for the lyrics' word times, and lends Beat This! its thread pool.
 rten = { version = "0.24", default-features = false }
 rayon = "1"
 # The Groove Box's Analog and Synthetic kits: Mutable Instruments Plaits'
 # drum models (MIT). Not on crates.io, so pinned to a commit.
 mi-plaits-dsp = { git = "https://github.com/sourcebox/mi-plaits-dsp-rs", rev = "effe9864bb67d23aaf5724722ac1ce165d4e7c9f" }
 jiff = { version = "1.0.2", default-features = false, features = ["std", "tz-system", "tzdb-bundle-platform", "tzdb-zoneinfo", "tzdb-concatenated"] }
-# Word timing for lyrics: whisper.cpp (MIT) through whisper-rs, built with
-# cmake. The model (OpenAI Whisper large-v3-turbo, MIT) is downloaded the
-# first time it is needed.
-
 # Real-time priority for the audio thread, which cpal only asks for with
 # this feature (Core Audio's callbacks on macOS already run real-time).
 # Background analysis runs at low priority (see `background.rs`).
