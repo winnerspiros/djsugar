@@ -200,7 +200,7 @@ fn main() {
             // Wide windows: the side panel's tabs, each must open.
             if ui.tap("ToggleSide") {
                 ui.render(&mut r);
-                for (n, tab) in ["automix", "info", "cues", "lyrics"].iter().enumerate() {
+                for (n, tab) in ["automix", "info", "cues", "lyrics", "sidelist", "related"].iter().enumerate() {
                     if !ui.tap(&format!("SideTab({n})")) {
                         faults.push(format!("{name}: no side panel {tab} tab"));
                     }
@@ -214,6 +214,21 @@ fn main() {
                         if !ui.tap("MenuQueue") {
                             faults.push(format!("{name}: track menu has no Add to Automix"));
                         }
+                        ui.render(&mut r);
+                        // The same menu puts it on the Sidelist, which then has a row for it.
+                        ui.context((x + w * 0.3) * scale, (y + 11.0) * scale);
+                        ui.render(&mut r);
+                        if !ui.tap("MenuSide") {
+                            faults.push(format!("{name}: track menu has no Add to Sidelist"));
+                        }
+                        ui.render(&mut r);
+                        ui.tap("SideTab(4)");
+                        ui.render(&mut r);
+                        save(&r, &out.join(format!("{name}-sidelist-row.png")));
+                        if !ui.targets().iter().any(|(t, _)| t == "SideLoad(0, 1)") {
+                            faults.push(format!("{name}: the added track is not on the Sidelist"));
+                        }
+                        ui.tap("SideTab(0)");
                         ui.render(&mut r);
                         // Length and style each open their choices; Phrases is the last length.
                         ui.tap("MixMenu(MixLength)");

@@ -8,6 +8,7 @@ mod models;
 mod open;
 mod prefs;
 mod record;
+mod related;
 mod settings;
 mod skips;
 mod sounds;

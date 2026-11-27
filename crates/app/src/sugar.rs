@@ -262,22 +262,30 @@ fn perform(p: &mut Painter, s: &mut State, r: Rect) {
 }
 
 /// The side panel's tabs, in order.
-pub const SIDE_TABS: [&str; 4] = ["Automix", "Info", "Cues", "Lyrics"];
+pub const SIDE_TABS: [&str; 6] = ["Automix", "Info", "Cues", "Lyrics", "Sidelist", "Related"];
+/// The order they are shown in: the lists first.
+const SIDE_ORDER: [usize; 6] = [0, 4, 5, 1, 2, 3];
 
 /// The side panel right of the library: the selected track's details, the hot cues
 /// of the deck playing, or the lyrics.
 fn side_panel(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, INK);
     let th = 36.0;
-    let tw = (r.w - 16.0) / SIDE_TABS.len() as f32;
     p.outlined(r.x + 8.0, r.y + 6.0, r.w - 16.0, th - 8.0, 8.0, theme::WELL, 1.0, theme::BORDER);
-    for (n, label) in SIDE_TABS.iter().enumerate() {
-        let b = Rect::new(r.x + 8.0 + n as f32 * tw, r.y + 6.0, tw, th - 8.0);
+    // Each tab is as wide as its name and an even share of what is left; a narrow panel gets smaller letters.
+    let named = if r.w < 330.0 { Style { px: 9.5, ..TAB } } else { TAB };
+    let names: f32 = SIDE_TABS.iter().map(|l| p.text_width(named, l)).sum();
+    let spare = (r.w - 16.0 - names) / SIDE_TABS.len() as f32;
+    let mut left = r.x + 8.0;
+    for n in SIDE_ORDER {
+        let label = SIDE_TABS[n];
+        let b = Rect::new(left, r.y + 6.0, p.text_width(named, label) + spare, th - 8.0);
+        left += b.w;
         let on = usize::from(s.side_tab) == n;
         if on {
             p.outlined(b.x + 2.0, b.y + 2.0, b.w - 4.0, b.h - 4.0, 6.0, theme::RAISED, 1.0, theme::BORDER);
         }
-        let ink = Style { colour: if on { TEXT } else { theme::DIM }, ..TAB };
+        let ink = Style { colour: if on { TEXT } else { theme::DIM }, ..named };
         p.text(b.x + (b.w - p.text_width(ink, label)) * 0.5, b.y + b.h * 0.5 + 4.0, ink, label);
         hit(s, b, Target::SideTab(n as u8));
     }
@@ -286,7 +294,113 @@ fn side_panel(p: &mut Painter, s: &mut State, r: Rect) {
         0 => side_auto(p, s, body),
         1 => side_info(p, s, body),
         2 => side_cues(p, s, body),
-        _ => lyrics(p, s, body),
+        3 => lyrics(p, s, body),
+        4 => side_list(p, s, body),
+        _ => side_related(p, s, body),
+    }
+}
+
+/// A track on one of the side panel's lists: its title and artist, a button for each deck, and a way off the
+/// list when it has one.
+fn side_row(p: &mut Painter, s: &mut State, b: Rect, names: (&str, &str), load: [Target; 2], off: Option<Target>) {
+    p.outlined(b.x, b.y, b.w, b.h, 6.0, SURFACE, 1.0, EDGE);
+    let right = if off.is_some() { 94.0 } else { 64.0 };
+    let base = if names.1.is_empty() { b.y + 21.0 } else { b.y + 15.0 };
+    p.text_in(b.x + 10.0, base, b.w - right - 14.0, Style { px: 13.0, ..TITLE }, names.0);
+    if !names.1.is_empty() {
+        p.text_in(b.x + 10.0, b.y + 28.0, b.w - right - 14.0, ARTIST, names.1);
+    }
+    for (d, target) in load.into_iter().enumerate() {
+        let k = Rect::new(b.x + b.w - right + d as f32 * 30.0, b.y + 5.0, 26.0, 24.0);
+        button(p, s, k, ["A", "B"][d], false, DECK[d], target);
+    }
+    if let Some(target) = off {
+        let close = Rect::new(b.x + b.w - 32.0, b.y + 3.0, 28.0, 28.0);
+        if s.pressed(target) {
+            p.rect(close.x, close.y, close.w, close.h, 6.0, theme::PRESSED);
+        }
+        let (cx, cy) = (close.x + 14.0, close.y + 14.0);
+        p.line((cx - 4.0, cy - 4.0), (cx + 4.0, cy + 4.0), 1.5, theme::DIM);
+        p.line((cx - 4.0, cy + 4.0), (cx + 4.0, cy - 4.0), 1.5, theme::DIM);
+        hit(s, close, target);
+    }
+}
+
+/// The Sidelist: tracks put aside, to load by hand or hand over to Automix.
+fn side_list(p: &mut Painter, s: &mut State, r: Rect) {
+    let (x, w) = (r.x + 8.0, r.w - 16.0);
+    let tw = p.text(x + 4.0, r.y + 21.0, Style { px: 15.0, ..TITLE }, "Sidelist");
+    p.text_in(x + 12.0 + tw, r.y + 21.0, w - tw - 196.0, ARTIST, &tracks(s.sidelist.len()));
+    button(
+        p,
+        s,
+        Rect::new(x + w - 176.0, r.y + 3.0, 104.0, 26.0),
+        "TO AUTOMIX",
+        false,
+        theme::AUTOMIX,
+        Target::SideToQueue,
+    );
+    button(p, s, Rect::new(x + w - 66.0, r.y + 3.0, 66.0, 26.0), "CLEAR", false, ACCENT, Target::SideClear);
+    p.rect(x, r.y + 37.0, w, 1.0, 0.0, EDGE);
+    let mut y = r.y + 42.0;
+    if s.sidelist.is_empty() {
+        for line in ["Put tracks aside from a track's menu.", "They wait here until you load them."] {
+            p.text_in(x + 4.0, y + 14.0, w - 8.0, ARTIST, line);
+            y += 16.0;
+        }
+        return;
+    }
+    let rows = (((r.y + r.h - y - 18.0) / QUEUE_ROW) as usize).min(s.sidelist.len());
+    for n in 0..rows {
+        let names = s.sidelist[n].1.clone();
+        let names = (names.first().map_or("", String::as_str), names.get(1).map_or("", String::as_str));
+        let load = [Target::SideLoad(n, 0), Target::SideLoad(n, 1)];
+        side_row(p, s, Rect::new(x, y, w, 34.0), names, load, Some(Target::SideRemove(n)));
+        y += QUEUE_ROW;
+    }
+    if rows < s.sidelist.len() {
+        p.text(x + 9.0, y + 12.0, ARTIST, &format!("and {} more", s.sidelist.len() - rows));
+    }
+}
+
+/// What goes with the selected track: the tracks linked to it by hand, then those it was played with.
+fn side_related(p: &mut Painter, s: &mut State, r: Rect) {
+    let (x, w) = (r.x + 8.0, r.w - 16.0);
+    let Some(i) = s.selected.map(|i| i as usize).filter(|&i| i < s.entries.len()) else {
+        p.text_in(x + 4.0, r.y + 20.0, w - 8.0, ARTIST, "Select a track to see what goes with it");
+        return;
+    };
+    let title = s.entries[i].title.to_string();
+    let tw = p.text(x + 4.0, r.y + 21.0, Style { px: 15.0, ..TITLE }, "Related to");
+    p.text_in(x + 12.0 + tw, r.y + 21.0, w - tw - 16.0, ARTIST, &title);
+    p.rect(x, r.y + 37.0, w, 1.0, 0.0, EDGE);
+    let (linked, played) = s.related();
+    let mut y = r.y + 42.0;
+    if linked.is_empty() && played.is_empty() {
+        for line in ["Link a track to this one from its menu.", "Tracks played with it are listed too."] {
+            p.text_in(x + 4.0, y + 14.0, w - 8.0, ARTIST, line);
+            y += 16.0;
+        }
+        return;
+    }
+    let mut row = 0;
+    for (heading, tracks, unlink) in [("LINKED", &linked, true), ("PLAYED WITH", &played, false)] {
+        if tracks.is_empty() || y + 18.0 + QUEUE_ROW > r.y + r.h {
+            row += tracks.len();
+            continue;
+        }
+        p.text(x + 4.0, y + 12.0, Style { colour: theme::FAINT, ..SMALL }, heading);
+        y += 18.0;
+        for (n, &t) in tracks.iter().enumerate() {
+            if y + QUEUE_ROW <= r.y + r.h {
+                let e = &s.entries[t as usize];
+                let (title, artist) = (e.title.to_string(), e.artist.to_string());
+                let load = [Target::RelatedLoad(row, 0), Target::RelatedLoad(row, 1)];
+                side_row(p, s, Rect::new(x, y, w, 34.0), (&title, &artist), load, unlink.then_some(Target::Unlink(n)));
+                y += QUEUE_ROW;
+            }
+            row += 1;
+        }
     }
 }
 
@@ -1531,6 +1645,11 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
             picks: (0..2).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuPlay(d))).collect(),
         },
         Line::item("Add to Automix", Target::MenuQueue),
+        Line::item("Add to Sidelist", Target::MenuSide),
+        match s.menu_linked() {
+            Some(true) => Line::item("Unlink from the selected track", Target::MenuLink),
+            linked => Line::item("Link to the selected track", Target::MenuLink).enabled(linked.is_some()),
+        },
         Line::sub("Add to playlist", 0).hint(if held > 0 { format!("In {held}") } else { String::new() }),
         Line::sub("Tags", 4).hint(if worn > 0 { worn.to_string() } else { String::new() }),
     ];

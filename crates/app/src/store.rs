@@ -198,6 +198,33 @@ pub fn load_queue() -> Vec<(String, Vec<String>)> {
     load_lists("automix.tsv")
 }
 
+/// The Sidelist, kept as Automix's list is.
+pub fn save_sidelist(list: &[(String, Vec<String>)]) {
+    save_lists("sidelist.tsv", list);
+}
+
+pub fn load_sidelist() -> Vec<(String, Vec<String>)> {
+    load_lists("sidelist.tsv")
+}
+
+/// Tracks linked by hand: each track's key, then its partners'.
+pub fn save_links(links: &[(String, Vec<String>)]) {
+    save_lists("links.tsv", links);
+}
+
+pub fn load_links() -> Vec<(String, Vec<String>)> {
+    load_lists("links.tsv")
+}
+
+/// Tracks played one after another, kept as links are.
+pub fn save_played(played: &[(String, Vec<String>)]) {
+    save_lists("played.tsv", played);
+}
+
+pub fn load_played() -> Vec<(String, Vec<String>)> {
+    load_lists("played.tsv")
+}
+
 /// Tags, kept as playlists are: each a name and the tracks it is on.
 pub fn save_tags(tags: &[(String, Vec<String>)]) {
     save_lists("tags.tsv", tags);

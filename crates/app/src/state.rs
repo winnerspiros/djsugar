@@ -175,6 +175,17 @@ pub enum Target {
     /// Puts the menu's track on Automix's list.
     MenuQueue,
     QueueRemove(usize),
+    /// Puts the track of the open menu on the Sidelist, or links it to the selected one (and back).
+    MenuSide,
+    MenuLink,
+    /// A row of the Sidelist: onto a deck, or off the list; then the whole list onto Automix's, or emptied.
+    SideLoad(usize, usize),
+    SideRemove(usize),
+    SideToQueue,
+    SideClear,
+    /// A row of the Related tab onto a deck, and a linked one unlinked.
+    RelatedLoad(usize, usize),
+    Unlink(usize),
     QueueClear,
     MixNow,
     MixSkip,
@@ -808,6 +819,11 @@ pub struct State {
     /// Tags: each a name and the tracks wearing it.
     pub tags: Vec<(String, Vec<String>)>,
     pub history: Vec<u32>,
+    /// Tracks put aside for later: each its key, then its title and artist.
+    pub sidelist: Vec<(String, Vec<String>)>,
+    /// Tracks linked by hand, and those played one after another.
+    pub links: crate::related::Pairs,
+    pub played: crate::related::Pairs,
     /// Automix's list: each track's key, then its title and artist.
     pub queue: Vec<(String, Vec<String>)>,
     /// Tracks got from the streaming services: the file, then its title, artist and service.
@@ -973,6 +989,9 @@ impl State {
             playlists: crate::store::load_playlists(),
             tags: crate::store::load_tags(),
             history: Vec::new(),
+            sidelist: crate::store::load_sidelist(),
+            links: crate::store::load_links(),
+            played: crate::store::load_played(),
             queue: crate::store::load_queue(),
             streamed: crate::store::load_streamed(),
             found: 0,
@@ -1360,6 +1379,27 @@ impl State {
         let change = l.phrases.iter().map(|p| p.start).find(|&s| s > at + 1e-3)?;
         let bar = l.grid?.beat_frames(l.track.rate) * 4.0 / f64::from(l.track.rate);
         Some((change - at) / bar)
+    }
+
+    /// What goes with the selected track: the tracks linked to it, then the others it was played with.
+    pub fn related(&self) -> (Vec<u32>, Vec<u32>) {
+        let Some(e) = self.selected.and_then(|i| self.entries.get(i as usize)) else { return Default::default() };
+        let key = entry_key(e);
+        let find = |keys: &[String]| -> Vec<u32> {
+            keys.iter().filter_map(|k| self.entries.iter().position(|e| entry_key(e) == *k)).map(|i| i as u32).collect()
+        };
+        let linked = find(crate::related::partners(&self.links, &key));
+        let mut played = find(crate::related::partners(&self.played, &key));
+        played.retain(|i| !linked.contains(i));
+        (linked, played)
+    }
+
+    /// Whether the track of the open menu is linked to the selected one; None when there is nothing to link.
+    pub fn menu_linked(&self) -> Option<bool> {
+        let (i, to) = (self.track_menu?, self.selected?);
+        let key = |i: u32| self.entries.get(i as usize).map(entry_key);
+        (i != to)
+            .then(|| crate::related::paired(&self.links, &key(to).unwrap_or_default(), &key(i).unwrap_or_default()))
     }
 
     /// The place on Automix's list a row let go at height `y` lands on.
@@ -2243,6 +2283,13 @@ impl State {
         }
         self.history.retain(|&i| i as usize != index);
         self.history.insert(0, index as u32);
+        // A track loaded while the other deck plays is taken to be played with that one.
+        if self.telemetry.decks[1 - deck].playing
+            && let Some(with) = self.decks[1 - deck].loaded.as_ref().map(|l| entry_key(&l.entry))
+            && crate::related::pair(&mut self.played, &with, &entry_key(&self.entries[index]))
+        {
+            crate::store::save_played(&self.played);
+        }
         self.status = None;
         self.decks[deck].loading = true;
         self.load(Job::Deck(deck), index);
@@ -2968,6 +3015,58 @@ impl State {
                     let e = &self.entries[i as usize];
                     self.queue.push((entry_key(e), vec![e.title.to_string(), e.artist.to_string()]));
                     crate::store::save_queue(&self.queue);
+                }
+            }
+            Target::MenuSide => {
+                if let Some(i) = self.track_menu.take() {
+                    let e = &self.entries[i as usize];
+                    let key = entry_key(e);
+                    if !self.sidelist.iter().any(|(k, _)| *k == key) {
+                        self.sidelist.push((key, vec![e.title.to_string(), e.artist.to_string()]));
+                        crate::store::save_sidelist(&self.sidelist);
+                    }
+                }
+            }
+            Target::MenuLink => {
+                if let (Some(i), Some(to)) = (self.track_menu.take(), self.selected) {
+                    let (a, b) = (entry_key(&self.entries[to as usize]), entry_key(&self.entries[i as usize]));
+                    if !crate::related::pair(&mut self.links, &a, &b) {
+                        crate::related::unpair(&mut self.links, &a, &b);
+                    }
+                    crate::store::save_links(&self.links);
+                }
+            }
+            Target::SideLoad(n, d) => {
+                let at = self.sidelist.get(n).and_then(|(k, _)| self.entries.iter().position(|e| entry_key(e) == *k));
+                match at {
+                    Some(i) => self.load_deck(d, i),
+                    None => self.status = Some("That track is no longer in the collection".into()),
+                }
+            }
+            Target::SideRemove(n) if n < self.sidelist.len() => {
+                self.sidelist.remove(n);
+                crate::store::save_sidelist(&self.sidelist);
+            }
+            Target::SideToQueue => {
+                self.queue.append(&mut self.sidelist);
+                crate::store::save_queue(&self.queue);
+                crate::store::save_sidelist(&self.sidelist);
+            }
+            Target::SideClear => {
+                self.sidelist.clear();
+                crate::store::save_sidelist(&self.sidelist);
+            }
+            Target::RelatedLoad(n, d) => {
+                let (linked, played) = self.related();
+                if let Some(&i) = linked.iter().chain(&played).nth(n) {
+                    self.load_deck(d, i as usize);
+                }
+            }
+            Target::Unlink(n) => {
+                if let (Some(to), Some(&i)) = (self.selected, self.related().0.get(n)) {
+                    let (a, b) = (entry_key(&self.entries[to as usize]), entry_key(&self.entries[i as usize]));
+                    crate::related::unpair(&mut self.links, &a, &b);
+                    crate::store::save_links(&self.links);
                 }
             }
             Target::QueueRemove(n) if n < self.queue.len() => {
