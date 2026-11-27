@@ -3320,7 +3320,6 @@ dependencies = [
  "bytes",
  "futures-util",
  "http",
- "librespot-audio",
  "librespot-core",
  "librespot-metadata",
  "librespot-protocol",
@@ -5325,26 +5324,6 @@ dependencies = [
  "libc",
  "plain",
  "redox_syscall 0.9.5",
-]
-
-[[package]]
-name = "librespot-audio"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3fe76acb49f58165484303edf0e7bd778f0e6d96f5c59e9d6b6fde1a90d36ff"
-dependencies = [
- "aes 0.8.4",
- "bytes",
- "ctr 0.9.2",
- "futures-util",
- "http-body-util",
- "hyper",
- "hyper-util",
- "librespot-core",
- "log",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
 ]
 
 [[package]]

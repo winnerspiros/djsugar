@@ -64,53 +64,43 @@ pub fn name(dir: &Path) -> Option<String> {
     v["name"].as_str().map(str::to_owned)
 }
 
-/// The track as a file in `cache`. Spotify hands audio to Premium accounts only,
-/// so a track it will not give is fetched as its closest match on YouTube.
+/// The YouTube hit that is the track: the first whose length is the track's, give or take, or else the first.
+fn closest(found: &[Hit], seconds: u32) -> Option<&Hit> {
+    found.iter().find(|h| seconds > 0 && h.seconds.abs_diff(seconds) <= 3).or(found.first())
+}
+
+/// The track as a file in `cache`. Spotify gives the name and the lyrics; the sound is its match on YouTube,
+/// looked for once and remembered.
 pub fn fetch(
     dir: &Path,
     youtube: &YouTube,
     hit: &Hit,
     cache: &Path,
     progress: &(dyn Fn(u64, u64) + Sync),
-    said: &(dyn Fn(String) + Sync),
 ) -> Result<PathBuf> {
-    let path = cache.join(format!("spotify-{}.ogg", hit.id));
-    if path.is_file() {
-        return Ok(path);
-    }
-    // Spotify's own lyrics come along, whichever way the sound does.
     let words = std::thread::spawn({
         let (d, id) = (dir.to_path_buf(), hit.id.clone());
         move || djsugar_spotify::lyrics(&d, &id).ok().flatten()
     });
-    let with_words = |sound: PathBuf| {
-        let lrc = sound.with_extension("lrc");
-        if !lrc.exists()
-            && let Ok(Some(text)) = words.join()
-        {
-            let _ = std::fs::write(lrc, text);
+    let known = cache.join(format!("spotify-{}.txt", hit.id));
+    let video = match std::fs::read_to_string(&known) {
+        Ok(video) => video,
+        Err(_) => {
+            let found = youtube.search(&format!("{} {}", hit.artist, hit.title), None)?;
+            let best = closest(&found.hits, hit.seconds).ok_or(Error::Refused("Nothing found".into()))?;
+            let _ = std::fs::create_dir_all(cache);
+            let _ = std::fs::write(&known, &best.id);
+            best.id.clone()
         }
-        sound
     };
-    let (tx, rx) = std::sync::mpsc::channel();
-    let (d, id, out) = (dir.to_path_buf(), hit.id.clone(), path.clone());
-    let job = std::thread::spawn(move || {
-        djsugar_spotify::fetch(&d, &id, &out, move |f| {
-            let _ = tx.send(f);
-        })
-    });
-    for f in rx {
-        progress((f * 1000.0) as u64, 1000);
+    let sound = youtube.fetch(&video, cache, progress)?;
+    let lrc = sound.with_extension("lrc");
+    if !lrc.exists()
+        && let Ok(Some(text)) = words.join()
+    {
+        let _ = std::fs::write(lrc, text);
     }
-    let why = match job.join() {
-        Ok(Ok(())) => return Ok(with_words(path)),
-        Ok(Err(why)) => why,
-        Err(_) => "Spotify: internal error".to_owned(),
-    };
-    said(format!("{why}. Looking for \"{}\" on YouTube", hit.title));
-    let found = youtube.search(&format!("{} {}", hit.artist, hit.title), None)?;
-    let best = found.hits.first().ok_or(Error::Refused(why))?;
-    youtube.fetch(&best.id, cache, progress).map(with_words)
+    Ok(sound)
 }
 
 #[cfg(test)]
@@ -129,5 +119,21 @@ mod tests {
         let p = page(&lists);
         assert_eq!(p.more, None);
         assert_eq!((p.hits[0].id.as_str(), p.hits[0].artist.as_str()), ("playlist:xyz", "12 tracks"));
+    }
+
+    #[test]
+    fn the_match_is_the_hit_of_the_same_length() {
+        let hit = |id: &str, seconds| Hit {
+            id: id.into(),
+            title: String::new(),
+            artist: String::new(),
+            seconds,
+            art: String::new(),
+        };
+        let found = [hit("video", 251), hit("audio", 201), hit("live", 340)];
+        assert_eq!(closest(&found, 200).map(|h| h.id.as_str()), Some("audio"));
+        assert_eq!(closest(&found, 90).map(|h| h.id.as_str()), Some("video"), "none fits: the first");
+        assert_eq!(closest(&found, 0).map(|h| h.id.as_str()), Some("video"));
+        assert!(closest(&[], 200).is_none());
     }
 }

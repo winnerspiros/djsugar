@@ -107,11 +107,10 @@ impl Clients {
         hit: &Hit,
         dir: &std::path::Path,
         progress: &(dyn Fn(u64, u64) + Sync),
-        said: &(dyn Fn(String) + Sync),
     ) -> Result<PathBuf> {
         let id = hit.id.as_str();
         match sv {
-            Service::Spotify => crate::spotify::fetch(&self.spotify, &self.youtube, hit, dir, progress, said),
+            Service::Spotify => crate::spotify::fetch(&self.spotify, &self.youtube, hit, dir, progress),
             Service::YouTube => self.youtube.fetch(id, dir, progress),
             Service::SoundCloud => self.soundcloud.fetch(id, dir, progress),
             Service::Audius => self.audius.fetch(id, dir, progress),
@@ -120,14 +119,17 @@ impl Clients {
     }
 }
 
+/// Why a list did not come, for the DJ: Spotify's own reasons are not for reading.
+fn plain(sv: Service, e: &sugar_net::Error) -> String {
+    if sv == Service::Spotify { "Spotify did not answer. Try again".into() } else { e.to_string() }
+}
+
 #[derive(Debug)]
 pub enum Reply {
     /// A page, whether it follows the one shown, and the era it was asked in.
     Page(Page, bool, u64),
     /// The Spotify login ended: the account's name, or why not.
     Account(std::result::Result<String, String>, u64),
-    /// Something to tell the DJ while a job goes on.
-    Said(String),
     Progress(String, f32),
     Ready(String, PathBuf, usize, Service),
     /// A hit's picture, for the search it was asked in.
@@ -283,7 +285,7 @@ impl Hub {
             }
             let _ = tx.send(match c.search(sv, &q, None) {
                 Ok(p) => Reply::Page(p, false, era),
-                Err(e) => Reply::Failed(None, e.to_string()),
+                Err(e) => Reply::Failed(None, plain(sv, &e)),
             });
         });
     }
@@ -300,7 +302,7 @@ impl Hub {
         std::thread::spawn(move || {
             let _ = tx.send(match c.search(sv, &q, Some(&token)) {
                 Ok(p) => Reply::Page(p, true, era),
-                Err(e) => Reply::Failed(None, e.to_string()),
+                Err(e) => Reply::Failed(None, plain(sv, &e)),
             });
         });
     }
@@ -329,10 +331,7 @@ impl Hub {
                     }
                 }
             };
-            let said = |what: String| {
-                let _ = tx.send(Reply::Said(what));
-            };
-            let r = c.fetch(sv, &wanted, &dir, &progress, &said);
+            let r = c.fetch(sv, &wanted, &dir, &progress);
             if let Ok(path) = &r {
                 // The largest picture there is; YouTube has not got the large ones for every video.
                 let large = ["maxresdefault", "hq720"].map(|size| sugar_net::youtube::art(&id, size));
@@ -348,6 +347,9 @@ impl Hub {
             }
             let _ = tx.send(match r {
                 Ok(path) => Reply::Ready(id, path, deck, sv),
+                Err(_) if sv == Service::Spotify => {
+                    Reply::Failed(Some(id), format!("Could not get \"{}\"", wanted.title))
+                }
                 Err(e) => Reply::Failed(Some(id), e.to_string()),
             });
         });
@@ -404,7 +406,6 @@ impl Hub {
         while let Ok(r) = self.rx.try_recv() {
             match r {
                 Reply::Page(_, _, era) | Reply::Account(Ok(_), era) if era != self.era => {}
-                Reply::Said(what) => self.status = what,
                 Reply::Account(r, _) => {
                     let fresh = self.signing;
                     self.signing = false;
@@ -416,7 +417,8 @@ impl Hub {
                                 self.show(crate::spotify::LIKED);
                             }
                         }
-                        Err(why) => self.status = if why == "cancelled" { String::new() } else { why },
+                        Err(why) if why == "cancelled" => self.status = String::new(),
+                        Err(_) => self.status = "Sign-in did not finish. Try again".into(),
                     }
                 }
                 Reply::Page(p, append, _) => {

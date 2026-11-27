@@ -1,45 +1,29 @@
 //! Spotify for the decks, on Spotify's own client protocol: no developer app or client id to register.
 //! Login is on Spotify's web page; the account is kept as reusable credentials in the cache directory.
-//! Lists come from the client endpoints of the session, and tracks are written as plain Ogg Vorbis (Premium).
+//! Lists and lyrics come from the client endpoints of the session; the sound of a track is got elsewhere.
 
 mod browse;
-mod keys;
 mod lyrics;
 
-use std::fs::File;
 use std::future::Future;
-use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
-use futures_util::stream::{FuturesUnordered, StreamExt};
-use librespot_audio::{AudioDecrypt, AudioFile};
 use librespot_core::authentication::Credentials;
 use librespot_core::cache::Cache;
 use librespot_core::config::SessionConfig;
 use librespot_core::http_client::HttpClient;
 use librespot_core::session::Session;
 use librespot_core::spotify_id::SpotifyId;
-use librespot_core::spotify_uri::SpotifyUri;
-use librespot_metadata::audio::{AudioFileFormat, AudioItem};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::runtime::Runtime;
 use tokio::sync::watch;
-
-/// Spotify's Ogg files start with a custom packet (normalisation data) the
-/// Vorbis decoders don't know; the playable stream begins after it
-const SPOTIFY_OGG_HEADER_END: u64 = 0xa7;
-
-/// Best first. Ogg only: the decks decode it everywhere (MP3 files are
-/// encrypted differently and FLAC is not served to third-party clients)
-const FORMATS: [AudioFileFormat; 3] =
-    [AudioFileFormat::OGG_VORBIS_320, AudioFileFormat::OGG_VORBIS_160, AudioFileFormat::OGG_VORBIS_96];
 
 /// The client id librespot logs in with on the web (Spotify's own; its
 /// login page takes a loopback redirect)
@@ -50,8 +34,6 @@ const WEB_API_SCOPES: &str = "streaming user-read-private user-library-read \
 playlist-read-private playlist-read-collaborative";
 /// Left by builds that browsed through the Web API; removed at logout
 const OLD_WEB_TOKEN_FILE: &str = "web_token.json";
-
-type Progress = Box<dyn Fn(f64) + Send>;
 
 /// Stack of every thread running librespot (its futures are large)
 const WORK_STACK: usize = 16 * 1024 * 1024;
@@ -386,100 +368,6 @@ async fn token_request(form: &[(&str, &str)]) -> Result<serde_json::Value, Strin
     serde_json::from_slice(&response).map_err(|e| format!("Spotify login: {e}"))
 }
 
-/// The track, or a playable alternative of it (another release of the same
-/// recording) when it is not available in the user's country
-async fn playable_item(session: &Session, uri: SpotifyUri) -> Result<AudioItem, String> {
-    let item = AudioItem::get_file(session, uri).await.map_err(|e| format!("Track info: {e}"))?;
-    if item.availability.is_ok() && !item.files.is_empty() {
-        return Ok(item);
-    }
-    let Some(alternatives) = item.alternatives.clone() else {
-        return Err(match item.availability {
-            Err(e) => format!("Not playable: {e}"),
-            Ok(()) => "Not playable here".to_owned(),
-        });
-    };
-    let mut lookups: FuturesUnordered<_> =
-        alternatives.0.into_iter().map(|alt| AudioItem::get_file(session, alt)).collect();
-    while let Some(alt) = lookups.next().await {
-        if let Ok(alt) = alt {
-            if alt.availability.is_ok() && !alt.files.is_empty() {
-                return Ok(alt);
-            }
-        }
-    }
-    Err("Not playable in this country".to_owned())
-}
-
-async fn download(dir: PathBuf, track_id: String, out_path: PathBuf, progress: Progress) -> Result<(), String> {
-    let id = SpotifyId::from_base62(&track_id).map_err(|e| format!("Track id: {e}"))?;
-    let session = session(&dir).await?;
-    if let Some(kind) = session.get_user_attribute("type").filter(|kind| kind != "premium") {
-        return Err(format!(
-            "This Spotify account is {kind}, not Premium: Spotify only lets \
-             Premium accounts load tracks"
-        ));
-    }
-    let item = playable_item(&session, SpotifyUri::Track { id }).await?;
-    let file_id_track = SpotifyId::try_from(&item.track_id).map_err(|e| e.to_string())?;
-    let file_id = FORMATS
-        .iter()
-        .find_map(|f| item.files.get(f).copied())
-        .ok_or_else(|| "No Ogg Vorbis file for this track".to_owned())?;
-    progress(0.05);
-
-    // Ahead of the file: the key comes from the access point, the file
-    // from the CDN
-    let key =
-        keys::request(|| session.audio_key().request(file_id_track, file_id)).await.map_err(
-            |e| match keys::refusal(&e) {
-                Some(1) => "Spotify gives this account no audio keys: it locked out \
-                        librespot-based apps (librespot issue #1649), so tracks \
-                        can't be loaded"
-                    .to_owned(),
-                Some(_) => format!("Spotify refused the audio key ({e}); try again in a minute"),
-                None => format!("Audio key: {e}"),
-            },
-        )?;
-    let encrypted = AudioFile::open(&session, file_id, 40 * 1024).await.map_err(|e| format!("Audio file: {e}"))?;
-    let controller = encrypted.get_stream_loader_controller().map_err(|e| e.to_string())?;
-    let total = controller.len() as u64;
-    // Whole file at once, not paced like playback
-    controller.set_random_access_mode();
-
-    // Reading blocks on the download: off the async workers
-    tokio::task::spawn_blocking(move || -> Result<(), String> {
-        let mut decrypted = AudioDecrypt::new(Some(key), encrypted);
-        decrypted.seek(SeekFrom::Start(SPOTIFY_OGG_HEADER_END)).map_err(|e| e.to_string())?;
-        let partial = out_path.with_extension("ogg.part");
-        let mut out = File::create(&partial).map_err(|e| format!("{}: {e}", partial.display()))?;
-        let mut buffer = vec![0u8; 64 * 1024];
-        let mut done = SPOTIFY_OGG_HEADER_END;
-        loop {
-            let n = decrypted.read(&mut buffer).map_err(|e| format!("Download: {e}"))?;
-            if n == 0 {
-                break;
-            }
-            out.write_all(&buffer[..n]).map_err(|e| e.to_string())?;
-            done += n as u64;
-            if total > 0 {
-                progress(0.05 + 0.9 * (done as f64 / total as f64).min(1.0));
-            }
-        }
-        out.flush().map_err(|e| e.to_string())?;
-        drop(out);
-        if total > 0 && done < total {
-            let _ = std::fs::remove_file(&partial);
-            return Err("Download ended early".to_owned());
-        }
-        std::fs::rename(&partial, &out_path).map_err(|e| e.to_string())?;
-        progress(1.0);
-        Ok(())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
 /// Runs `work` to the end on a thread of its own and waits for it: the
 /// caller's stack may be too small for the session's large futures, and a
 /// panic there ends in an error message, not in a crashed app.
@@ -538,13 +426,6 @@ pub fn browse(dir: &Path, request: &str, offset: usize, limit: usize) -> Result<
         let session = session(&dir).await?;
         browse::browse(&session, &request, offset, limit).await
     })
-}
-
-/// Fetches a track (base62 id) as plain Ogg Vorbis into `out`; `progress`
-/// hears the fraction done. Needs a Premium account. Blocks until done.
-pub fn fetch(dir: &Path, track: &str, out: &Path, progress: impl Fn(f64) + Send + 'static) -> Result<(), String> {
-    let (dir, track, out) = (dir.to_path_buf(), track.to_owned(), out.to_path_buf());
-    guarded(move || download(dir, track, out, Box::new(progress)))
 }
 
 /// A track's (base62 id) lyrics as LRC text, timed as far as Spotify times them; None when it has none. Any account

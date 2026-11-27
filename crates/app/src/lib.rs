@@ -148,7 +148,17 @@ impl Ui {
         self.state.dismiss()
     }
 
-    /// Ctrl+Q was pressed.
+    /// Whether a deck plays.
+    pub fn playing(&self) -> bool {
+        self.state.telemetry.decks.iter().any(|d| d.playing)
+    }
+
+    /// Quits, or asks first when music would stop (see `State::ask_quit`).
+    pub fn ask_quit(&mut self) {
+        self.state.ask_quit();
+    }
+
+    /// The DJ quit: with Ctrl+Q, the menu or the window, and said yes if asked.
     pub fn quit(&self) -> bool {
         self.state.quit
     }
@@ -335,7 +345,13 @@ pub mod native {
 
         fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
             match event {
-                WindowEvent::CloseRequested => event_loop.exit(),
+                WindowEvent::CloseRequested => {
+                    self.ui.ask_quit();
+                    if self.ui.quit() {
+                        event_loop.exit();
+                    }
+                    self.redraw();
+                }
                 WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => self.resize(),
                 WindowEvent::RedrawRequested => {
                     if let Some(gpu) = &mut self.gpu {
@@ -420,6 +436,9 @@ pub mod native {
                         TouchPhase::Started => self.ui.pointer_down(t.id, x, y),
                         TouchPhase::Moved => self.ui.pointer_move(t.id, x, y),
                         TouchPhase::Ended | TouchPhase::Cancelled => self.ui.pointer_up(t.id, y),
+                    }
+                    if self.ui.quit() {
+                        event_loop.exit();
                     }
                     self.redraw();
                 }

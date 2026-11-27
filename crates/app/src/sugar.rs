@@ -150,6 +150,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     tag_menu(p, s, w, h);
     fx_menu(p, s, w, h);
     fx_edit(p, s, w, h);
+    quit_ask(p, s, w, h);
     crate::prefs::app_menu(p, s, w, h);
     crate::prefs::overlay(p, s, w, h);
 }
@@ -2133,6 +2134,26 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
         button(p, s, at(1.0), to, aim > 0, DECK[aim.saturating_sub(1).min(1)], Target::XyAim);
         button(p, s, at(2.0), "RESET", false, ACCENT, Target::XyReset);
     }
+}
+
+/// The question before quitting, over everything; a tap beside it is a no.
+fn quit_ask(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    if !s.quit_ask {
+        return;
+    }
+    const WARN: u32 = rgb(0xff5252);
+    p.layer();
+    p.rect(0.0, 0.0, w, h, 0.0, fade(rgb(0x000000), 0xb0));
+    hit(s, Rect::new(0.0, 0.0, w, h), Target::QuitCancel);
+    let cw = (w - 40.0).min(420.0);
+    let r = Rect::new((w - cw) * 0.5, (h - 132.0) * 0.5, cw, 132.0);
+    theme::card(p, r, WARN);
+    hit(s, r, Target::MenuBody);
+    p.text(r.x + 18.0, r.y + 32.0, Style { px: 16.0, ..TITLE }, "Quit DJ Sugar?");
+    p.text_in(r.x + 18.0, r.y + 56.0, r.w - 36.0, ARTIST, "The music stops.");
+    let bw = ((r.w - 46.0) * 0.5).min(140.0);
+    button(p, s, Rect::new(r.x + 18.0, r.y + r.h - 54.0, bw, 36.0), "CANCEL", false, ACCENT, Target::QuitCancel);
+    button(p, s, Rect::new(r.x + r.w - 18.0 - bw, r.y + r.h - 54.0, bw, 36.0), "QUIT", true, WARN, Target::QuitNow);
 }
 
 /// Sample picker over everything: tap a sound to hear it on the pad.

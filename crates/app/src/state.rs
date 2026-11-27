@@ -175,6 +175,9 @@ pub enum Target {
     /// Puts the menu's track on Automix's list.
     MenuQueue,
     QueueRemove(usize),
+    /// The answers to the question whether to quit.
+    QuitNow,
+    QuitCancel,
     /// Puts the track of the open menu on the Sidelist, or links it to the selected one (and back).
     MenuSide,
     MenuLink,
@@ -849,6 +852,8 @@ pub struct State {
     pub prefs_max: f32,
     /// Ctrl+Q asked the app to close.
     pub quit: bool,
+    /// The question whether to quit is on screen.
+    pub quit_ask: bool,
     /// The held playlist whose menu is open.
     pub list_menu: Option<usize>,
     /// The deck to start once its track has loaded.
@@ -1021,6 +1026,7 @@ impl State {
             prefs_scroll: 0.0,
             prefs_max: 0.0,
             quit: false,
+            quit_ask: false,
             list_menu: None,
             column_menu: false,
             play_on_load: None,
@@ -1953,8 +1959,22 @@ impl State {
         }
     }
 
+    /// Quits, after asking where a slip would cost a set: on a phone, where Back is a swipe from the edge, and
+    /// anywhere while a deck plays.
+    pub fn ask_quit(&mut self) {
+        let playing = self.telemetry.decks.iter().any(|d| d.playing);
+        if cfg!(any(target_os = "android", target_os = "ios")) || playing {
+            self.quit_ask = true;
+        } else {
+            self.quit = true;
+        }
+    }
+
     /// Closes the topmost menu or sheet; false when nothing was open.
     pub fn dismiss(&mut self) -> bool {
+        if std::mem::take(&mut self.quit_ask) {
+            return true;
+        }
         if self.pref_menu.take().is_some() {
             return true;
         }
@@ -2048,6 +2068,11 @@ impl State {
         if key == Key::Escape && self.dismiss() {
             return;
         }
+        // On a phone Escape is Back, and Back with nothing left to close is the way out.
+        if key == Key::Escape && cfg!(target_os = "android") {
+            self.ask_quit();
+            return;
+        }
         if m.ctrl {
             self.shortcut(key, m);
             return;
@@ -2131,7 +2156,7 @@ impl State {
                 self.press(Target::View(VIEWS[n as usize - '1' as usize]), 0.0, 0.0);
             }
             '5' => self.press(Target::ToggleFx, 0.0, 0.0),
-            'q' => self.quit = true,
+            'q' => self.ask_quit(),
             _ => {}
         }
     }
@@ -3108,7 +3133,12 @@ impl State {
                 };
                 self.settings.set(o, (self.settings.get(o) + 1) % choices);
             }
-            Target::Quit => self.quit = true,
+            Target::Quit => {
+                self.dismiss();
+                self.ask_quit();
+            }
+            Target::QuitNow => self.quit = true,
+            Target::QuitCancel => self.quit_ask = false,
             Target::Tour => {
                 self.app_menu = false;
                 self.submenu = None;

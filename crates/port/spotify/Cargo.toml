@@ -1,6 +1,6 @@
 [package]
 name = "djsugar-spotify"
-description = "Spotify for the decks: web login, the account's lists, and tracks fetched as Ogg Vorbis"
+description = "Spotify for the decks: web login, the account's lists, and lyrics"
 version.workspace = true
 edition = "2021"
 publish = false
@@ -8,7 +8,6 @@ license.workspace = true
 
 [dependencies]
 librespot-core = { version = "0.8.0", default-features = false }
-librespot-audio = { version = "0.8.0", default-features = false }
 librespot-metadata = { version = "0.8.0", default-features = false }
 librespot-protocol = "0.8.0"
 protobuf = "3.7"

@@ -197,6 +197,16 @@ fn main() {
             }
             ui.render(&mut r);
             save(&r, &out.join(format!("{name}-loaded.png")));
+            // A deck is playing, so quitting asks first; Cancel leaves the app running.
+            if ui.playing() {
+                ui.ask_quit();
+                ui.render(&mut r);
+                save(&r, &out.join(format!("{name}-quit.png")));
+                if ui.quit() || !ui.tap("QuitCancel") {
+                    faults.push(format!("{name}: quitting while a deck plays does not ask"));
+                }
+                ui.render(&mut r);
+            }
             // Wide windows: the side panel's tabs, each must open.
             if ui.tap("ToggleSide") {
                 ui.render(&mut r);
