@@ -496,7 +496,7 @@ fn watch_devices(
         if rescan || last_scan.is_none_or(|t| t.elapsed() >= RESCAN) {
             last_scan = Some(Instant::now());
             #[cfg(target_os = "android")]
-            crate::ble::wake();
+            crate::ble::wake(rescan);
             let mut ports: Vec<String> = input
                 .iter()
                 .flat_map(|input| input.ports().iter().filter_map(|p| input.port_name(p).ok()).collect::<Vec<_>>())
@@ -542,6 +542,10 @@ fn watch_devices(
                 connected.lock().unwrap().retain(|c| c.port != port);
             }
             *shared.ports.lock().unwrap() = picked.clone();
+            #[cfg(target_os = "android")]
+            if crate::ble::pending() {
+                continue;
+            }
             follow_keyboards(&mut keyboards, &picked, &stand_ins, &shared, &registry);
             for (port, path) in picked {
                 if devices.contains_key(&port) || connected.lock().unwrap().iter().any(|c| c.port == port) {
@@ -727,6 +731,10 @@ fn run_keyboard(port: &str, stop: &AtomicBool, shared: &Arc<Shared>, watch: crat
         },
         (),
     );
+    #[cfg(target_os = "android")]
+    if conn.is_err() {
+        crate::ble::calm();
+    }
     let Ok(_conn) = conn else {
         return;
     };
@@ -805,6 +813,8 @@ fn run_device(
             // Windows lets only one app at a time open a MIDI device.
             let hint = if cfg!(windows) { " (is another DJ app using it?)" } else { "" };
             eprintln!("{port}: cannot open MIDI input: {e}{hint}");
+            #[cfg(target_os = "android")]
+            crate::ble::calm();
             return;
         }
     };
@@ -820,6 +830,10 @@ fn run_device(
             .clone();
         output.connect(&p, "DJ Sugar out").ok()
     });
+    #[cfg(target_os = "android")]
+    if out_conn.is_none() {
+        crate::ble::calm();
+    }
     let send = move |m: &[u8]| {
         if let Some(out) = out_conn.as_mut() {
             let _ = out.send(m);

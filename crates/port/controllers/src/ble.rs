@@ -11,8 +11,12 @@ use jni::objects::{GlobalRef, JObject, JObjectArray, JString, JValue};
 use jni::JNIEnv;
 use jni_min_helper::{android_api_level, android_context, jni_with_env, JObjectGet, JniProxy};
 
-/// A device that did not answer is not asked again sooner than this.
-const AGAIN: Duration = Duration::from_secs(30);
+/// How often the list of paired devices is read for new ones.
+const LOOK: Duration = Duration::from_secs(30);
+/// How long the system is given to answer; it gives up on a device that is not there in about this time.
+const PATIENCE: Duration = Duration::from_secs(40);
+/// What a Bluetooth MIDI device offers.
+const MIDI_SERVICE: &str = "03b80e5a-ede8-4b33-a751-6ce34ec4c700";
 /// `BluetoothDevice.DEVICE_TYPE_LE`: headphones and speakers are of the other kinds and are left alone.
 const LOW_ENERGY: i32 = 2;
 const LISTENER: &str = "android/media/midi/MidiManager$OnDeviceOpenedListener";
@@ -21,6 +25,7 @@ const OPEN: &str =
 
 struct Held {
     asked: Instant,
+    answered: bool,
     device: Option<GlobalRef>,
     /// What the system answers to; kept for as long as it may.
     listener: Option<JniProxy>,
@@ -31,11 +36,36 @@ fn held() -> &'static Mutex<HashMap<String, Held>> {
     HELD.get_or_init(Mutex::default)
 }
 
-/// Opens the paired devices that are not open. Cheap when there is nothing to do, so it runs with every look for ports.
-pub(crate) fn wake() {
-    if let Err(e) = jni_with_env(open_paired) {
+/// Opens the paired devices not asked for yet; with `again`, as on Refresh, also those that did not answer.
+/// Runs with every look for ports and reads the list of paired devices only now and then.
+pub(crate) fn wake(again: bool) {
+    static LOOKED: Mutex<Option<Instant>> = Mutex::new(None);
+    {
+        let mut looked = LOOKED.lock().unwrap();
+        if !again && looked.is_some_and(|t| t.elapsed() < LOOK) {
+            return;
+        }
+        *looked = Some(Instant::now());
+    }
+    if let Err(e) = jni_with_env(|env| {
+        let done = open_paired(env, again);
+        let _ = env.exception_clear();
+        done
+    }) {
         eprintln!("Bluetooth controllers: {e}");
     }
+}
+
+/// Whether the system is still opening a Bluetooth device. Until it has answered, it refuses to open any other MIDI
+/// device for this app (it trips over the half-open one), so the wired ones wait for it.
+pub(crate) fn pending() -> bool {
+    held().lock().unwrap().values().any(|h| !h.answered && h.asked.elapsed() < PATIENCE)
+}
+
+/// Drops an error the system raised on this thread while a device was opened; left in place it ends the app when
+/// the thread does.
+pub(crate) fn calm() {
+    let _ = jni_with_env(|env| env.exception_clear());
 }
 
 fn service<'a>(env: &mut JNIEnv<'a>, name: &str) -> Result<JObject<'a>, Error> {
@@ -63,7 +93,7 @@ fn allowed(env: &mut JNIEnv<'_>) -> Result<bool, Error> {
     Ok(env.call_method(android_context(), "checkSelfPermission", sig, &[JValue::from(&perm)])?.i()? == 0)
 }
 
-fn open_paired(env: &mut JNIEnv<'_>) -> Result<(), Error> {
+fn open_paired(env: &mut JNIEnv<'_>, again: bool) -> Result<(), Error> {
     if !allowed(env)? {
         return Ok(());
     }
@@ -90,7 +120,7 @@ fn open_paired(env: &mut JNIEnv<'_>) -> Result<(), Error> {
             continue;
         }
         let address = text(env, &device, "getAddress")?;
-        if !due(env, &address) {
+        if !offers_midi(env, &device)? || !due(env, &address, again) {
             continue;
         }
         let listener = JniProxy::build(env, None, [LISTENER].as_slice(), {
@@ -99,6 +129,7 @@ fn open_paired(env: &mut JNIEnv<'_>) -> Result<(), Error> {
                 if method.get_method_name(env).unwrap_or_default() == "onDeviceOpened" {
                     let opened = args.first().filter(|d| !d.is_null()).and_then(|d| env.new_global_ref(d).ok());
                     if let Some(h) = held().lock().unwrap().get_mut(&address) {
+                        h.answered = true;
                         h.device = opened;
                     }
                 }
@@ -108,7 +139,10 @@ fn open_paired(env: &mut JNIEnv<'_>) -> Result<(), Error> {
         let none = JObject::null();
         let args = [JValue::from(&device), JValue::from(&listener), JValue::from(&none)];
         // Noted before the system is asked: its answer may come first, on another thread.
-        held().lock().unwrap().insert(address.clone(), Held { asked: Instant::now(), device: None, listener: None });
+        held()
+            .lock()
+            .unwrap()
+            .insert(address.clone(), Held { asked: Instant::now(), answered: false, device: None, listener: None });
         env.call_method(&midi, "openBluetoothDevice", OPEN, &args)?;
         if let Some(h) = held().lock().unwrap().get_mut(&address) {
             h.listener = Some(listener);
@@ -117,23 +151,41 @@ fn open_paired(env: &mut JNIEnv<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Whether to open the device at `address` now: not while it is held and still connected, and not right after it
-/// was asked. A held one that has gone away is closed, so that it can be opened again when it is back.
-fn due(env: &mut JNIEnv<'_>, address: &str) -> bool {
+/// Whether to open the device at `address` now. Each one is asked for once: again by itself only after it was
+/// open and went away, and after it did not answer only when the user asks (`again`).
+fn due(env: &mut JNIEnv<'_>, address: &str, again: bool) -> bool {
     let mut all = held().lock().unwrap();
     let Some(h) = all.get(address) else { return true };
-    if h.asked.elapsed() < AGAIN {
+    if !h.answered {
         return false;
     }
-    if let Some(device) = &h.device {
-        if connected(env, device.as_obj()).unwrap_or(false) {
-            return false;
+    match &h.device {
+        Some(device) if connected(env, device.as_obj()).unwrap_or(false) => return false,
+        Some(device) => {
+            let _ = env.call_method(device.as_obj(), "close", "()V", &[]);
+            let _ = env.exception_clear();
         }
-        let _ = env.call_method(device.as_obj(), "close", "()V", &[]);
-        let _ = env.exception_clear();
+        None if !again => return false,
+        None => {}
     }
     all.remove(address);
     true
+}
+
+/// Whether the device offers MIDI. A watch, a tag or a pair of earphones does not, and neither does one that has
+/// not said what it offers; those are never handed to the system as MIDI devices.
+fn offers_midi(env: &mut JNIEnv<'_>, device: &JObject<'_>) -> Result<bool, Error> {
+    let offers: JObjectArray<'_> = env.call_method(device, "getUuids", "()[Landroid/os/ParcelUuid;", &[])?.l()?.into();
+    if offers.is_null() {
+        return Ok(false);
+    }
+    for i in 0..env.get_array_length(&offers)? {
+        let one = env.get_object_array_element(&offers, i)?;
+        if text(env, &one, "toString")?.eq_ignore_ascii_case(MIDI_SERVICE) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// Whether the system still lists the opened device among its MIDI devices.
