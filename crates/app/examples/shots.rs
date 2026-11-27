@@ -214,7 +214,14 @@ fn main() {
                         if !ui.tap("MenuQueue") {
                             faults.push(format!("{name}: track menu has no Add to Automix"));
                         }
-                        ui.tap("Cycle(MixStyle)");
+                        ui.render(&mut r);
+                        // Length and style each open their choices; Phrases is the last length.
+                        ui.tap("MixMenu(MixLength)");
+                        ui.render(&mut r);
+                        save(&r, &out.join(format!("{name}-automix-length.png")));
+                        if !ui.tap("MixPick(MixLength, 6)") {
+                            faults.push(format!("{name}: Automix's lengths have no Phrases"));
+                        }
                         ui.render(&mut r);
                         // The Order button opens its menu, and a pick closes it.
                         ui.tap("OrderMenu");
@@ -225,6 +232,22 @@ fn main() {
                             faults.push(format!("{name}: no Automix order menu"));
                         }
                         ui.render(&mut r);
+                        // A row dragged over another shows where it would land, and lands there.
+                        let row = |ui: &Ui, n: usize| {
+                            let name = format!("QueueRow({n})");
+                            ui.targets()
+                                .into_iter()
+                                .find(|(t, _)| *t == name)
+                                .map(|(_, [x, y, w, h])| (x + w * 0.4, y + h * 0.5))
+                        };
+                        if let (Some(from), Some(to)) = (row(&ui, 0), row(&ui, 1)) {
+                            ui.pointer_down(0, from.0, from.1);
+                            ui.pointer_move(0, to.0, to.1 + 4.0);
+                            ui.render(&mut r);
+                            save(&r, &out.join(format!("{name}-automix-drag.png")));
+                            ui.pointer_up(0, to.1 + 4.0);
+                            ui.render(&mut r);
+                        }
                         // Running, Automix marks what it holds: the crossfader and the mix to come.
                         ui.tap("AutoDj");
                         ui.render(&mut r);

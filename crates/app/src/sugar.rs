@@ -1,7 +1,7 @@
 use sugar_layout::Rect;
 use sugar_ui::{Painter, Style, Weight, rgb};
 
-use crate::state::{DETAIL_FRAMES, GridOp, Hit, State, Target, View};
+use crate::state::{DETAIL_FRAMES, GridOp, Hit, QUEUE_ROW, State, Target, View};
 use sugar_engine::station::Scene;
 
 use crate::theme::{self, Line, Mark};
@@ -145,6 +145,7 @@ pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     list_menu(p, s, w, h);
     column_menu(p, s, w, h);
     order_menu(p, s, w, h);
+    mix_menu(p, s, w, h);
     chip_menu(p, s, w, h);
     tag_menu(p, s, w, h);
     fx_menu(p, s, w, h);
@@ -304,7 +305,7 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         [(Opt::MixLength, "LENGTH", &crate::automix::LENGTHS[..]), (Opt::MixStyle, "STYLE", &crate::automix::STYLES)];
     for (n, (opt, name, choices)) in picks.into_iter().enumerate() {
         let b = Rect::new(x + n as f32 * (half + 6.0), r.y + 36.0, half, 38.0);
-        let down = s.pressed(Target::Cycle(opt));
+        let down = s.pressed(Target::MixMenu(opt)) || s.mix_menu == Some(opt);
         p.outlined(b.x, b.y, b.w, b.h, 6.0, if down { theme::PRESSED } else { SURFACE }, 1.0, EDGE);
         p.text(b.x + 9.0, b.y + 14.0, SMALL, name);
         let choice = choices[usize::from(s.settings.get(opt)).min(choices.len() - 1)];
@@ -312,7 +313,7 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         let (cx, cy) = (b.x + b.w - 15.0, b.y + b.h * 0.5);
         p.line((cx - 4.0, cy - 2.0), (cx, cy + 2.0), 1.5, theme::DIM);
         p.line((cx, cy + 2.0), (cx + 4.0, cy - 2.0), 1.5, theme::DIM);
-        hit(s, b, Target::Cycle(opt));
+        hit(s, b, Target::MixMenu(opt));
     }
     let quarter = (w - 18.0) * 0.25;
     let repeat = s.settings.on(Opt::MixRepeat);
@@ -326,8 +327,11 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         let b = Rect::new(x + n as f32 * (quarter + 6.0), r.y + 80.0, quarter, 28.0);
         button(p, s, b, name, lit, theme::AUTOMIX, target);
     }
-    p.rect(x, r.y + 115.0, w, 1.0, 0.0, EDGE);
-    let mut y = r.y + 120.0;
+    let status = s.mix_status();
+    let line = if status.is_empty() { 0.0 } else { 18.0 };
+    p.text_in(x + 4.0, r.y + 126.0, w - 8.0, Style { colour: theme::AUTOMIX, ..ARTIST }, &status);
+    p.rect(x, r.y + 115.0 + line, w, 1.0, 0.0, EDGE);
+    let mut y = r.y + 120.0 + line;
     if s.queue.is_empty() {
         for line in ["Add tracks from a track's menu.", "Until then Automix plays the list on screen."] {
             p.text_in(x + 4.0, y + 14.0, w - 8.0, ARTIST, line);
@@ -341,10 +345,21 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         held[d] = (0..s.queue.len())
             .find(|&n| s.mix_held[d].as_deref() == Some(s.queue[n].0.as_str()) && held[1 - d] != Some(n));
     }
-    let rows = (((r.y + r.h - y - 18.0) / 38.0) as usize).min(s.queue.len());
+    let rows = (((r.y + r.h - y - 18.0) / QUEUE_ROW) as usize).min(s.queue.len());
+    // A row being dragged is lit, and a line shows the place it would land on.
+    let moving = s.queue_drag.filter(|&(n, _)| n < rows && s.pressed(Target::QueueRow(n)));
+    let landing = moving.map(|(n, at)| (n, crate::state::queue_slot(y, rows, at))).filter(|(n, to)| n != to);
     for n in 0..rows {
         let b = Rect::new(x, y, w, 34.0);
-        p.outlined(b.x, b.y, b.w, b.h, 6.0, SURFACE, 1.0, EDGE);
+        let lit = moving.is_some_and(|(row, _)| row == n);
+        p.outlined(b.x, b.y, b.w, b.h, 6.0, SURFACE, 1.0, if lit { theme::AUTOMIX } else { EDGE });
+        if let Some((from, to)) = landing
+            && to == n
+        {
+            let edge = if to > from { b.y + b.h + 1.0 } else { b.y - 3.0 };
+            p.rect(b.x, edge, b.w, 2.0, 1.0, theme::AUTOMIX);
+        }
+        hit(s, b, Target::QueueRow(n));
         // A track on a deck shows which, until it has played and leaves the list.
         let deck = held.iter().position(|&row| row == Some(n));
         let place = deck.map_or_else(|| (n + 1).to_string(), |d| ["A", "B"][d].to_string());
@@ -366,7 +381,7 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         p.line((cx - 4.0, cy - 4.0), (cx + 4.0, cy + 4.0), 1.5, theme::DIM);
         p.line((cx - 4.0, cy + 4.0), (cx + 4.0, cy - 4.0), 1.5, theme::DIM);
         hit(s, close, Target::QueueRemove(n));
-        y += 38.0;
+        y += QUEUE_ROW;
     }
     if rows < s.queue.len() {
         p.text(x + 9.0, y + 12.0, ARTIST, &format!("and {} more", s.queue.len() - rows));
@@ -1388,6 +1403,22 @@ fn chip_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         }));
         v
     };
+    theme::menu(p, s, s.menu_at, screen, &lines);
+}
+
+/// The choices of Automix's length or style, the one in use ticked.
+fn mix_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
+    let Some(opt) = s.mix_menu else { return };
+    let crate::settings::Kind::Menu(choices) = crate::settings::spec(opt).kind else { return };
+    p.layer();
+    let screen = Rect::new(0.0, 0.0, w, h);
+    hit(s, screen, Target::MenuClose);
+    let now = s.settings.get(opt);
+    let lines: Vec<Line> = choices
+        .iter()
+        .zip(0u8..)
+        .map(|(&name, k)| Line::item(name, Target::MixPick(opt, k)).mark(theme::Mark::Check(k == now)))
+        .collect();
     theme::menu(p, s, s.menu_at, screen, &lines);
 }
 

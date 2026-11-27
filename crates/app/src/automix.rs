@@ -1,13 +1,19 @@
 //! Automix's choices: how long a mix runs and what it asks of the mixer on the way.
 
+use djsugar_engine::phrases::{Phrase, PhraseKind};
+
 /// Mix lengths, in the order the panel offers them.
-pub const LENGTHS: [&str; 6] = ["0 s", "12 s", "15 s", "30 s", "16 bars", "32 bars"];
+pub const LENGTHS: [&str; 7] = ["0 s", "12 s", "15 s", "30 s", "16 bars", "32 bars", "Phrases"];
+/// The length that mixes by the tracks' phrases.
+pub const PHRASES: u8 = 6;
+/// Shortest and longest phrase mix, in bars.
+const PHRASE_BARS: (f64, f64) = (8.0, 32.0);
 /// How a mix moves, in the order the panel offers them.
 pub const STYLES: [&str; 4] = ["Smooth", "Bass swap", "Filter", "Cut"];
 
 const BASS_SWAP: u8 = 1;
 const FILTER: u8 = 2;
-const CUT: u8 = 3;
+pub const CUT: u8 = 3;
 
 /// The mix's length in frames of the outgoing track, given one of its beats and its sample rate.
 /// A cut switches over in one beat whatever the length.
@@ -20,9 +26,54 @@ pub fn frames(length: u8, style: u8, beat: f64, rate: f64) -> f64 {
         1 => 12.0 * rate,
         2 => 15.0 * rate,
         3 => 30.0 * rate,
-        4 => beat * 64.0,
-        _ => beat * 128.0,
+        5 => beat * 128.0,
+        // Also what a phrase mix falls back to on a track with no phrases found.
+        _ => beat * 64.0,
     }
+}
+
+/// A track's phrases from the waveform the deck draws: `detail` holds a slice's level and its low, mid and high
+/// band for every `per` frames. Empty when there are too few bars or it all sounds alike.
+pub fn phrases(detail: &[[u8; 4]], per: usize, grid: &sugar_analysis::Grid, rate: u32) -> Vec<Phrase> {
+    let bar = grid.beat_frames(rate) * 4.0;
+    if bar < per as f64 * 4.0 {
+        return Vec::new();
+    }
+    let (mut at, mut starts, mut levels) = (grid.first_beat.rem_euclid(bar), Vec::new(), Vec::new());
+    loop {
+        let (i, j) = ((at / per as f64) as usize, ((at + bar) / per as f64) as usize);
+        if j > detail.len() || i >= j {
+            break;
+        }
+        let mut sum = [0f32; 3];
+        for slice in &detail[i..j] {
+            for (k, s) in sum.iter_mut().enumerate() {
+                *s += (f32::from(slice[1 + k]) / 255.0).powi(2);
+            }
+        }
+        starts.push(at / f64::from(rate));
+        levels.push(sum.map(|s| s / (j - i) as f32));
+        at += bar;
+    }
+    djsugar_engine::phrases::from_bars(&starts, levels)
+}
+
+/// Where a phrase mix starts on the outgoing track and how long it runs, in seconds: from its outro, or else its
+/// last change 8 to 32 bars before the end, for as many bars as the incoming track's `intro` lasts, so that
+/// track's first change lands as the mix ends. `bar` is a bar of the outgoing track; None when no phrase fits.
+pub fn phrase_mix(out: &[Phrase], bar: f64, end: f64, intro: Option<f64>) -> Option<(f64, f64)> {
+    if bar <= 0.0 {
+        return None;
+    }
+    let (least, most) = PHRASE_BARS;
+    let room = |p: &Phrase| (end - p.start) / bar;
+    let late = |p: &&Phrase| p.start > 0.0 && room(p) >= least;
+    let outro = out.iter().rev().find(|p| p.kind == PhraseKind::Outro).filter(late);
+    let from = outro.or_else(|| out.iter().rev().find(|p| late(p) && room(p) <= most))?;
+    let room = room(from).floor();
+    let bars = intro.map_or(most, |i| i.round().min(most)).min(room);
+    let bars = ((bars / 4.0).floor() * 4.0).max(least).min(room);
+    Some((from.start, bars * bar))
 }
 
 /// What a mix asks of the mixer besides the crossfader, `t` of the way through.
@@ -101,6 +152,39 @@ pub fn arrange(order: u8, from: Fact, facts: &[Fact], mut seed: u64) -> Vec<usiz
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parts(at: &[(f64, PhraseKind)]) -> Vec<Phrase> {
+        at.iter().map(|&(bar, kind)| Phrase { start: bar * 2.0, kind, energy: 0 }).collect()
+    }
+
+    #[test]
+    fn a_phrase_mix_runs_from_the_outro_for_as_long_as_the_next_intro() {
+        use PhraseKind::{Chorus, Drop, Intro, Outro};
+        // Bars of two seconds; the track is 96 bars long.
+        let out = parts(&[(0.0, Intro), (16.0, Drop), (64.0, Outro)]);
+        assert_eq!(phrase_mix(&out, 2.0, 192.0, None), Some((128.0, 64.0)));
+        assert_eq!(phrase_mix(&out, 2.0, 192.0, Some(16.0)), Some((128.0, 32.0)));
+        assert_eq!(phrase_mix(&out, 2.0, 192.0, Some(3.0)), Some((128.0, 16.0)), "never under 8 bars");
+        // No outro: the last change with 8 to 32 bars to go.
+        let out = parts(&[(0.0, Intro), (40.0, Drop), (84.0, Chorus), (92.0, Drop)]);
+        assert_eq!(phrase_mix(&out, 2.0, 192.0, None), Some((168.0, 24.0)));
+        // An outro too near the end leaves no room; neither does a track of one long part.
+        let out = parts(&[(0.0, Intro), (90.0, Outro)]);
+        assert_eq!(phrase_mix(&out, 2.0, 192.0, None), None);
+        assert_eq!(phrase_mix(&[], 2.0, 192.0, None), None);
+    }
+
+    #[test]
+    fn phrases_are_found_in_the_deck_waveform() {
+        // 120 BPM at 48 kHz: a bar is 96000 frames, 375 slices of 256. Quiet 16 bars, loud 32, quiet 16.
+        let grid = sugar_analysis::Grid { bpm: 120.0, first_beat: 0.0 };
+        let slice = |bar: usize| if (16..48).contains(&bar) { [250, 240, 200, 180] } else { [60, 5, 40, 30] };
+        let detail: Vec<[u8; 4]> = (0..64 * 375).map(|n| slice(n / 375)).collect();
+        let found = phrases(&detail, 256, &grid, 48_000);
+        let starts: Vec<f64> = found.iter().map(|p| p.start).collect();
+        assert_eq!(starts, [0.0, 32.0, 96.0], "{found:?}");
+        assert!(phrases(&detail[..8 * 375], 256, &grid, 48_000).is_empty());
+    }
 
     #[test]
     fn orders_keep_every_track_and_follow_tempo_or_key() {

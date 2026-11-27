@@ -14,6 +14,13 @@ pub type Reader = fn(&str) -> Option<Vec<u8>>;
 
 const OVERVIEW: usize = 1024;
 pub const DETAIL_FRAMES: usize = 256;
+/// From one row of Automix's list to the next, in points.
+pub const QUEUE_ROW: f32 = 38.0;
+
+/// The row of Automix's list at height `y`, of `shown` rows from `top` down.
+pub fn queue_slot(top: f32, shown: usize, y: f32) -> usize {
+    (((y - top) / QUEUE_ROW).floor().max(0.0) as usize).min(shown.saturating_sub(1))
+}
 /// The view switch fade, as long as the reference's reflow transition.
 pub const VIEW_FADE: std::time::Duration = std::time::Duration::from_millis(150);
 const TAP: f32 = 8.0;
@@ -172,6 +179,11 @@ pub enum Target {
     MixNow,
     MixSkip,
     OrderMenu,
+    /// A track on Automix's list, to drag to another place.
+    QueueRow(usize),
+    /// Opens the choices of one of Automix's settings, and picks one.
+    MixMenu(crate::settings::Opt),
+    MixPick(crate::settings::Opt, u8),
     /// Puts Automix's list in an order, by its place in `automix::ORDERS`.
     MixOrder(u8),
     /// Steps a setting to its next choice, round to the first.
@@ -445,6 +457,8 @@ pub struct Loaded {
     pub art: Option<Art>,
     /// The parts that are not music, in seconds.
     pub skips: Vec<(f64, f64)>,
+    /// Its phrases, for Automix's Phrases length; empty when none were found.
+    pub phrases: Vec<djsugar_engine::phrases::Phrase>,
 }
 
 /// A square picture ready to draw: a cover or a thumbnail.
@@ -803,6 +817,10 @@ pub struct State {
     /// The list track waiting or playing on each deck; it stays on the list until it has played.
     pub mix_held: [Option<String>; 2],
     pub order_menu: bool,
+    /// Which of Automix's settings has its choices open.
+    pub mix_menu: Option<crate::settings::Opt>,
+    /// The row of Automix's list being dragged, and where the finger is.
+    pub queue_drag: Option<(usize, f32)>,
     pub track_menu: Option<u32>,
     pub settings: crate::settings::Settings,
     /// The open settings page.
@@ -960,6 +978,8 @@ impl State {
             found: 0,
             mix_held: [None, None],
             order_menu: false,
+            mix_menu: None,
+            queue_drag: None,
             track_menu: None,
             settings: crate::settings::Settings::load(),
             fx,
@@ -1307,19 +1327,65 @@ impl State {
                 Some(((start / len) as f32, ((start + mix) / len).min(1.0) as f32))
             }
             Some(_) => None,
-            None if self.telemetry.decks[d].playing => Some((1.0 - (self.mix_frames(d)? / len) as f32, 1.0)),
+            None if self.telemetry.decks[d].playing => {
+                let (start, mix) = self.mix_plan(d)?;
+                Some(((start / len) as f32, ((start + mix) / len).min(1.0) as f32))
+            }
             None => None,
         }
     }
 
-    /// How long the mix out of a deck's track runs, in its frames.
-    fn mix_frames(&self, d: usize) -> Option<f64> {
+    /// Where the mix out of a deck's track starts and how long it runs, in its frames. A mix by phrases may end
+    /// before the track does; the others run to its end.
+    fn mix_plan(&self, d: usize) -> Option<(f64, f64)> {
         use crate::settings::Opt;
         let l = self.decks[d].loaded.as_ref()?;
         let (len, rate) = (l.track.frames.len() as f64, f64::from(l.track.rate));
         let beat = l.grid.map_or(0.5 * rate, |g| g.beat_frames(l.track.rate));
         let (length, style) = (self.settings.get(Opt::MixLength), self.settings.get(Opt::MixStyle));
-        Some(crate::automix::frames(length, style, beat, rate).min(len * 0.4))
+        if length == crate::automix::PHRASES && style != crate::automix::CUT && l.grid.is_some() {
+            let bar = beat * 4.0 / rate;
+            if let Some((start, mix)) = crate::automix::phrase_mix(&l.phrases, bar, len / rate, self.mix_intro(1 - d)) {
+                return Some((start * rate, mix * rate));
+            }
+        }
+        let mix = crate::automix::frames(length, style, beat, rate).min(len * 0.4);
+        Some((len - mix, mix))
+    }
+
+    /// The bars from where a deck's track waits to its first phrase change after that.
+    fn mix_intro(&self, d: usize) -> Option<f64> {
+        let l = self.decks[d].loaded.as_ref()?;
+        let at = self.decks[d].seconds(self.telemetry.decks[d].position);
+        let change = l.phrases.iter().map(|p| p.start).find(|&s| s > at + 1e-3)?;
+        let bar = l.grid?.beat_frames(l.track.rate) * 4.0 / f64::from(l.track.rate);
+        Some((change - at) / bar)
+    }
+
+    /// The place on Automix's list a row let go at height `y` lands on.
+    pub fn queue_slot(&self, y: f32) -> Option<usize> {
+        let top = self.rect_of(Target::QueueRow(0))?.y;
+        let shown = self.hits.iter().filter(|h| matches!(h.target, Target::QueueRow(_))).count();
+        Some(queue_slot(top, shown, y))
+    }
+
+    /// What Automix is doing, for its panel: the mix under way, or how long until the next.
+    pub fn mix_status(&self) -> String {
+        let Some(a) = self.auto else { return String::new() };
+        let title = |d: usize| self.decks[d].loaded.as_ref().map_or_else(String::new, |l| l.entry.title.to_string());
+        if let Some((from, ..)) = a.fade {
+            return format!("Mixing into {}", title(1 - from));
+        }
+        let Some(live) = (0..2).find(|&d| self.telemetry.decks[d].playing) else { return "Starting".into() };
+        if self.decks[1 - live].loading {
+            return "Loading the next track".into();
+        }
+        if self.decks[1 - live].loaded.is_none() {
+            return "The last track plays out".into();
+        }
+        let Some((start, _)) = self.mix_plan(live) else { return String::new() };
+        let wait = self.decks[live].seconds((start - self.telemetry.decks[live].position).max(0.0)) as u32;
+        format!("Mixes into {} in {}:{:02}", title(1 - live), wait / 60, wait % 60)
     }
 
     /// Automix holds the crossfader while it is on; says so and returns true when it does.
@@ -1436,15 +1502,16 @@ impl State {
             self.auto = Some(a);
             return;
         }
-        let (Some(l), Some(o), Some(mix)) =
-            (&self.decks[live].loaded, &self.decks[other].loaded, self.mix_frames(live))
+        let (Some(l), Some(o), Some((from, mix))) =
+            (&self.decks[live].loaded, &self.decks[other].loaded, self.mix_plan(live))
         else {
             return;
         };
         let rate = f64::from(l.track.rate);
         let left = l.track.frames.len() as f64 - self.telemetry.decks[live].position;
         // A mix of no length still has to start the next deck before this one runs out.
-        if !a.now && left > mix.max(rate * 0.05) {
+        let wait = self.telemetry.decks[live].position < from && left > rate * 0.05;
+        if !a.now && wait {
             return;
         }
         let mix = mix.min(left);
@@ -1516,7 +1583,9 @@ impl State {
                     Source::File(path) if !detail.is_empty() => crate::skips::find(path, &t),
                     _ => Vec::new(),
                 };
-                Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics, art, skips }
+                let phrases =
+                    grid.map_or_else(Vec::new, |g| crate::automix::phrases(&detail, DETAIL_FRAMES, &g, t.rate));
+                Loaded { entry, track: Arc::new(t), overview, detail, grid, key, lyrics, art, skips, phrases }
             });
             let _ = tx.send((job, loaded));
         });
@@ -1858,6 +1927,7 @@ impl State {
         let open = self.track_menu.is_some()
             || self.column_menu
             || self.order_menu
+            || self.mix_menu.is_some()
             || self.chip_menu.is_some()
             || self.tag_menu.is_some()
             || self.fx_menu.is_some()
@@ -1869,6 +1939,7 @@ impl State {
         self.track_menu = None;
         self.column_menu = false;
         self.order_menu = false;
+        self.mix_menu = None;
         self.chip_menu = None;
         self.tag_menu = None;
         self.fx_menu = None;
@@ -2923,6 +2994,14 @@ impl State {
                 self.order_menu = false;
                 self.mix_order(order);
             }
+            Target::MixMenu(o) => {
+                self.mix_menu = Some(o);
+                self.menu_at = self.rect_of(t).map_or((x, y), |r| (r.x, r.y + r.h + 2.0));
+            }
+            Target::MixPick(o, v) => {
+                self.mix_menu = None;
+                self.settings.set(o, v);
+            }
             Target::Cycle(o) => {
                 let choices = match crate::settings::spec(o).kind {
                     crate::settings::Kind::Switch => 2,
@@ -3209,6 +3288,7 @@ impl State {
             Target::MenuClose => {
                 self.column_menu = false;
                 self.order_menu = false;
+                self.mix_menu = None;
                 self.chip_menu = None;
                 self.tag_menu = None;
                 self.fx_menu = None;
@@ -3438,6 +3518,16 @@ impl State {
         if let Some(Target::Cue(deck)) = d.target {
             self.end_preview(deck);
         }
+        if let Some((from, at)) = self.queue_drag.take()
+            && d.moved
+            && let Some(to) = self.queue_slot(at)
+            && from < self.queue.len()
+            && to != from
+        {
+            let row = self.queue.remove(from);
+            self.queue.insert(to, row);
+            crate::store::save_queue(&self.queue);
+        }
         if let Some(t @ (Target::Pref(_) | Target::PrefPick(..))) = d.target
             && !d.moved
         {
@@ -3590,6 +3680,7 @@ impl State {
         let Some(r) = self.rect_of(t) else { return };
         let vertical = |r: Rect| (1.0 - (y - r.y) / r.h).clamp(0.0, 1.0);
         match t {
+            Target::QueueRow(n) => self.queue_drag = Some((n, y)),
             Target::Volume(d) => {
                 let v = vertical(r);
                 self.decks[d].volume = v;

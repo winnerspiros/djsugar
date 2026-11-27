@@ -191,11 +191,21 @@ pub fn detect(track: &Track) -> Vec<Phrase> {
         ends.push(b);
         levels.push(sum.map(|s| s / (j - i) as f32));
     }
-    if levels.len() < MIN_TRACK_BARS {
+    let chroma = bar_chroma(&wave.chroma, &starts, &ends);
+    cut(&starts, levels, chroma)
+}
+
+/// The phrases of a track from its bars alone: where each starts, in seconds, and its mean level in the low, mid
+/// and high band. For a caller that keeps its own waveform.
+pub fn from_bars(starts: &[f64], levels: Vec<[f32; 3]>) -> Vec<Phrase> {
+    cut(starts, levels, None)
+}
+
+fn cut(starts: &[f64], mut levels: Vec<[f32; 3]>, chroma: Option<Vec<[f32; 12]>>) -> Vec<Phrase> {
+    if levels.len() < MIN_TRACK_BARS || starts.len() != levels.len() {
         return Vec::new();
     }
     normalise(&mut levels);
-    let chroma = bar_chroma(&wave.chroma, &starts, &ends);
     let novelty = chroma.as_deref().map_or_else(|| vec![0.0; levels.len()], novelty);
     let cuts = refine(&levels, &segment(&levels, &novelty));
     let repeats = repeats(&levels, chroma.as_deref(), &cuts);
@@ -657,6 +667,16 @@ mod tests {
         // The breakdown starts where the synth's does (bar 64), give or take a bar.
         let breakdown = p.iter().find(|p| p.kind == PhraseKind::Breakdown).unwrap();
         assert!((breakdown.start / bar - 64.0).abs() <= 1.0, "{p:?}");
+    }
+
+    #[test]
+    fn bars_alone_give_phrases() {
+        let level = |bar: usize| if (16..48).contains(&bar) { [0.9, 0.8, 0.7] } else { [0.05, 0.2, 0.1] };
+        let starts: Vec<f64> = (0..64).map(|bar| bar as f64 * 2.0).collect();
+        let found = from_bars(&starts, (0..64).map(level).collect());
+        assert_eq!(found.iter().map(|p| p.start).collect::<Vec<_>>(), [0.0, 32.0, 96.0], "{found:?}");
+        assert!(from_bars(&starts[..4], (0..4).map(level).collect()).is_empty());
+        assert!(from_bars(&starts, (0..60).map(level).collect()).is_empty(), "a level for every bar");
     }
 
     #[test]
