@@ -54,6 +54,50 @@ pub fn hit(s: &mut State, r: Rect, target: Target) {
     s.hits.push(Hit { rect: r, target });
 }
 
+/// The past searches as pills in rows, centred, with one to forget them at the end.
+fn recent(p: &mut Painter, s: &mut State, r: Rect) {
+    if s.hub.recent.is_empty() {
+        return;
+    }
+    let (h, gap, pad) = (26.0, 8.0, 12.0);
+    let mut pills: Vec<(String, Target)> =
+        s.hub.recent.iter().zip(0u8..).map(|(q, n)| (q.clone(), Target::HubRecent(n))).collect();
+    pills.push(("CLEAR".into(), Target::HubForget));
+    let width = |p: &Painter, q: &str| (p.text_width(ARTIST, q) + 2.0 * pad).min(r.w);
+    let mut rows: Vec<Vec<usize>> = vec![Vec::new()];
+    let mut used = 0.0;
+    for (i, (q, _)) in pills.iter().enumerate() {
+        let w = width(p, q);
+        if used > 0.0 && used + gap + w > r.w {
+            rows.push(Vec::new());
+            used = 0.0;
+        }
+        used += if used > 0.0 { gap + w } else { w };
+        if let Some(row) = rows.last_mut() {
+            row.push(i);
+        }
+    }
+    for (n, row) in rows.iter().enumerate() {
+        let y = r.y + n as f32 * (h + gap);
+        if y + h > r.y + r.h {
+            break;
+        }
+        let total: f32 = row.iter().map(|&i| width(p, &pills[i].0)).sum::<f32>() + gap * (row.len() - 1) as f32;
+        let mut x = r.x + (r.w - total) * 0.5;
+        for &i in row {
+            let (q, t) = &pills[i];
+            let w = width(p, q);
+            let clear = *t == Target::HubForget;
+            let fill = if s.pressed(*t) { theme::PRESSED } else { theme::RAISED };
+            p.outlined(x, y, w, h, h * 0.5, if clear { theme::CONTROL } else { fill }, 1.0, theme::BORDER);
+            let ink = Style { colour: if clear { GREY } else { TEXT }, ..ARTIST };
+            p.text_in(x + pad, y + h * 0.5 + 4.0, w - 2.0 * pad, ink, q);
+            hit(s, Rect::new(x, y, w, h), *t);
+            x += w + gap;
+        }
+    }
+}
+
 fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, on: bool, colour: u32, target: Target) {
     let down = s.pressed(target);
     theme::labelled(p, r, label, if r.h < 26.0 { 9.0 } else { 10.5 }, on, down, colour);
@@ -2427,6 +2471,9 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             Style { colour: GREY, ..ARTIST },
             msg,
         );
+        if !busy && !spotify && s.hub.list.is_empty() {
+            recent(p, s, Rect::new(list.x + 12.0, list.y + 64.0, list.w - 24.0, list.h - 64.0));
+        }
         return;
     }
     hit(s, list, Target::HubList);

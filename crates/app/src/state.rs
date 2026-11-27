@@ -154,6 +154,9 @@ pub enum Target {
     HubSignOut,
     /// One of the account's lists: liked songs, then the playlists.
     HubShow(u8),
+    /// One of the past searches, and forgetting them all.
+    HubRecent(u8),
+    HubForget,
     /// The menu of the YouTube account's channels, and one of them.
     HubChannels,
     HubChannel(u8),
@@ -3270,6 +3273,11 @@ impl State {
                 self.hub.search();
             }
             Target::HubList => {}
+            Target::HubRecent(n) => {
+                self.hub.focus = false;
+                self.hub.again(usize::from(n));
+            }
+            Target::HubForget => self.hub.forget(),
             Target::HubLoad(hit, deck) => self.hub.fetch(hit, deck),
             Target::HubSignIn => self.hub.sign_in(),
             Target::HubSignOut => self.hub.sign_out(),

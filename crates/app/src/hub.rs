@@ -18,6 +18,15 @@ use crate::state::Art;
 const THUMB: usize = 96;
 /// Pictures fetched at once.
 const FETCHERS: usize = 4;
+/// How many past searches are kept.
+const RECENT: usize = 8;
+
+/// `recent` with `query` moved to its front, the oldest dropped past [`RECENT`].
+fn remembered(recent: &[String], query: &str) -> Vec<String> {
+    let same = |r: &String| r.eq_ignore_ascii_case(query);
+    let rest = recent.iter().filter(|r| !same(r)).cloned();
+    std::iter::once(query.to_owned()).chain(rest).take(RECENT).collect()
+}
 
 /// A service tab, in DJ Sugar's order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -222,6 +231,8 @@ pub struct Hub {
     stop: Arc<std::sync::atomic::AtomicBool>,
     /// The account's list shown: liked songs, the playlists, one playlist or a Spotify search; none for a search.
     pub list: String,
+    /// The searches typed lately, the newest first; kept across runs.
+    pub recent: Vec<String>,
     /// The YouTube account's channels, when it has more than its own.
     pub channels: Vec<Channel>,
     /// Counts sign-outs, so the answer to an earlier sign-in is dropped.
@@ -254,7 +265,10 @@ impl Hub {
             let dir = spotify.clone();
             std::thread::spawn(move || djsugar_spotify::warm(&dir));
         }
+        let recent = std::fs::read_to_string(cache.with_file_name("searches")).unwrap_or_default();
+        let recent = recent.lines().filter(|l| !l.trim().is_empty()).take(RECENT).map(str::to_owned).collect();
         let hub = Self {
+            recent,
             service: Service::YouTube,
             query: String::new(),
             focus: false,
@@ -289,6 +303,24 @@ impl Hub {
         };
         hub.ask_channels();
         hub
+    }
+
+    fn keep_recent(&self) {
+        let _ = std::fs::write(self.cache.with_file_name("searches"), self.recent.join("\n"));
+    }
+
+    /// Searches again for one of the past searches.
+    pub fn again(&mut self, n: usize) {
+        if let Some(q) = self.recent.get(n) {
+            self.query = q.clone();
+            self.search();
+        }
+    }
+
+    /// Forgets the past searches.
+    pub fn forget(&mut self) {
+        self.recent.clear();
+        self.keep_recent();
     }
 
     /// The shown service's account: its name, empty until the service has told it.
@@ -479,6 +511,11 @@ impl Hub {
             return;
         }
         self.searching = true;
+        let typed = self.query.trim();
+        if !typed.is_empty() && self.recent.first().map(String::as_str) != Some(typed) {
+            self.recent = remembered(&self.recent, typed);
+            self.keep_recent();
+        }
         self.status = if self.query.trim().is_empty() {
             String::new()
         } else {
@@ -690,5 +727,21 @@ impl Hub {
             }
         }
         ready
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RECENT, remembered};
+
+    #[test]
+    fn a_search_moves_to_the_front_once_and_the_oldest_falls_off() {
+        let kept = remembered(&["house".into(), "Techno".into()], "techno");
+        assert_eq!(kept, ["techno", "house"]);
+        let many: Vec<String> = (0..RECENT).map(|n| n.to_string()).collect();
+        let kept = remembered(&many, "new");
+        assert_eq!(kept.len(), RECENT);
+        assert_eq!(kept[0], "new");
+        assert!(!kept.contains(&(RECENT - 1).to_string()));
     }
 }
