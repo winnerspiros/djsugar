@@ -136,6 +136,36 @@ pub fn samples() -> Vec<Entry> {
         .collect()
 }
 
+/// What is wrong in a collection, counted.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Health {
+    pub tracks: usize,
+    /// Tracks that share their title and artist with an earlier one.
+    pub twice: usize,
+    /// Places in playlists and under tags whose track is no longer found.
+    pub lost: usize,
+    /// Tracks named by their file alone, with no artist.
+    pub nameless: usize,
+}
+
+/// Counts what is wrong among `tracks`, given the keys the playlists and tags hold and each track's own key.
+pub fn health<'a>(tracks: &[Entry], keys: impl Iterator<Item = &'a str>, key_of: impl Fn(&Entry) -> String) -> Health {
+    use std::collections::HashSet;
+    let mut seen = HashSet::new();
+    let twice = tracks
+        .iter()
+        .filter(|e| !e.artist.is_empty())
+        .filter(|e| !seen.insert((fold(&e.title), fold(&e.artist))))
+        .count();
+    let known: HashSet<String> = tracks.iter().map(key_of).collect();
+    Health {
+        tracks: tracks.len(),
+        twice,
+        lost: keys.filter(|k| !known.contains(*k)).count(),
+        nameless: tracks.iter().filter(|e| e.artist.is_empty()).count(),
+    }
+}
+
 /// Where recorded mixes are written: beside the music when there is a Music folder, else with the app's files.
 pub fn recordings_dir() -> Option<PathBuf> {
     let music = std::env::var_os("HOME").map(|h| Path::new(&h).join("Music"));
@@ -214,6 +244,14 @@ pub fn scan(roots: &[PathBuf]) -> Vec<Entry> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn health_counts_repeats_lost_places_and_nameless_tracks() {
+        let tracks = [e("Ann - One", "a"), e("ann - ONE", "b"), e("Two", "a"), e("Bob - Three", "a")];
+        let keys = ["One", "Gone", "Three"];
+        let h = health(&tracks, keys.into_iter(), |t| t.title.to_string());
+        assert_eq!(h, Health { tracks: 4, twice: 1, lost: 1, nameless: 1 });
+    }
 
     fn e(title: &str, folder: &str) -> Entry {
         Entry::new(Source::Sample("x.ogg"), title, folder)

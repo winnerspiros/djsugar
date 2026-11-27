@@ -835,6 +835,8 @@ pub struct State {
     pub found: usize,
     /// How many of the entries are mixes recorded here.
     pub mixes: usize,
+    /// The collection's health, counted after each look through the folders and when the settings open.
+    pub health: library::Health,
     /// The list track waiting or playing on each deck; it stays on the list until it has played.
     pub mix_held: [Option<String>; 2],
     pub order_menu: bool,
@@ -1005,6 +1007,7 @@ impl State {
             streamed: crate::store::load_streamed(),
             found: 0,
             mixes: 0,
+            health: library::Health::default(),
             mix_held: [None, None],
             order_menu: false,
             channel_menu: false,
@@ -1192,6 +1195,7 @@ impl State {
                         .collect();
                     self.entries.extend(kept);
                     self.mixes = self.recorded().len();
+                    self.check_health();
                     self.selected = None;
                     let q = std::mem::take(&mut self.query);
                     self.search(q);
@@ -1907,6 +1911,12 @@ impl State {
     }
 
     /// The library's folders, sorted, each once.
+    fn check_health(&mut self) {
+        let tracks = &self.entries[SAMPLES.len().min(self.entries.len())..];
+        let keys = self.playlists.iter().chain(&self.tags).flat_map(|(_, k)| k.iter().map(String::as_str));
+        self.health = library::health(tracks, keys, entry_key);
+    }
+
     /// The entries that are mixes recorded here.
     fn recorded(&self) -> Vec<u32> {
         let Some(dir) = library::recordings_dir() else { return Vec::new() };
@@ -3210,6 +3220,7 @@ impl State {
                 self.submenu = None;
             }
             Target::Prefs(n) => {
+                self.check_health();
                 self.prefs = Some(usize::from(n));
                 self.prefs_scroll = 0.0;
                 self.app_menu = false;

@@ -54,6 +54,46 @@ pub fn hit(s: &mut State, r: Rect, target: Target) {
     s.hits.push(Hit { rect: r, target });
 }
 
+/// The tracks being got, in a strip along the foot of the streaming page: each with its deck and a bar filling
+/// as it arrives. They stay there while other searches are made. Returns the height taken.
+fn downloads(p: &mut Painter, s: &State, r: Rect) -> f32 {
+    let all = s.hub.downloads();
+    if all.is_empty() {
+        return 0.0;
+    }
+    let rh = 24.0;
+    let shown = all.len().min(3).min((r.h / 3.0 / rh) as usize);
+    if shown == 0 {
+        return 0.0;
+    }
+    let h = shown as f32 * rh + 1.0;
+    let y0 = r.y + r.h - h;
+    p.rect(r.x, y0, r.w, h, 0.0, theme::PANEL);
+    p.rect(r.x, y0, r.w, 1.0, 0.0, EDGE);
+    for (n, (title, deck, f)) in all.iter().take(shown).enumerate() {
+        let y = y0 + 1.0 + n as f32 * rh;
+        let tint = DECK[(*deck).min(1)];
+        let more = all.len() - shown;
+        let pct = if n + 1 == shown && more > 0 {
+            format!("{:.0}%  +{more}", f * 100.0)
+        } else {
+            format!("{:.0}%", f * 100.0)
+        };
+        let pw = p.text_width(ARTIST, "100%  +88");
+        p.rect(r.x + 12.0, y + rh * 0.5 - 4.0, 8.0, 8.0, 4.0, tint);
+        p.text_in(r.x + 28.0, y + rh * 0.5 + 4.0, r.w - 52.0 - pw, ARTIST, title);
+        p.text(
+            r.x + r.w - 12.0 - p.text_width(ARTIST, &pct),
+            y + rh * 0.5 + 4.0,
+            Style { colour: GREY, ..ARTIST },
+            &pct,
+        );
+        p.rect(r.x + 12.0, y + rh - 3.0, r.w - 24.0, 2.0, 1.0, theme::RAISED);
+        p.rect(r.x + 12.0, y + rh - 3.0, (r.w - 24.0) * f.clamp(0.0, 1.0), 2.0, 1.0, tint);
+    }
+    h
+}
+
 /// The past searches as pills in rows, centred, with one to forget them at the end.
 fn recent(p: &mut Painter, s: &mut State, r: Rect) {
     if s.hub.recent.is_empty() {
@@ -2437,7 +2477,8 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
         p.text_in(r.x + 12.0, r.y + bar + account_h + 16.0, r.w - 24.0, Style { colour: AMBER, ..ARTIST }, &status);
     }
     let top = bar + account_h + status_h;
-    let list = Rect::new(r.x, r.y + top, r.w, r.h - top);
+    let foot = downloads(p, s, Rect::new(r.x, r.y + top, r.w, r.h - top));
+    let list = Rect::new(r.x, r.y + top, r.w, r.h - top - foot);
     s.hub_area = list;
     if spotify && !signed {
         let msg = "Sign in to Spotify for your liked songs, your playlists and its search.";

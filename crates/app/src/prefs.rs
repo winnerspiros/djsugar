@@ -141,7 +141,10 @@ pub fn overlay(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         settings::PAGES[page.min(settings::PAGES.len() - 1)],
     );
     let ports = s.desk.as_ref().map(|d| (d.ports(), d.known())).unwrap_or_default();
-    let rows = settings::page(page, &crate::library::roots(), s.out_rate, &s.audio_device(), (&ports.0, ports.1));
+    let mut rows = settings::page(page, &crate::library::roots(), s.out_rate, &s.audio_device(), (&ports.0, ports.1));
+    if settings::PAGES.get(page) == Some(&"Collection") {
+        rows.extend(settings::health(s.health));
+    }
     let top = body.y + 50.0;
     let bottom = body.y + body.h;
     let total: f32 = rows.iter().map(row_h).sum();

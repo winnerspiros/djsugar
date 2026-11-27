@@ -221,6 +221,9 @@ pub struct Hub {
     pub status: String,
     /// Downloads under way: video, deck, done 0..1.
     pub fetching: Vec<(String, usize, f32)>,
+    /// What each track being got is called, by its id, for the list of downloads and for the library once the
+    /// search that found it has gone.
+    names: Vec<(String, String, String)>,
     pub scroll: f32,
     /// The hits' pictures by ID, fetched as soon as a search answers.
     pub thumbs: std::collections::HashMap<String, Art>,
@@ -277,6 +280,7 @@ impl Hub {
             searching: false,
             status: String::new(),
             fetching: Vec::new(),
+            names: Vec::new(),
             scroll: 0.0,
             thumbs: std::collections::HashMap::new(),
             accounts,
@@ -303,6 +307,17 @@ impl Hub {
         };
         hub.ask_channels();
         hub
+    }
+
+    /// The title and artist of a track being got.
+    fn named(&self, id: &str) -> (String, String) {
+        let kept = self.names.iter().find(|n| n.0 == id);
+        kept.map_or_else(|| (id.to_owned(), String::new()), |n| (n.1.clone(), n.2.clone()))
+    }
+
+    /// The tracks being got: title, deck and how far along, in the order asked for.
+    pub fn downloads(&self) -> Vec<(String, usize, f32)> {
+        self.fetching.iter().map(|(id, deck, f)| (self.named(id).0, *deck, *f)).collect()
     }
 
     fn keep_recent(&self) {
@@ -568,6 +583,7 @@ impl Hub {
         }
         let (id, art, wanted) = (h.id.clone(), h.art.clone(), h.clone());
         self.fetching.push((id.clone(), deck, 0.0));
+        self.names.push((id.clone(), h.title.clone(), h.artist.clone()));
         self.status = format!("Getting \"{}\" for deck {}", h.title, ["A", "B"][deck.min(1)]);
         let (c, tx, dir, sv) = (self.clients.clone(), self.tx.clone(), self.cache.clone(), self.service);
         std::thread::spawn(move || {
@@ -705,9 +721,8 @@ impl Hub {
                 }
                 Reply::Ready(id, path, deck, sv) => {
                     self.fetching.retain(|x| x.0 != id);
-                    let h = self.hits.iter().find(|h| h.id == id);
-                    let (title, artist) =
-                        h.map_or_else(|| (id.clone(), String::new()), |h| (h.title.clone(), h.artist.clone()));
+                    let (title, artist) = self.named(&id);
+                    self.names.retain(|n| n.0 != id);
                     self.status = format!("Loaded \"{title}\" to deck {}", ["A", "B"][deck.min(1)]);
                     ready.push((path, title, artist, deck, sv.title()));
                 }
@@ -720,6 +735,7 @@ impl Hub {
                     self.searching = id.is_some() && self.searching;
                     if let Some(id) = id {
                         self.fetching.retain(|x| x.0 != id);
+                        self.names.retain(|n| n.0 != id);
                     }
                     self.status = why;
                     self.dropped();

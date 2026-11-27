@@ -417,6 +417,18 @@ pub enum Row {
 pub const PAGES: [&str; 9] =
     ["Audio", "Decks", "Mixer", "Keyboard", "Controllers", "Collection", "Analysis", "Appearance", "About"];
 
+/// The collection's health as rows: what was counted, and for each fault what it means.
+pub fn health(h: crate::library::Health) -> Vec<Row> {
+    let fault = |n: usize, none: &str, some: &str| if n == 0 { none.to_owned() } else { format!("{n} {some}") };
+    vec![
+        Row::Heading("HEALTH"),
+        Row::Info("Tracks", h.tracks.to_string()),
+        Row::Info("Same track twice", fault(h.twice, "None", "share a title and artist with another")),
+        Row::Info("Lost from playlists and tags", fault(h.lost, "None", "point at files no longer found")),
+        Row::Info("Without an artist", fault(h.nameless, "None", "named by their file alone")),
+    ]
+}
+
 /// The controllers page: each device plugged in and the mapping it runs.
 fn controllers(ports: &[(String, String)], known: usize) -> Vec<Row> {
     let mut rows = vec![Row::Heading("PLUGGED IN")];
