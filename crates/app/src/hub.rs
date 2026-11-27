@@ -20,8 +20,10 @@ const THUMB: usize = 96;
 const FETCHERS: usize = 4;
 /// How many past searches are kept.
 const RECENT: usize = 8;
-/// The most tracks the service suggests for one.
-const SUGGESTED: usize = 8;
+/// The most tracks suggested for one.
+const SUGGESTED: usize = 50;
+/// Where suggestions come from, whichever service is shown: the one that keeps a radio for every song.
+const SUGGESTER: Service = Service::YouTube;
 
 /// `recent` with `query` moved to its front, the oldest dropped past [`RECENT`].
 fn remembered(recent: &[String], query: &str) -> Vec<String> {
@@ -609,18 +611,14 @@ impl Hub {
         });
     }
 
-    /// The service the suggestions come from: the one shown, or YouTube where that one only lists an account.
-    fn suggester(&self) -> Service {
-        if self.service == Service::Spotify { Service::YouTube } else { self.service }
-    }
-
     pub fn suggested_on(&self) -> &'static str {
         self.suggested_for.1.title()
     }
 
-    /// Asks the service for tracks that go with one: more of its artist, the track itself left out.
+    /// Asks for tracks that go with one: the radio YouTube Music keeps for it, else more of its artist. The track
+    /// itself is left out.
     pub fn suggest(&mut self, artist: &str, title: &str) {
-        let sv = self.suggester();
+        let sv = SUGGESTER;
         let key = format!("{artist}\n{title}");
         if self.suggesting || (self.suggested_for.0 == key && self.suggested_for.1 == sv) {
             return;
@@ -632,13 +630,23 @@ impl Hub {
         self.suggesting = true;
         let (c, tx) = (self.clients.clone(), self.tx.clone());
         std::thread::spawn(move || {
-            let q = if who.is_empty() { what.clone() } else { who };
-            let found = c.search(sv, &q, None, false);
-            if let Err(e) = &found {
-                crate::log::note(&format!("related on {}: {e}", sv.title()));
+            let radio = c.ytmusic.song(format!("{who} {what}").trim(), 0).map(|id| ytmusic::radio(&id));
+            let mut hits = match radio {
+                Some(Ok(hits)) => hits,
+                Some(Err(e)) => {
+                    crate::log::note(&format!("radio of a track: {e}"));
+                    Vec::new()
+                }
+                None => Vec::new(),
+            };
+            if hits.is_empty() {
+                let found = c.search(sv, if who.is_empty() { &what } else { &who }, None, false);
+                if let Err(e) = &found {
+                    crate::log::note(&format!("related on {}: {e}", sv.title()));
+                }
+                hits = found.map(|p| p.hits).unwrap_or_default();
             }
             let low = what.to_lowercase();
-            let mut hits = found.map(|p| p.hits).unwrap_or_default();
             hits.retain(|h| !h.title.to_lowercase().contains(&low) && h.seconds < 1200);
             hits.truncate(SUGGESTED);
             let _ = tx.send(Reply::Suggested(key, sv, hits));

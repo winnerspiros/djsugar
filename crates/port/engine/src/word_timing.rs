@@ -5,6 +5,7 @@
 use std::path::Path;
 
 use crate::lyrics::{Line, Word};
+use crate::whisper::Ear;
 
 /// The model: what hears the sound, what writes the words, and the words it knows. About 290 MB together.
 pub const MODELS: [(&str, &str); 3] = [
@@ -42,12 +43,69 @@ pub type Report = std::sync::Arc<dyn Fn(Stage) + Send + Sync>;
 /// Times each word of `lines` by listening to the track at `path`: its vocal stem when it has one, else the whole
 /// mix. Lines keep their text; each sung line gets its words' times.
 pub fn time_words(path: &Path, lines: &[Line], report: Report) -> Result<Vec<Line>, String> {
-    let heard = hear(path, report)?;
-    align(lines, &heard)
+    let told = report.clone();
+    listen(path, report, |ear, samples| {
+        let heard = ear.hear(samples, &|p| {
+            told(Stage::Listening(p * 2 / 3));
+            true
+        })?;
+        let mut timed = align(lines, &heard)?;
+        place(ear, samples, &mut timed, &|p| told(Stage::Listening(66 + p / 3)))?;
+        Ok(timed)
+    })
+}
+
+/// Listens again for the words of `timed`, now that about when each is sung is known, and sets each where the
+/// model is found listening for it.
+fn place(ear: &Ear, samples: &[f32], timed: &mut [Line], told: &dyn Fn(i32)) -> Result<(), String> {
+    let known: Vec<(&str, f64)> =
+        timed.iter().flat_map(|l| l.words.iter().map(|w| (w.text.as_str(), w.start))).collect();
+    let placed = ear.place(samples, &known, &|p| {
+        told(p);
+        true
+    })?;
+    let mut placed = placed.into_iter();
+    let mut last = 0.0f64;
+    for line in timed.iter_mut().filter(|l| !l.words.is_empty()) {
+        for (word, found) in line.words.iter_mut().zip(&mut placed) {
+            last = found.max(last);
+            word.start = last;
+        }
+        line.start = line.words.first().map(|w| w.start);
+        line.end = line.end.map(|e| e.max(last));
+    }
+    Ok(())
+}
+
+/// Every written word of `lines`: its line, its text with the space after, and its plain form.
+fn written(lines: &[Line]) -> Vec<(usize, String, String)> {
+    let mut written = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let mut words = words_of(&line.text);
+        if let Some(last) = words.last_mut() {
+            last.push(' ');
+        }
+        for w in words {
+            let p = plain(&w);
+            written.push((i, w, p));
+        }
+    }
+    written
 }
 
 /// The words Whisper hears in the track at `path`.
 pub fn hear(path: &Path, report: Report) -> Result<Vec<Heard>, String> {
+    let told = report.clone();
+    listen(path, report, |ear, samples| {
+        ear.hear(samples, &|p| {
+            told(Stage::Listening(p));
+            true
+        })
+    })
+}
+
+/// Has the model, fetched if it must be, do `work` on the sound of the track at `path`.
+fn listen<T>(path: &Path, report: Report, work: impl FnOnce(&Ear, &[f32]) -> Result<T, String>) -> Result<T, String> {
     if MODELS.iter().any(|(name, _)| crate::separation::model(name).is_none()) {
         report(Stage::Downloading);
     }
@@ -61,10 +119,7 @@ pub fn hear(path: &Path, report: Report) -> Result<Vec<Heard>, String> {
         crate::background::lower_rten_priority();
     }
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        crate::whisper::hear(&files[0], &files[1], &files[2], &samples, &|p| {
-            report(Stage::Listening(p));
-            true
-        })
+        work(&Ear::open(&files[0], &files[1], &files[2])?, &samples)
     }));
     result.unwrap_or_else(|_| Err("the listening model crashed".into()))
 }
@@ -183,12 +238,10 @@ fn words_of(text: &str) -> Vec<String> {
 /// Lines `lines` up with the words Whisper heard and gives each sung line
 /// its words' times. Errors when too few of the words were heard to trust.
 pub fn align(lines: &[Line], heard: &[Heard]) -> Result<Vec<Line>, String> {
-    // Every written word: (line, text, plain).
-    let mut written: Vec<(usize, String, String)> = Vec::new();
-    for (i, line) in lines.iter().enumerate() {
-        for w in words_of(&line.text) {
-            let p = plain(&w);
-            written.push((i, w, p));
+    let mut written = written(lines);
+    for i in 0..written.len() {
+        if written.get(i + 1).is_none_or(|next| next.0 != written[i].0) {
+            written[i].1.pop();
         }
     }
     let heard_plain: Vec<String> = heard.iter().map(|h| plain(&h.text)).collect();
@@ -337,6 +390,91 @@ mod tests {
 
     fn heard(words: &[(&str, f64)]) -> Vec<Heard> {
         words.iter().map(|(w, t)| Heard { start: *t, end: t + 0.4, text: (*w).into(), opens: false }).collect()
+    }
+
+    /// What was heard in `track`, kept beside it from one run to the next unless `DJSUGAR_REHEAR` is set.
+    fn kept(track: &Path) -> Vec<Heard> {
+        let file = track.with_extension("heard");
+        let before = std::fs::read_to_string(&file).ok().filter(|_| std::env::var_os("DJSUGAR_REHEAR").is_none());
+        if let Some(text) = before {
+            return text
+                .lines()
+                .filter_map(|l| {
+                    let mut p = l.splitn(4, '\t');
+                    let (start, end, opens) = (p.next()?.parse().ok()?, p.next()?.parse().ok()?, p.next()? == "1");
+                    Some(Heard { start, end, opens, text: p.next()?.to_owned() })
+                })
+                .collect();
+        }
+        let heard = hear(track, std::sync::Arc::new(|_| ())).unwrap();
+        let text: String =
+            heard.iter().map(|h| format!("{}\t{}\t{}\t{}\n", h.start, h.end, u8::from(h.opens), h.text)).collect();
+        std::fs::write(file, text).unwrap();
+        heard
+    }
+
+    /// Run with `DJSUGAR_MARKED` naming a folder of tracks, each beside its lyrics (`.txt`) and a `.csv` whose first
+    /// column is the second every word of them starts at, under a heading.
+    #[test]
+    #[ignore = "the model files and marked tracks of one's own"]
+    fn lands_on_marked_words() {
+        let Some(folder) = std::env::var_os("DJSUGAR_MARKED") else { return };
+        let mut tracks: Vec<_> = std::fs::read_dir(folder).unwrap().flatten().map(|e| e.path()).collect();
+        tracks.retain(|p| p.extension().is_some_and(|e| e == "mp3"));
+        tracks.sort();
+        let mut all: Vec<f64> = Vec::new();
+        for track in tracks {
+            let text = std::fs::read_to_string(track.with_extension("txt")).unwrap();
+            let lines: Vec<Line> = text.lines().filter(|l| !l.trim().is_empty()).map(line).collect();
+            let marks = std::fs::read_to_string(track.with_extension("csv")).unwrap();
+            let marks: Vec<f64> = marks.lines().skip(1).filter_map(|l| l.split(',').next()?.parse().ok()).collect();
+            let name = track.file_stem().unwrap().to_str().unwrap().to_owned();
+            let mut timed = match align(&lines, &kept(&track)) {
+                Ok(timed) => timed,
+                Err(why) => {
+                    println!("{name:32.32} {why}");
+                    continue;
+                }
+            };
+            let starts =
+                |timed: &[Line]| timed.iter().flat_map(|l| l.words.iter().map(|w| w.start)).collect::<Vec<_>>();
+            let rough = starts(&timed);
+            assert_eq!(rough.len(), marks.len(), "{}", track.display());
+            listen(&track, std::sync::Arc::new(|_| ()), |ear, samples| place(ear, samples, &mut timed, &|_| ()))
+                .unwrap();
+            let ours = starts(&timed);
+            let off: Vec<f64> = ours.iter().zip(&marks).map(|(a, b)| a - b).collect();
+            println!("{}", report(&off, &name));
+            if let Some(out) = std::env::var_os("DJSUGAR_OFF") {
+                let rows: String =
+                    (0..marks.len()).map(|i| format!("{:.2}\t{:.2}\t{:.2}\n", marks[i], rough[i], ours[i])).collect();
+                std::fs::write(Path::new(&out).join(track.with_extension("off").file_name().unwrap()), rows).unwrap();
+            }
+            all.extend(off);
+        }
+        println!("{}", report(&all, "all"));
+    }
+
+    /// How far off the marks a run was: the mean and middle distance, the lean, and the share within some bounds.
+    fn report(off: &[f64], name: &str) -> String {
+        let mut far: Vec<f64> = off.iter().map(|o| o.abs()).collect();
+        far.sort_by(f64::total_cmp);
+        let n = far.len().max(1) as f64;
+        let within = |s: f64| 100.0 * far.iter().filter(|f| **f <= s).count() as f64 / n;
+        let mut lean = off.to_vec();
+        lean.sort_by(f64::total_cmp);
+        format!(
+            "{name:32.32} n={:4} mean={:.3} mid={:.3} lean={:+.3} in50={:.0}% in100={:.0}% in200={:.0}% in300={:.0}% in1s={:.0}%",
+            far.len(),
+            far.iter().sum::<f64>() / n,
+            far[far.len() / 2],
+            lean[lean.len() / 2],
+            within(0.05),
+            within(0.1),
+            within(0.2),
+            within(0.3),
+            within(1.0),
+        )
     }
 
     #[test]

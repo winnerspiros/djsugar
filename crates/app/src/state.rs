@@ -153,6 +153,9 @@ pub enum Target {
     Record,
     SearchFocus,
     HubFocus,
+    SearchClear,
+    HubClear,
+    Lyrics,
     HubSearch,
     HubList,
     HubLoad(usize, usize),
@@ -395,8 +398,14 @@ pub const LONG_PRESS_MS: u128 = 450;
 const TIMED: &str = "The lyrics follow the vocals now";
 /// And once a track without lyrics has had its words written down.
 const WRITTEN: &str = "The words were written down by ear, and may be off here and there";
-/// How far a list at its top is pulled down, in pixels, for letting go to refresh it.
-pub const PULL: f32 = 72.0;
+/// The gap a list pulled down at its top must open, in pixels, for letting go to refresh it. The list resists:
+/// the gap is half the finger's travel.
+pub const PULL: f32 = 60.0;
+/// The gap kept open while a list refreshes, and the least time a refresh shows for.
+const REFRESHING: f32 = 44.0;
+const REFRESH_SHOWN: std::time::Duration = std::time::Duration::from_millis(450);
+/// How long lyrics moved by the wheel stay put before they go back to the line being sung.
+pub const LYRICS_REST: std::time::Duration = std::time::Duration::from_millis(1200);
 /// The pointer a right click stands in for.
 const CONTEXT: u64 = u64::MAX - 1;
 
@@ -807,6 +816,20 @@ pub struct State {
     pub carry: Option<(Carried, u64, (f32, f32))>,
     /// How far the list under the finger is pulled down past its top.
     pub pull: f32,
+    /// The gap that list has open at its top, when a pull last asked for a refresh, and the scans under way.
+    pub gap: f32,
+    pub refresh: Option<std::time::Instant>,
+    gap_at: std::time::Instant,
+    scans: u32,
+    /// The lyrics: how far the reader moved them off the line being sung, how far down they are shown, when
+    /// the wheel last moved them, when they were last drawn and where.
+    pub lyrics_pull: f32,
+    pub lyrics_at: f32,
+    pub lyrics_touch: Option<std::time::Instant>,
+    pub lyrics_seen: std::time::Instant,
+    pub lyrics_area: Rect,
+    /// A text field was touched: the phone's keyboard is wanted, even if it was up before.
+    keys_asked: bool,
     /// The app's and the streaming page's last messages, to show each new one once.
     last_msgs: [String; 2],
     pub out_rate: u32,
@@ -856,6 +879,11 @@ pub struct State {
     pub search_in_bar: bool,
     pub hub: crate::hub::Hub,
     pub hub_area: Rect,
+    /// Where the Related tab's list is, how far down it is scrolled, how far it can be, and the track it is of.
+    pub related_area: Rect,
+    pub related_scroll: f32,
+    pub related_reach: f32,
+    pub related_of: String,
     pub shelf: Shelf,
     pub playlists: Vec<(String, Vec<String>)>,
     /// Tags: each a name and the tracks wearing it.
@@ -1014,6 +1042,16 @@ impl State {
             drags: Vec::new(),
             carry: None,
             pull: 0.0,
+            gap: 0.0,
+            refresh: None,
+            gap_at: std::time::Instant::now(),
+            scans: 0,
+            lyrics_pull: 0.0,
+            lyrics_at: 0.0,
+            lyrics_touch: None,
+            lyrics_seen: std::time::Instant::now(),
+            lyrics_area: Rect::default(),
+            keys_asked: false,
             jog: [Jog::default(); DECKS],
             last_press: None,
             read,
@@ -1038,6 +1076,10 @@ impl State {
             search_focus: false,
             search_in_bar: false,
             hub_area: Rect::default(),
+            related_area: Rect::default(),
+            related_scroll: 0.0,
+            related_reach: 0.0,
+            related_of: String::new(),
             hub: crate::hub::Hub::new(crate::store::dir().unwrap_or_else(std::env::temp_dir).join("youtube_cache")),
             shelf: Shelf::Tracks,
             playlists: crate::store::load_playlists(),
@@ -1148,6 +1190,44 @@ impl State {
             || self.toast.as_ref().is_some_and(|t| t.1.elapsed() < TOAST)
             || self.hub.busy()
             || self.hearing.is_some()
+            || self.settling()
+    }
+
+    /// Whether something let go of is still on its way back: a pulled list, lyrics moved by hand.
+    fn settling(&self) -> bool {
+        self.gap > 0.0
+            || self.refresh.is_some()
+            || (self.lyrics_pull != 0.0 && self.lyrics_seen.elapsed() < LYRICS_REST)
+    }
+
+    /// Whether the refresh a pull asked for is still under way. It shows for a moment even when done at once.
+    pub fn refreshing(&self) -> bool {
+        let busy = if self.view == View::Stream { self.hub.searching } else { self.scans > 0 };
+        self.refresh.is_some_and(|t| busy || t.elapsed() < REFRESH_SHOWN)
+    }
+
+    /// Sets the gap the pulled list has open for this frame: it follows the finger, stays open while the list
+    /// refreshes, and springs shut.
+    pub fn pull_gap(&mut self) {
+        let dt = self.gap_at.elapsed().as_secs_f32().min(0.1);
+        self.gap_at = std::time::Instant::now();
+        if !self.refreshing() {
+            self.refresh = None;
+        }
+        if self.pull > 0.0 {
+            self.gap = (self.pull * 0.5).min(PULL * 1.5);
+            return;
+        }
+        let to = if self.refresh.is_some() { REFRESHING } else { 0.0 };
+        self.gap += (to - self.gap) * (1.0 - (-dt * 14.0).exp());
+        if (self.gap - to).abs() < 0.5 {
+            self.gap = to;
+        }
+    }
+
+    /// Whether a text field was touched since this was last asked.
+    pub fn keys_asked(&mut self) -> bool {
+        std::mem::take(&mut self.keys_asked)
     }
 
     /// The least time between two frames: short while something on screen moves, long while the screen only
@@ -1156,6 +1236,7 @@ impl State {
         let moving = self.recorder.is_some()
             || self.telemetry.decks.iter().any(|d| d.playing)
             || !self.drags.is_empty()
+            || self.settling()
             || self.view_at.is_some_and(|t| t.elapsed() < VIEW_FADE);
         std::time::Duration::from_millis(if moving { 15 } else { 100 })
     }
@@ -1245,6 +1326,7 @@ impl State {
                     }
                 }
                 (Job::Scan(found), _) => {
+                    self.scans = self.scans.saturating_sub(1);
                     self.entries.truncate(SAMPLES.len());
                     self.found = found.len();
                     self.entries.extend(found);
@@ -1460,7 +1542,7 @@ impl State {
     /// Tracks of the collection that suit the selected one, best first: its artist's others, and those close in
     /// tempo and key. Those already listed as `known` are left out.
     pub fn alike(&self, known: &[u32]) -> Vec<u32> {
-        let Some(at) = self.selected.map(|i| i as usize).filter(|&i| i < self.entries.len()) else { return Vec::new() };
+        let Some(at) = self.about().map(|i| i as usize) else { return Vec::new() };
         let facts = |i: usize| {
             let m = self.meta.get(i).copied().flatten().unwrap_or_default();
             (self.entries[i].artist.to_lowercase(), m.bpm, m.key)
@@ -1486,16 +1568,40 @@ impl State {
         rows
     }
 
-    /// Asks the streaming service for what goes with the selected track, once a track.
+    /// The track the Related tab is about, as its title and artist: the one playing, on the crossfader's side when
+    /// two are, else the one selected. With it, where it is in the collection, if it is there.
+    pub fn subject(&self) -> Option<(Option<u32>, String, String)> {
+        let side = usize::from(self.crossfader > 0.0);
+        let mut live: Vec<usize> = (0..DECKS).filter(|&d| self.telemetry.decks[d].playing).collect();
+        live.sort_by_key(|d| d % 2 != side);
+        if let Some(e) = live.first().and_then(|&d| self.decks[d].loaded.as_ref()).map(|l| &l.entry) {
+            let at = self.entries.iter().position(|x| x.source == e.source).map(|i| i as u32);
+            return Some((at, e.title.to_string(), e.artist.to_string()));
+        }
+        let e = self.entries.get(self.selected? as usize)?;
+        Some((self.selected, e.title.to_string(), e.artist.to_string()))
+    }
+
+    /// Where the Related tab's track is in the collection.
+    fn about(&self) -> Option<u32> {
+        self.subject()?.0
+    }
+
+    /// Asks the streaming service for what goes with the Related tab's track, once a track.
     pub fn suggest(&mut self) {
-        if let Some(e) = self.selected.and_then(|i| self.entries.get(i as usize)) {
-            self.hub.suggest(&e.artist, &e.title);
+        if let Some((_, title, artist)) = self.subject() {
+            self.hub.suggest(&artist, &title);
         }
     }
 
-    /// What goes with the selected track: the tracks linked to it, then the others it was played with.
+    /// Moves the Related tab's list by `dy`.
+    fn related_scroll_by(&mut self, dy: f32) {
+        self.related_scroll = (self.related_scroll + dy).clamp(0.0, self.related_reach);
+    }
+
+    /// What goes with the Related tab's track: the tracks linked to it, then the others it was played with.
     pub fn related(&self) -> (Vec<u32>, Vec<u32>) {
-        let Some(e) = self.selected.and_then(|i| self.entries.get(i as usize)) else { return Default::default() };
+        let Some(e) = self.about().and_then(|i| self.entries.get(i as usize)) else { return Default::default() };
         let key = entry_key(e);
         let find = |keys: &[String]| -> Vec<u32> {
             keys.iter().filter_map(|k| self.entries.iter().position(|e| entry_key(e) == *k)).map(|i| i as u32).collect()
@@ -1508,7 +1614,7 @@ impl State {
 
     /// Whether the track of the open menu is linked to the selected one; None when there is nothing to link.
     pub fn menu_linked(&self) -> Option<bool> {
-        let (i, to) = (self.track_menu?, self.selected?);
+        let (i, to) = (self.track_menu?, self.about()?);
         let key = |i: u32| self.entries.get(i as usize).map(entry_key);
         (i != to)
             .then(|| crate::related::paired(&self.links, &key(to).unwrap_or_default(), &key(i).unwrap_or_default()))
@@ -1748,6 +1854,7 @@ impl State {
         if roots.is_empty() {
             return;
         }
+        self.scans += 1;
         let tx = self.jobs.0.clone();
         std::thread::spawn(move || {
             let _ = tx.send((Job::Scan(library::scan(&roots)), None));
@@ -2190,6 +2297,11 @@ impl State {
     }
 
     fn key_press(&mut self, key: Key, m: Mods) {
+        // In a text field the space bar types a space, whatever else it does.
+        if key == Key::Space && self.typing() && !m.ctrl && self.binding.is_none() {
+            self.type_text(" ");
+            return;
+        }
         if self.naming.is_some() {
             match key {
                 Key::Enter => self.end_naming(true),
@@ -3044,8 +3156,9 @@ impl State {
         if self.naming.is_some() && !matches!(target, Some(Target::NameField)) {
             self.end_naming(true);
         }
-        self.search_focus = target == Some(Target::SearchFocus);
-        self.hub.focus = target == Some(Target::HubFocus);
+        self.search_focus = matches!(target, Some(Target::SearchFocus | Target::SearchClear));
+        self.hub.focus = matches!(target, Some(Target::HubFocus | Target::HubClear));
+        self.keys_asked |= self.search_focus || self.hub.focus || target == Some(Target::NameField);
         if let Some(t) = target {
             let again = self.last_press.is_some_and(|(last, at)| last == t && at.elapsed() < DOUBLE_TAP);
             self.last_press = (!again).then(|| (t, std::time::Instant::now()));
@@ -3225,7 +3338,7 @@ impl State {
                 }
             }
             Target::MenuLink => {
-                if let (Some(i), Some(to)) = (self.track_menu.take(), self.selected) {
+                if let (Some(i), Some(to)) = (self.track_menu.take(), self.about()) {
                     let (a, b) = (entry_key(&self.entries[to as usize]), entry_key(&self.entries[i as usize]));
                     if !crate::related::pair(&mut self.links, &a, &b) {
                         crate::related::unpair(&mut self.links, &a, &b);
@@ -3261,7 +3374,7 @@ impl State {
             Target::SuggestLoad(n, d) => self.hub.fetch_suggested(n, d),
             Target::RelatedRow(_) | Target::SuggestRow(_) => {}
             Target::Unlink(n) => {
-                if let (Some(to), Some(&i)) = (self.selected, self.related().0.get(n)) {
+                if let (Some(to), Some(&i)) = (self.about(), self.related().0.get(n)) {
                     let (a, b) = (entry_key(&self.entries[to as usize]), entry_key(&self.entries[i as usize]));
                     crate::related::unpair(&mut self.links, &a, &b);
                     crate::store::save_links(&self.links);
@@ -3439,8 +3552,9 @@ impl State {
                 self.grid_menu = None;
                 self.submenu = None;
             }
-            Target::SearchFocus => {}
-            Target::HubFocus => {}
+            Target::SearchFocus | Target::HubFocus | Target::Lyrics => {}
+            Target::SearchClear => self.search(String::new()),
+            Target::HubClear => self.hub.query.clear(),
             Target::HubService(sv) => self.hub.switch(sv),
             Target::Filter(n) => {
                 self.filters ^= 1 << n;
@@ -3854,7 +3968,8 @@ impl State {
             self.put_down(what, d.moved, if d.moved { d.last } else { d.start });
             return;
         }
-        if std::mem::take(&mut self.pull) >= PULL {
+        if std::mem::take(&mut self.pull) * 0.5 >= PULL {
+            self.refresh = Some(std::time::Instant::now());
             match d.target {
                 Some(Target::Library) => self.press(Target::Rescan, 0.0, 0.0),
                 Some(Target::HubList) => self.hub.search(),
@@ -3941,6 +4056,11 @@ impl State {
             self.hub_scroll(-dy);
         } else if self.library.hit(x, y) {
             self.scroll_by(-dy);
+        } else if self.related_area.hit(x, y) {
+            self.related_scroll_by(-dy);
+        } else if self.lyrics_area.hit(x, y) {
+            self.lyrics_pull -= dy;
+            self.lyrics_touch = Some(std::time::Instant::now());
         }
     }
 
@@ -4106,6 +4226,8 @@ impl State {
                 self.pull = (self.pull + delta.1).max(0.0);
             }
             Target::HubList => self.hub_scroll(-delta.1),
+            Target::RelatedRow(_) | Target::SuggestRow(_) => self.related_scroll_by(-delta.1),
+            Target::Lyrics => self.lyrics_pull -= delta.1,
             Target::Picker => {
                 let g = self.picker_grid;
                 let rows = (SAMPLES.len() + self.sounds.len()).div_ceil(g.cols.max(1)) as f32;

@@ -84,8 +84,9 @@ impl Shell {
     }
 
     fn draw(&mut self) {
-        let typing = self.ui.typing();
-        if typing != self.keyboard {
+        // Asked for again at each touch of a field: the keyboard may have been put away with the field still on.
+        let (typing, asked) = (self.ui.typing(), self.ui.keys_asked());
+        if typing != self.keyboard || (typing && asked) {
             self.keyboard = typing;
             if typing {
                 self.app.show_soft_input(true);

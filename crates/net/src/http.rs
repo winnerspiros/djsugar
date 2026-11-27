@@ -63,6 +63,13 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
 /// time is asked for again from where it stopped, so a slow line still gets there and a dead one gives up.
 const ANSWER: Duration = Duration::from_secs(15);
 const SENDING: Duration = Duration::from_secs(40);
+/// How long connecting to the server holding a file may take.
+const REACHING: Duration = Duration::from_secs(6);
+
+/// The server a link names, for the log: never the link itself, which can carry a signature.
+fn host(url: &str) -> &str {
+    url.split("://").nth(1).unwrap_or(url).split(['/', '?', ':']).next().unwrap_or_default()
+}
 
 /// The most one request asks for; streaming hosts cut longer replies short.
 pub const PIECE: u64 = 1 << 20;
@@ -95,14 +102,34 @@ pub fn download(
         let mut at = from;
         let mut tries = 0;
         loop {
+            // Asked between tries too: a server that can't be reached sends nothing to be stopped over.
+            if !progress(done.load(Relaxed), total) {
+                return Err(Error::Stopped);
+            }
             let mut req = agent().get(url).header("Range", &format!("bytes={at}-{end}"));
             for (k, v) in headers {
                 req = req.header(*k, *v);
             }
             let before = at;
             let run = |at: &mut u64| -> Result<()> {
-                let timed = req.config().timeout_recv_response(Some(ANSWER)).timeout_recv_body(Some(SENDING)).build();
-                let mut resp = timed.call().map_err(net)?;
+                let timed = req
+                    .config()
+                    .timeout_connect(Some(REACHING))
+                    .timeout_recv_response(Some(ANSWER))
+                    .timeout_recv_body(Some(SENDING))
+                    .build();
+                // A server that has sent nothing and can't be connected to is not asked again: another may hold
+                // the file. One that goes quiet midway is.
+                let mut resp = timed.call().map_err(|e| match e {
+                    ureq::Error::Timeout(ureq::Timeout::Connect | ureq::Timeout::Resolve)
+                    | ureq::Error::HostNotFound
+                    | ureq::Error::ConnectionFailed
+                        if done.load(Relaxed) == 0 =>
+                    {
+                        Error::Unreachable
+                    }
+                    e => net(e),
+                })?;
                 let status = resp.status().as_u16();
                 if status >= 400 {
                     return Err(Error::Status(status));
@@ -134,6 +161,10 @@ pub fn download(
                 _ if at > end => return Ok(()),
                 Err(Error::Status(s)) if s < 500 => return Err(Error::Status(s)),
                 Err(Error::Stopped) => return Err(Error::Stopped),
+                Err(Error::Unreachable) => {
+                    crate::note(&format!("{} can't be reached", host(url)));
+                    return Err(Error::Unreachable);
+                }
                 // A piece that moved on is not a failed try.
                 _ if at > before => tries = 0,
                 r if tries >= 4 => return r.and(Err(Error::Parse("download ended early"))),

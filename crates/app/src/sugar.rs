@@ -207,6 +207,8 @@ fn mini(p: &mut Painter, s: &mut State, w: f32, h: f32) {
 
 pub fn paint(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     s.hits.clear();
+    s.pull_gap();
+    s.lyrics_area = Rect::default();
     if s.mini {
         mini(p, s, w, h);
         toast(p, s, w, h);
@@ -399,6 +401,7 @@ fn side_panel(p: &mut Painter, s: &mut State, r: Rect) {
         hit(s, b, Target::SideTab(n as u8));
     }
     let body = Rect::new(r.x, r.y + th + 4.0, r.w, r.h - th - 4.0);
+    s.related_area = Rect::default();
     match s.side_tab {
         0 => side_auto(p, s, body),
         1 => side_info(p, s, body),
@@ -473,70 +476,134 @@ fn side_list(p: &mut Painter, s: &mut State, r: Rect) {
     }
 }
 
-/// What goes with the selected track: the tracks linked to it by hand, then those it was played with.
+/// A service's mark on a tile of its colour, drawn here: a play button, a cloud after its sound, a peak, a
+/// colonnade, three waves.
+fn service_mark(p: &mut Painter, sv: crate::hub::Service, r: Rect) {
+    use crate::hub::Service;
+    let u = r.w;
+    let at = |x: f32, y: f32| (r.x + x * u, r.y + y * u);
+    let ink = rgb(if matches!(sv, Service::Archive | Service::Spotify) { 0x121214 } else { 0xffffff });
+    p.rect(r.x, r.y, r.w, r.h, u * 0.24, rgb(sv.colour()));
+    let stroke = (u * 0.09).max(1.2);
+    match sv {
+        Service::YouTube => {
+            let columns = (u * 0.36).ceil().max(1.0) as usize;
+            for c in 0..columns {
+                let t = c as f32 / columns as f32;
+                let (x, y) = at(0.36 + 0.36 * t, 0.28 + 0.22 * t);
+                p.rect(x, y, u * 0.36 / columns as f32 + 0.5, u * 0.44 * (1.0 - t), 0.0, ink);
+            }
+        }
+        Service::SoundCloud => {
+            for (n, tall) in [0.1, 0.18, 0.26].into_iter().enumerate() {
+                let (x, y) = at(0.14 + n as f32 * 0.1, 0.68 - tall);
+                p.rect(x, y, u * 0.06, u * tall, u * 0.03, ink);
+            }
+            let (x, y) = at(0.44, 0.48);
+            p.rect(x, y, u * 0.44, u * 0.2, u * 0.1, ink);
+            let (cx, cy) = at(0.6, 0.5);
+            p.disc(cx, cy, u * 0.17, ink, ink);
+        }
+        Service::Audius => {
+            let (foot, peak, other) = (at(0.22, 0.72), at(0.5, 0.24), at(0.78, 0.72));
+            p.line(foot, peak, stroke, ink);
+            p.line(peak, other, stroke, ink);
+            p.line(at(0.34, 0.56), at(0.66, 0.56), stroke, ink);
+        }
+        Service::Archive => {
+            p.line(at(0.2, 0.36), at(0.5, 0.2), stroke * 0.8, ink);
+            p.line(at(0.5, 0.2), at(0.8, 0.36), stroke * 0.8, ink);
+            for (y, tall) in [(0.36, 0.07), (0.74, 0.07)] {
+                let (x, y) = at(0.2, y);
+                p.rect(x, y, u * 0.6, u * tall, 0.0, ink);
+            }
+            for n in 0..4 {
+                let (x, y) = at(0.25 + n as f32 * 0.145, 0.46);
+                p.rect(x, y, u * 0.07, u * 0.26, 0.0, ink);
+            }
+        }
+        Service::Spotify => {
+            let (cx, cy) = at(0.5, 1.0);
+            for (reach, thick) in [(0.68, 1.0), (0.52, 0.85), (0.37, 0.7)] {
+                p.arc(cx, cy, u * reach, stroke * thick, 0.9, 0.1, ink);
+                p.arc(cx, cy, u * reach, stroke * thick, 0.0, 0.1, ink);
+            }
+        }
+    }
+}
+
+/// What goes with the track playing, or with the selected one when nothing plays: the tracks linked to it by hand,
+/// those it was played with, those of the collection like it, then the service's. One list, scrolled as one.
 fn side_related(p: &mut Painter, s: &mut State, r: Rect) {
     let (x, w) = (r.x + 8.0, r.w - 16.0);
-    let Some(i) = s.selected.map(|i| i as usize).filter(|&i| i < s.entries.len()) else {
-        p.text_in(x + 4.0, r.y + 20.0, w - 8.0, ARTIST, "Select a track to see what goes with it");
+    let Some((_, title, artist)) = s.subject() else {
+        p.text_in(x + 4.0, r.y + 20.0, w - 8.0, ARTIST, "Play or select a track to see what goes with it");
         return;
     };
-    let title = s.entries[i].title.to_string();
     let tw = p.text(x + 4.0, r.y + 21.0, Style { px: 15.0, ..TITLE }, "Related to");
     p.text_in(x + 12.0 + tw, r.y + 21.0, w - tw - 16.0, ARTIST, &title);
     p.rect(x, r.y + 37.0, w, 1.0, 0.0, EDGE);
+    let of = format!("{artist}\n{title}");
+    if s.related_of != of {
+        s.related_of = of;
+        s.related_scroll = 0.0;
+    }
     s.suggest();
     let (linked, played) = s.related();
     let alike = s.alike(&[linked.clone(), played.clone()].concat());
     let online: Vec<(String, String)> = s.hub.suggested.iter().map(|h| (h.title.clone(), h.artist.clone())).collect();
-    let mut y = r.y + 42.0;
+    let top = r.y + 42.0;
     if linked.is_empty() && played.is_empty() && alike.is_empty() && online.is_empty() {
         let wait =
             if s.hub.suggesting { "Looking for tracks that go with it" } else { "Nothing found that goes with it." };
-        for line in [wait, "Link a track to this one from its menu."] {
-            p.text_in(x + 4.0, y + 14.0, w - 8.0, ARTIST, line);
-            y += 16.0;
+        for (n, line) in [wait, "Link a track to this one from its menu."].into_iter().enumerate() {
+            p.text_in(x + 4.0, top + 14.0 + n as f32 * 16.0, w - 8.0, ARTIST, line);
         }
         return;
     }
-    // Each list gets its share of the panel, so the service's suggestions are not pushed off by the collection's.
-    let shares = [&linked, &played, &alike].iter().filter(|l| !l.is_empty()).count() + usize::from(!online.is_empty());
-    let most = (((r.y + r.h - y) / shares.max(1) as f32 - 18.0) / QUEUE_ROW).floor().max(1.0) as usize;
+    let area = Rect::new(r.x, top, r.w, r.y + r.h - top);
+    s.related_area = area;
+    let seen = |y: f32, h: f32| y >= area.y && y + h <= area.y + area.h;
+    let mut y = top - s.related_scroll;
     let mut row = 0;
     let lists = [("LINKED", &linked, true), ("PLAYED WITH", &played, false), ("FROM YOUR COLLECTION", &alike, false)];
     for (heading, tracks, unlink) in lists {
-        if tracks.is_empty() || y + 18.0 + QUEUE_ROW > r.y + r.h {
-            row += tracks.len();
+        if tracks.is_empty() {
             continue;
         }
-        p.text(x + 4.0, y + 12.0, Style { colour: theme::FAINT, ..SMALL }, heading);
+        if seen(y, 18.0) {
+            p.text(x + 4.0, y + 12.0, Style { colour: theme::FAINT, ..SMALL }, heading);
+        }
         y += 18.0;
         for (n, &t) in tracks.iter().enumerate() {
-            if n < most && y + QUEUE_ROW <= r.y + r.h {
+            if seen(y, 34.0) {
                 let e = &s.entries[t as usize];
                 let (title, artist) = (e.title.to_string(), e.artist.to_string());
                 let load = s.fore().map(|d| Target::RelatedLoad(row, d));
                 hit(s, Rect::new(x, y, w, 34.0), Target::RelatedRow(row));
                 side_row(p, s, Rect::new(x, y, w, 34.0), (&title, &artist), load, unlink.then_some(Target::Unlink(n)));
-                y += QUEUE_ROW;
             }
+            y += QUEUE_ROW;
             row += 1;
         }
     }
-    if online.is_empty() || y + 18.0 + QUEUE_ROW > r.y + r.h {
-        return;
-    }
-    let heading = format!("ON {}", s.hub.suggested_on().to_uppercase());
-    p.text(x + 4.0, y + 12.0, Style { colour: theme::FAINT, ..SMALL }, &heading);
-    y += 18.0;
-    for (n, (title, artist)) in online.iter().enumerate() {
-        if y + QUEUE_ROW > r.y + r.h {
-            break;
+    if !online.is_empty() {
+        if seen(y, 18.0) {
+            let heading = format!("ON {}", s.hub.suggested_on().to_uppercase());
+            p.text(x + 4.0, y + 12.0, Style { colour: theme::FAINT, ..SMALL }, &heading);
         }
-        let load = s.fore().map(|d| Target::SuggestLoad(n, d));
-        hit(s, Rect::new(x, y, w, 34.0), Target::SuggestRow(n));
-        side_row(p, s, Rect::new(x, y, w, 34.0), (title, artist), load, None);
-        y += QUEUE_ROW;
+        y += 18.0;
+        for (n, (title, artist)) in online.iter().enumerate() {
+            if seen(y, 34.0) {
+                let load = s.fore().map(|d| Target::SuggestLoad(n, d));
+                hit(s, Rect::new(x, y, w, 34.0), Target::SuggestRow(n));
+                side_row(p, s, Rect::new(x, y, w, 34.0), (title, artist), load, None);
+            }
+            y += QUEUE_ROW;
+        }
     }
+    s.related_reach = (y + s.related_scroll - top - area.h).max(0.0);
+    s.related_scroll = s.related_scroll.min(s.related_reach);
 }
 
 /// Automix: its switch, how it mixes, and the tracks it has waiting.
@@ -824,10 +891,11 @@ fn search_box(p: &mut Painter, s: &mut State, r: Rect) {
         let hint = s.status.as_deref().unwrap_or("Search tracks");
         p.text_in(tx, base, r.w - 36.0, Style { colour: theme::FAINT, ..ARTIST }, hint);
     } else {
-        let qw = p.text_in(tx, base, r.w - 68.0, Style { px: 12.0, ..TITLE }, &s.query);
+        let x = clear_x(p, s, r, Target::SearchClear);
+        let qw = p.text_in(tx, base, r.w - 68.0 - x, Style { px: 12.0, ..TITLE }, &s.query);
         p.rect(tx + 1.0 + qw, base - 11.0, 1.5, 15.0, 0.0, ACCENT);
         let n = s.shown.len().to_string();
-        p.text(r.x + r.w - 10.0 - p.text_width(SMALL, &n), base, SMALL, &n);
+        p.text(r.x + r.w - 6.0 - x - p.text_width(SMALL, &n), base, SMALL, &n);
     }
 }
 
@@ -1376,10 +1444,7 @@ fn rail(p: &mut Painter, s: &mut State, r: Rect) {
             break;
         }
         let i = row(p, s, &mut y, sv.label(), !lib && s.hub.service == sv, Target::StreamFrom(sv));
-        p.rect(i.x, i.y, i.w, i.h, 7.0, rgb(sv.colour()));
-        let letter = Style::new((i.h * 0.55).round(), Weight::Bold, rgb(0xffffff));
-        let initial = &sv.label()[..1];
-        p.text(i.x + (i.w - p.text_width(letter, initial)) * 0.5, i.y + i.h * 0.5 + letter.px * 0.36, letter, initial);
+        service_mark(p, sv, i);
     }
 }
 
@@ -1513,7 +1578,11 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect, railed: bool) {
     if !railed && head(p, s, &mut y, "STREAMING", 2) {
         for sv in crate::hub::Service::ALL {
             let on = !lib && s.hub.service == sv;
+            let at = y;
             row(p, s, &mut y, (sv.label(), None), Target::StreamFrom(sv), on, Some(rgb(sv.colour())));
+            if y > at {
+                service_mark(p, sv, Rect::new(r.x + 25.0, at + (rh - 2.0) * 0.5 - 7.0, 14.0, 14.0));
+            }
         }
     }
     if !s.tags.is_empty() && head(p, s, &mut y, "TAGS", 5) {
@@ -1538,21 +1607,52 @@ fn sidebar(p: &mut Painter, s: &mut State, r: Rect, railed: bool) {
 }
 
 /// The latest message, over every page near the bottom, fading out.
-/// A list pulled down past its top: what letting go will do, sliding in from under its header.
+/// A list pulled down past its top: in the gap it opens, an arrow that turns over once letting go refreshes, and
+/// a turning arc while it does.
 fn pulled(p: &mut Painter, s: &State) {
-    if s.pull <= 0.0 {
+    if s.gap <= 0.0 {
         return;
     }
     let (area, top) = if s.view == View::Stream { (s.hub_area, 0.0) } else { (s.library, 30.0) };
-    let ready = s.pull >= crate::state::PULL;
-    let msg = if ready { "Let go to refresh" } else { "Pull to refresh" };
-    let st = Style::new(12.0, Weight::Semibold, if ready { TEXT } else { GREY });
-    let tw = p.text_width(st, msg);
-    let y = area.y + top + (s.pull.min(crate::state::PULL) * 0.6 - 30.0).max(4.0);
-    let r = Rect::new(area.x + (area.w - tw) * 0.5 - 14.0, y, tw + 28.0, 28.0);
+    let turning = s.pull <= 0.0 && s.refresh.is_some();
+    let armed = s.pull > 0.0 && s.gap >= crate::state::PULL;
+    let near = (s.gap / crate::state::PULL).min(1.0);
+    let size = 36.0 * if armed || turning { 1.0 } else { 0.7 + 0.3 * near };
+    let (cx, cy) = (area.x + area.w * 0.5, area.y + top + (s.gap * 0.5).max(size * 0.5 + 2.0));
+    let seen = (near * 255.0) as u32;
+    let edge = if armed || turning { ACCENT } else { theme::MENU_BORDER };
     p.layer();
-    p.outlined(r.x, r.y, r.w, r.h, 14.0, theme::MENU, 1.0, if ready { ACCENT } else { theme::MENU_BORDER });
-    p.text(r.x + 14.0, r.y + 18.5, st, msg);
+    p.outlined(
+        cx - size * 0.5,
+        cy - size * 0.5,
+        size,
+        size,
+        size * 0.5,
+        fade(theme::MENU, seen),
+        1.0,
+        fade(edge, seen),
+    );
+    if turning {
+        let turn = s.refresh.map_or(0.0, |t| t.elapsed().as_secs_f32() * 1.4 % 1.0);
+        p.arc(cx, cy, 9.0, 2.5, turn, 0.7, ACCENT);
+        return;
+    }
+    let ink = fade(if armed { ACCENT } else { TEXT }, seen);
+    let way = if armed { -1.0 } else { 1.0 };
+    let tip = (cx, cy + 8.0 * way);
+    p.line((cx, cy - 8.0 * way), tip, 2.5, ink);
+    p.line((cx - 6.0, cy + 2.0 * way), tip, 2.5, ink);
+    p.line((cx + 6.0, cy + 2.0 * way), tip, 2.5, ink);
+}
+
+/// A drawn X at the right end of a text field, which empties it. Returns the width it takes.
+fn clear_x(p: &mut Painter, s: &mut State, field: Rect, target: Target) -> f32 {
+    let (cx, cy) = (field.x + field.w - 15.0, field.y + field.h * 0.5);
+    let ink = if s.pressed(target) { TEXT } else { theme::DIM };
+    p.line((cx - 4.5, cy - 4.5), (cx + 4.5, cy + 4.5), 1.6, ink);
+    p.line((cx - 4.5, cy + 4.5), (cx + 4.5, cy - 4.5), 1.6, ink);
+    hit(s, Rect::new(cx - 19.0, field.y - 4.0, 38.0, field.h + 8.0), target);
+    30.0
 }
 
 /// A track picked up from a list: its name under the finger, and the decks it can be dropped on outlined.
@@ -1820,8 +1920,8 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Line::item("Add to Automix", Target::MenuQueue),
         Line::item("Add to Sidelist", Target::MenuSide),
         match s.menu_linked() {
-            Some(true) => Line::item("Unlink from the selected track", Target::MenuLink),
-            linked => Line::item("Link to the selected track", Target::MenuLink).enabled(linked.is_some()),
+            Some(true) => Line::item("Unlink from the Related tab's track", Target::MenuLink),
+            linked => Line::item("Link to the Related tab's track", Target::MenuLink).enabled(linked.is_some()),
         },
         Line::sub("Add to playlist", 0).hint(if held > 0 { format!("In {held}") } else { String::new() }),
         Line::sub("Tags", 4).hint(if worn > 0 { worn.to_string() } else { String::new() }),
@@ -2076,7 +2176,7 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
     hit(s, Rect::new(list.x, list.y + 29.0, list.w, list.h - 29.0), Target::Library);
     let cell = Style::new(12.0, Weight::Regular, TEXT);
     for (n, &i) in s.shown.iter().skip(first).take(rows).enumerate() {
-        let y = r.y + 30.0 + n as f32 * row - (s.scroll % row);
+        let y = r.y + 30.0 + n as f32 * row - (s.scroll % row) + if s.view == View::Stream { 0.0 } else { s.gap };
         if y < r.y + 29.0 || y + row > list.y + list.h {
             continue;
         }
@@ -2190,10 +2290,13 @@ fn library_head(p: &mut Painter, s: &mut State, r: Rect) -> Rect {
             "Search songs, artists, albums",
         );
     } else {
-        let qw = p.text_in(r.x + 16.0, y + 22.0, r.w - 40.0, Style::new(13.0, Weight::Regular, TEXT), &s.query);
+        let qw = p.text_in(r.x + 16.0, y + 22.0, r.w - 70.0, Style::new(13.0, Weight::Regular, TEXT), &s.query);
         p.rect(r.x + 17.0 + qw, y + 9.0, 1.5, 16.0, 0.0, ACCENT);
     }
     hit(s, Rect::new(r.x, y, r.w, sh), Target::SearchFocus);
+    if !s.query.is_empty() {
+        clear_x(p, s, Rect::new(r.x + 8.0, y, r.w - 16.0, sh - 2.0), Target::SearchClear);
+    }
     Rect::new(r.x, y + sh + 4.0, r.w, r.h - sh - 32.0)
 }
 
@@ -2457,8 +2560,9 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     // The rail already names the services; the tabs stand in where it is absent.
     for sv in Service::ALL.into_iter().filter(|_| rw == 0.0) {
         let on = s.hub.service == sv;
-        let tw = p.text_width(TAB, sv.name()) + 24.0;
-        p.text(x + 12.0, r.y + 24.0, Style { colour: if on { TEXT } else { GREY }, ..TAB }, sv.name());
+        let tw = p.text_width(TAB, sv.name()) + 46.0;
+        service_mark(p, sv, Rect::new(x + 12.0, r.y + 11.0, 16.0, 16.0));
+        p.text(x + 34.0, r.y + 24.0, Style { colour: if on { TEXT } else { GREY }, ..TAB }, sv.name());
         if on {
             p.rect(x + 8.0, r.y + bar - 3.0, tw - 16.0, 2.0, 1.0, rgb(sv.colour()));
         }
@@ -2474,8 +2578,15 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     } else {
         (format!("{}{}", s.hub.query, if s.hub.focus { "|" } else { "" }), TEXT)
     };
-    p.text_in(field.x + 10.0, field.y + field.h * 0.5 + 4.0, field.w - 20.0, Style { colour: ink, ..ARTIST }, &shown);
     hit(s, field, Target::HubFocus);
+    let x = if s.hub.query.is_empty() { 0.0 } else { clear_x(p, s, field, Target::HubClear) };
+    p.text_in(
+        field.x + 10.0,
+        field.y + field.h * 0.5 + 4.0,
+        field.w - 20.0 - x,
+        Style { colour: ink, ..ARTIST },
+        &shown,
+    );
     let busy = s.hub.searching;
     button(
         p,
@@ -2581,7 +2692,7 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     let rows = (list.h / HUB_ROW).ceil() as usize + 1;
     let bw = 52.0;
     for i in first..(first + rows).min(s.hub.hits.len()) {
-        let y = list.y + i as f32 * HUB_ROW - s.hub.scroll;
+        let y = list.y + i as f32 * HUB_ROW - s.hub.scroll + s.gap;
         if y < list.y - 1.0 || y + HUB_ROW > list.y + list.h + 1.0 {
             continue;
         }
@@ -2693,40 +2804,92 @@ fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
         let on = s.hearing == Some(d);
         button(p, s, Rect::new(r.x + r.w - 62.0, r.y + 6.0, 52.0, 22.0), "TIME", on, ACCENT, Target::TimeLyrics(d));
     }
+    // The words can be moved by hand; let go, they glide back to the line being sung.
+    let body = Rect::new(r.x, r.y + 30.0, r.w, r.h - 34.0);
+    hit(s, body, Target::Lyrics);
+    s.lyrics_area = body;
+    let held = s.pressed(Target::Lyrics) || s.lyrics_touch.is_some_and(|t| t.elapsed() < crate::state::LYRICS_REST);
+    let dt = s.lyrics_seen.elapsed().as_secs_f32().min(0.1);
+    let ease = |from: f32, to: f32, rate: f32| {
+        let v = from + (to - from) * (1.0 - (-dt * rate).exp());
+        if (v - to).abs() < 0.5 { to } else { v }
+    };
     let Some(l) = &s.decks[d].loaded else { return };
     let at = s.decks[d].seconds(s.telemetry.decks[d].position);
     let cur = l.lyrics.current(at);
-    let line_h = 22.0;
-    let rows = ((r.h - 36.0) / line_h).max(1.0) as usize;
-    let first = cur.unwrap_or(0).saturating_sub(rows / 3);
-    for (n, line) in l.lyrics.lines.iter().enumerate().skip(first).take(rows) {
-        let (x, y, w) = (r.x + 12.0, r.y + 44.0 + (n - first) as f32 * line_h, r.w - 24.0);
+    let (x, w) = (r.x + 12.0, r.w - 24.0);
+    let (line_h, fold_h) = (22.0, 18.0);
+    let lit = Style::new(14.0, Weight::Bold, DECK[d]);
+    // The current line as karaoke: sung words in the deck colour, the word being sung filling in.
+    let set = |p: &Painter, n: usize| {
+        let line = &l.lyrics.lines[n];
         if Some(n) != cur {
             let past = cur.is_some_and(|c| n < c);
-            p.text_in(x, y, w, Style { px: 12.5, colour: if past { DARK } else { GREY }, ..ARTIST }, &line.text);
-            continue;
+            return flow(p, &[(&line.text, Style { px: 12.5, colour: if past { DARK } else { GREY }, ..ARTIST })], w);
         }
-        // The current line as karaoke: sung words in the deck colour, the word being sung filling in.
         let f = l.lyrics.fill(n, at);
-        let lit = Style::new(14.0, Weight::Bold, DECK[d]);
-        let dim = Style { colour: TEXT, ..lit };
-        let mut cx = x;
-        if !f.sung.is_empty() {
-            cx += p.text_in(cx, y, w, lit, &f.sung);
-            if !f.sung.ends_with(' ') {
-                cx += p.text_width(lit, " ");
+        let mix = fade(DECK[d], 0x60 + (159.0 * f.part.clamp(0.0, 1.0)) as u32);
+        flow(p, &[(&f.sung, lit), (&f.word, Style { colour: mix, ..lit }), (&f.rest, Style { colour: TEXT, ..lit })], w)
+    };
+    let lines: Vec<_> = (0..l.lyrics.lines.len()).map(|n| set(p, n)).collect();
+    let mut tops = Vec::with_capacity(lines.len());
+    let mut total = 0.0;
+    for rows in &lines {
+        tops.push(total);
+        total += line_h + fold_h * rows.len().saturating_sub(1) as f32;
+    }
+    let room = body.h - 14.0;
+    let reach = (total - room).max(0.0);
+    let to = cur.map_or(0.0, |c| tops[c] - room / 3.0).clamp(0.0, reach);
+    // Lyrics just opened start where they belong; after that they glide.
+    let down = if dt < 0.1 { ease(s.lyrics_at, to, 9.0) } else { to };
+    let mut pull = (down + s.lyrics_pull).clamp(0.0, reach) - down;
+    if !held {
+        pull = ease(pull, 0.0, 7.0);
+    }
+    for (rows, top) in lines.iter().zip(&tops) {
+        for (row, words) in rows.iter().enumerate() {
+            let y = r.y + 44.0 + top + row as f32 * fold_h - down - pull;
+            if y < body.y + 12.0 || y > r.y + r.h - 8.0 {
+                continue;
+            }
+            for (dx, word, style) in words {
+                p.text(x + dx, y, *style, word);
             }
         }
-        if !f.word.is_empty() {
-            let ww = p.text_width(dim, &f.word);
-            let mix = fade(DECK[d], 0x60 + (159.0 * f.part.clamp(0.0, 1.0)) as u32);
-            p.text_in(cx, y, (x + w - cx).max(0.0), Style { colour: mix, ..lit }, &f.word);
-            cx += ww + p.text_width(dim, " ");
-        }
-        if !f.rest.is_empty() && cx < x + w {
-            p.text_in(cx, y, x + w - cx, dim, &f.rest);
+    }
+    (s.lyrics_at, s.lyrics_pull, s.lyrics_seen) = (down, pull, std::time::Instant::now());
+    if !held {
+        s.lyrics_touch = None;
+    }
+}
+
+/// Words set out in rows no wider than `w`, none cut short: each with how far along its row it starts. A word
+/// wider than a row is broken where it must be.
+fn flow(p: &Painter, parts: &[(&str, Style)], w: f32) -> Vec<Vec<(f32, String, Style)>> {
+    let mut rows: Vec<Vec<(f32, String, Style)>> = vec![Vec::new()];
+    let mut cx = 0.0;
+    for &(text, style) in parts {
+        let space = p.text_width(style, " ");
+        for word in text.split_whitespace() {
+            let whole = p.text_width(style, word);
+            let pieces: Vec<String> =
+                if whole > w { word.chars().map(String::from).collect() } else { vec![word.to_owned()] };
+            for (n, piece) in pieces.into_iter().enumerate() {
+                let wide = if whole > w { p.text_width(style, &piece) } else { whole };
+                let gap = if n == 0 && cx > 0.0 { space } else { 0.0 };
+                if cx > 0.0 && cx + gap + wide > w {
+                    rows.push(Vec::new());
+                    cx = 0.0;
+                } else {
+                    cx += gap;
+                }
+                rows.last_mut().expect("a row").push((cx, piece, style));
+                cx += wide;
+            }
         }
     }
+    rows
 }
 
 /// The track picker a LOAD button opens: the library over everything below the toolbar.
@@ -2745,9 +2908,10 @@ fn browser(p: &mut Painter, s: &mut State, w: f32, h: f32, top: f32) {
         (s.query.as_str(), TITLE)
     };
     let q = q.to_string();
-    let tw = p.text_in(x, r.y + 25.0, r.w - x - 90.0, st, &q);
+    let tw = p.text_in(x, r.y + 25.0, r.w - x - 124.0, st, &q);
     if !s.query.is_empty() {
         p.rect(x + tw + 2.0, r.y + 12.0, 1.5, 17.0, 0.0, ACCENT);
+        clear_x(p, s, Rect::new(x, r.y + 7.0, r.x + r.w - 86.0 - x, 26.0), Target::SearchClear);
     }
     button(p, s, Rect::new(r.x + r.w - 78.0, r.y + 7.0, 70.0, 26.0), "CLOSE", false, ACCENT, Target::CloseBrowser);
     library(p, s, Rect::new(r.x + 1.0, r.y + 40.0, r.w - 2.0, r.h - 41.0));

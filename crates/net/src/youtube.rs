@@ -452,6 +452,8 @@ impl YouTube {
                     Ok(_) => return Ok(to),
                     Err(Error::Stopped) => return Err(Error::Stopped),
                     Err(Error::Status(403)) => return Err(Error::Status(403)),
+                    // A client's formats all sit on one server.
+                    Err(Error::Unreachable) => return Err(Error::Unreachable),
                     Err(e) => last = e,
                 }
             }

@@ -1,6 +1,7 @@
 //! Hears the words sung in a track: OpenAI's Whisper (MIT) on the rten runtime. The sound goes through in half-minute
 //! windows; each word's time comes from where the model was listening as it wrote the word.
 
+use std::collections::HashMap;
 use std::ops::Range;
 use std::path::Path;
 
@@ -35,6 +36,12 @@ const QUIET: f32 = 1e-4;
 /// A window the model calls silent this surely, and writes this unsurely, has no words.
 const SILENT: f32 = 0.6;
 const UNSURE: f32 = -1.0;
+/// Placing known words: how long before the first of a window's words the window starts, and how far into it
+/// words are taken, seconds.
+const LEAD: f64 = 1.0;
+const TAKEN: f64 = 26.0;
+/// How long after a word starts the model listens hardest for it: measured against words marked by hand.
+const LAG: f64 = 0.03;
 /// The longest a word is taken to last, seconds; and the first of a line, which is listened for through the pause before it.
 const WORD: f64 = 1.5;
 const FIRST: f64 = 0.6;
@@ -56,6 +63,12 @@ struct Tokens {
     zero: usize,
     languages: Range<usize>,
     names: Vec<String>,
+    /// Has the model write words alone, without the times of their lines.
+    untimed: i32,
+    /// How text is spelled in tokens: each token's spelling, and the order pairs of spellings are joined in.
+    spelled: HashMap<String, i32>,
+    joins: HashMap<(String, String), usize>,
+    letters: Vec<char>,
 }
 
 impl Tokens {
@@ -63,22 +76,38 @@ impl Tokens {
         let file = std::fs::read(path).map_err(|e| e.to_string())?;
         let json: serde_json::Value = serde_json::from_slice(&file).map_err(|e| e.to_string())?;
         // Tokens are spelled a letter to a byte; bytes that don't print are moved up past 255.
-        let mut bytes = std::collections::HashMap::new();
+        let mut bytes = HashMap::new();
+        let mut letters = Vec::with_capacity(256);
         let mut moved = 0;
         for b in 0..=255u8 {
             let prints = matches!(b, 33..=126 | 161..=172 | 174..=255);
             let c = if prints { char::from(b) } else { char::from_u32(256 + moved).unwrap_or(' ') };
             moved += u32::from(!prints);
             bytes.insert(c, b);
+            letters.push(c);
         }
         let vocab = json["model"]["vocab"].as_object().ok_or("no vocabulary")?;
         let added = json["added_tokens"].as_array().ok_or("no added tokens")?;
         let mut text = vec![Vec::new(); vocab.len() + added.len()];
+        let mut spelled = HashMap::with_capacity(vocab.len());
         for (word, id) in vocab {
             if let Some(slot) = id.as_u64().and_then(|i| text.get_mut(i as usize)) {
                 *slot = word.chars().filter_map(|c| bytes.get(&c).copied()).collect();
+                spelled.insert(word.clone(), id.as_u64().unwrap_or(0) as i32);
             }
         }
+        let joins = json["model"]["merges"].as_array().map(Vec::as_slice).unwrap_or_default();
+        let joins = joins
+            .iter()
+            .enumerate()
+            .filter_map(|(rank, pair)| {
+                let (a, b) = match pair.as_str() {
+                    Some(pair) => pair.split_once(' ')?,
+                    None => (pair[0].as_str()?, pair[1].as_str()?),
+                };
+                Some(((a.to_owned(), b.to_owned()), rank))
+            })
+            .collect();
         let mut names = vec![String::new(); text.len()];
         for token in added {
             let known = token["id"].as_u64().zip(token["content"].as_str());
@@ -96,10 +125,48 @@ impl Tokens {
             write: id("<|transcribe|>")? as i32,
             silent: id("<|nocaptions|>").or_else(|_| id("<|nospeech|>"))?,
             zero: id("<|0.00|>")?,
+            untimed: id("<|notimestamps|>")? as i32,
             languages,
             text,
             names,
+            spelled,
+            joins,
+            letters,
         })
+    }
+
+    /// The tokens `text` is spelled in.
+    fn spell(&self, text: &str) -> Vec<i32> {
+        let mut out = Vec::new();
+        for word in text.split_whitespace() {
+            // A word, with the space before it; marks stand alone, and what follows an apostrophe goes with it.
+            let mut parts: Vec<String> = vec![" ".into()];
+            for c in word.chars() {
+                let last = parts.last().map_or("", |p| p.trim_start());
+                let opens = last.is_empty();
+                let joins = c.is_alphanumeric() && last.chars().all(|l| l.is_alphanumeric() || l == '\'');
+                match parts.last_mut() {
+                    Some(part) if joins || (c == '\'' && opens) => part.push(c),
+                    _ => parts.push(c.into()),
+                }
+            }
+            for part in parts {
+                let mut pieces: Vec<String> = part.bytes().map(|b| self.letters[usize::from(b)].to_string()).collect();
+                loop {
+                    let rank = |i: usize| self.joins.get(&(pieces[i].clone(), pieces[i + 1].clone())).copied();
+                    let Some((i, _)) = (0..pieces.len().saturating_sub(1))
+                        .filter_map(|i| Some((i, rank(i)?)))
+                        .min_by_key(|(_, rank)| *rank)
+                    else {
+                        break;
+                    };
+                    let joined = pieces.remove(i + 1);
+                    pieces[i].push_str(&joined);
+                }
+                out.extend(pieces.iter().filter_map(|p| self.spelled.get(p)));
+            }
+        }
+        out
     }
 
     fn unspaced(&self, language: usize) -> bool {
@@ -188,7 +255,7 @@ struct Writer {
 
 impl Writer {
     fn load(path: &Path) -> Result<Self, String> {
-        let model = Model::load_file(path).map_err(fault)?;
+        let model = Model::load(crate::packed::read(path)?).map_err(fault)?;
         let id = |name: &str| model.node_id(name).map_err(fault);
         let mut past = Vec::new();
         let mut present = Vec::new();
@@ -224,6 +291,18 @@ impl Writer {
     /// Feeds `ids` after what `memory` holds. Gives the scores for the token that follows, and where each of
     /// [`FOLLOW`]'s heads listened for it: [`HEARD`] weights a head.
     fn feed(&self, ids: &[i32], sound: &Value, memory: &mut Vec<Value>) -> Result<(Vec<f32>, Vec<f32>), String> {
+        let (scores, mut looked) = self.read(ids, sound, memory, 1)?;
+        Ok((scores, looked.pop().unwrap_or_default()))
+    }
+
+    /// As [`Self::feed`], with where the heads listened after each of the last `rows` of `ids`.
+    fn read(
+        &self,
+        ids: &[i32],
+        sound: &Value,
+        memory: &mut Vec<Value>,
+        rows: usize,
+    ) -> Result<(Vec<f32>, Vec<Vec<f32>>), String> {
         let first = memory.is_empty();
         if first {
             for _ in 0..self.past.len() {
@@ -248,16 +327,21 @@ impl Writer {
         for i in renewed {
             memory[i] = out.next().ok_or("no memory")?;
         }
-        let mut looked = Vec::with_capacity(FOLLOW.len() * HEARD);
+        let mut looked = vec![Vec::with_capacity(FOLLOW.len() * HEARD); rows];
         for ((layer, _), value) in self.looks.iter().zip(out) {
             let (shape, weights): ([usize; 4], Vec<f32>) = value.into_shape_vec().map_err(fault)?;
             let [_, heads, said, frames] = shape;
             if frames != HEARD {
                 return Err("the listening model hears another length".into());
             }
+            if said < rows {
+                return Err("the listening model lost its place".into());
+            }
             for (_, head) in FOLLOW.iter().filter(|(l, h)| l == layer && *h < heads) {
-                let row = (head * said + said - 1) * frames;
-                looked.extend_from_slice(&weights[row..row + frames]);
+                for (r, looked) in looked.iter_mut().enumerate() {
+                    let row = (head * said + said - rows + r) * frames;
+                    looked.extend_from_slice(&weights[row..row + frames]);
+                }
             }
         }
         Ok((scores, looked))
@@ -330,12 +414,18 @@ fn smooth(row: &mut [f32]) {
 /// The frame each token starts at: `looked` holds, token after token, where [`FOLLOW`]'s heads listened; only the first
 /// `frames` frames have sound. The tokens are laid along the frames in order, each where it was listened for most.
 fn starts(looked: &[Vec<f32>], frames: usize) -> Vec<usize> {
+    path(&costs(looked, frames), looked.len(), frames)
+}
+
+/// What it costs to say a token was written while a frame sounded, a row of `frames` to a token: the less the
+/// heads listened there for it, against how they listen there for all tokens, the more.
+fn costs(looked: &[Vec<f32>], frames: usize) -> Vec<f32> {
     let tokens = looked.len();
     let heads = looked.first().map_or(0, |l| l.len() / HEARD);
-    if tokens == 0 || heads == 0 || frames == 0 {
-        return vec![0; tokens];
-    }
     let mut cost = vec![0.0f32; tokens * frames];
+    if heads == 0 {
+        return cost;
+    }
     let mut row = vec![0.0f32; frames];
     for h in 0..heads {
         let of = |t: usize, f: usize| looked[t][h * HEARD + f];
@@ -356,7 +446,14 @@ fn starts(looked: &[Vec<f32>], frames: usize) -> Vec<usize> {
             }
         }
     }
-    // The cheapest way through, moving on a token, a frame, or both at each step.
+    cost
+}
+
+/// The cheapest way through `cost`, moving on a token, a frame, or both at each step: the frame each token starts at.
+fn path(cost: &[f32], tokens: usize, frames: usize) -> Vec<usize> {
+    if tokens == 0 || frames == 0 {
+        return vec![0; tokens];
+    }
     let wide = frames + 1;
     let mut total = vec![f32::INFINITY; (tokens + 1) * wide];
     let mut came = vec![0u8; (tokens + 1) * wide];
@@ -431,91 +528,171 @@ fn words(written: &[Written], t: &Tokens, unspaced: bool, offset: f64, out: &mut
     close(&mut bytes, &mut span, until);
 }
 
-/// The words sung in `samples` (mono, at [`RATE`]), each with its time. `progress` is told how far along it is, of 100,
-/// and stops the listening by answering false.
-pub fn hear(
-    encoder: &Path,
-    decoder: &Path,
-    tokens: &Path,
-    samples: &[f32],
-    progress: &dyn Fn(i32) -> bool,
-) -> Result<Vec<Heard>, String> {
-    let t = Tokens::read(tokens)?;
-    let listener = Model::load_file(encoder).map_err(fault)?;
-    let writer = Writer::load(decoder)?;
-    let bands = bands();
-    let mut out = Vec::new();
-    let mut language: Option<usize> = None;
-    let mut seek = 0;
-    while seek < samples.len() {
-        if !progress((seek * 100 / samples.len()) as i32) {
-            return Err("stopped".into());
-        }
-        let real = &samples[seek..samples.len().min(seek + WINDOW)];
-        let loud = (real.iter().map(|s| s * s).sum::<f32>() / real.len() as f32).sqrt();
-        if loud < QUIET {
-            seek += WINDOW;
-            continue;
-        }
-        let picture = picture(real, &bands);
+/// The model, loaded and ready to listen.
+pub struct Ear {
+    t: Tokens,
+    listener: Model,
+    writer: Writer,
+    bands: Vec<(usize, Vec<f32>)>,
+    /// The language of what was last heard.
+    language: std::cell::Cell<Option<usize>>,
+}
+
+impl Ear {
+    pub fn open(encoder: &Path, decoder: &Path, tokens: &Path) -> Result<Self, String> {
+        Ok(Self {
+            t: Tokens::read(tokens)?,
+            listener: Model::load(crate::packed::read(encoder)?).map_err(fault)?,
+            writer: Writer::load(decoder)?,
+            bands: bands(),
+            language: std::cell::Cell::new(None),
+        })
+    }
+
+    /// What the encoder makes of a window of sound.
+    fn sound(&self, real: &[f32]) -> Result<Value, String> {
+        let picture = picture(real, &self.bands);
         let input = ValueView::from_shape([1, MELS, FRAMES], &picture[..]).map_err(fault)?;
-        let sound = listener.run_one(input.into(), None).map_err(fault)?;
-        drop(picture);
-        let mut memory = Vec::new();
-        let (mut scores, _) = writer.feed(&[t.start], &sound, &mut memory)?;
-        chances(&mut scores);
-        let silent = scores[t.silent].exp();
-        let spoken = language.unwrap_or_else(|| {
-            t.languages.clone().max_by(|a, b| scores[*a].total_cmp(&scores[*b])).unwrap_or(t.languages.start)
-        });
-        let (mut scores, mut looked) = writer.feed(&[spoken as i32, t.write], &sound, &mut memory)?;
-        let mut said: Vec<usize> = Vec::new();
-        let mut looks: Vec<Vec<f32>> = Vec::new();
-        let mut sure = 0.0;
-        loop {
-            let (token, chance) = choose(scores, &said, &t);
-            sure += chance;
-            looks.push(looked);
-            if token == t.end || said.len() >= LONGEST {
-                break;
+        self.listener.run_one(input.into(), None).map_err(fault)
+    }
+
+    /// The words sung in `samples` (mono, at [`RATE`]), each with its time. `progress` is told how far along it
+    /// is, of 100, and stops the listening by answering false.
+    pub fn hear(&self, samples: &[f32], progress: &dyn Fn(i32) -> bool) -> Result<Vec<Heard>, String> {
+        let (t, writer) = (&self.t, &self.writer);
+        let mut out = Vec::new();
+        let mut language: Option<usize> = self.language.get();
+        let mut seek = 0;
+        while seek < samples.len() {
+            if !progress((seek * 100 / samples.len()) as i32) {
+                return Err("stopped".into());
             }
-            said.push(token);
-            (scores, looked) = writer.feed(&[token as i32], &sound, &mut memory)?;
-        }
-        drop(memory);
-        let frames = real.len().div_ceil(HOP * 2).clamp(1, HEARD);
-        // A window that stops mid-line is taken up again from that line's start.
-        let pair = (1..said.len()).rev().find(|i| said[*i] >= t.zero && said[i - 1] >= t.zero);
-        let whole = said.last().is_some_and(|l| *l >= t.zero) && !pair.is_some_and(|p| p + 1 == said.len());
-        let (kept, moved) = match pair {
-            Some(p) if !whole && said[p] > t.zero => (p, (said[p] - t.zero) * HOP * 2),
-            _ => (said.len(), WINDOW),
-        };
-        seek += moved;
-        if silent > SILENT && sure / (looks.len() as f32) < UNSURE {
-            continue;
-        }
-        let at = starts(&looks, frames);
-        let mut written = Vec::new();
-        let mut opened = 0.0;
-        for (i, token) in said.iter().enumerate().take(kept) {
-            if *token >= t.zero {
-                opened = (token - t.zero) as f64 * STEP;
+            let real = &samples[seek..samples.len().min(seek + WINDOW)];
+            let loud = (real.iter().map(|s| s * s).sum::<f32>() / real.len() as f32).sqrt();
+            if loud < QUIET {
+                seek += WINDOW;
                 continue;
             }
-            let closes = said[i..]
-                .iter()
-                .find(|s| **s >= t.zero)
-                .map_or(WINDOW as f64 / RATE as f64, |s| (s - t.zero) as f64 * STEP);
-            written.push(Written { token: *token, at: at[i] as f64 * STEP, line: (opened, closes.max(opened)) });
+            let sound = self.sound(real)?;
+            let mut memory = Vec::new();
+            let (mut scores, _) = writer.feed(&[t.start], &sound, &mut memory)?;
+            chances(&mut scores);
+            let silent = scores[t.silent].exp();
+            let spoken = language.unwrap_or_else(|| {
+                t.languages.clone().max_by(|a, b| scores[*a].total_cmp(&scores[*b])).unwrap_or(t.languages.start)
+            });
+            let (mut scores, mut looked) = writer.feed(&[spoken as i32, t.write], &sound, &mut memory)?;
+            let mut said: Vec<usize> = Vec::new();
+            let mut looks: Vec<Vec<f32>> = Vec::new();
+            let mut sure = 0.0;
+            loop {
+                let (token, chance) = choose(scores, &said, t);
+                sure += chance;
+                looks.push(looked);
+                if token == t.end || said.len() >= LONGEST {
+                    break;
+                }
+                said.push(token);
+                (scores, looked) = writer.feed(&[token as i32], &sound, &mut memory)?;
+            }
+            drop(memory);
+            let frames = real.len().div_ceil(HOP * 2).clamp(1, HEARD);
+            // A window that stops mid-line is taken up again from that line's start.
+            let pair = (1..said.len()).rev().find(|i| said[*i] >= t.zero && said[i - 1] >= t.zero);
+            let whole = said.last().is_some_and(|l| *l >= t.zero) && !pair.is_some_and(|p| p + 1 == said.len());
+            let (kept, moved) = match pair {
+                Some(p) if !whole && said[p] > t.zero => (p, (said[p] - t.zero) * HOP * 2),
+                _ => (said.len(), WINDOW),
+            };
+            seek += moved;
+            if silent > SILENT && sure / (looks.len() as f32) < UNSURE {
+                continue;
+            }
+            let at = starts(&looks, frames);
+            let mut written = Vec::new();
+            let mut opened = 0.0;
+            for (i, token) in said.iter().enumerate().take(kept) {
+                if *token >= t.zero {
+                    opened = (token - t.zero) as f64 * STEP;
+                    continue;
+                }
+                let closes = said[i..]
+                    .iter()
+                    .find(|s| **s >= t.zero)
+                    .map_or(WINDOW as f64 / RATE as f64, |s| (s - t.zero) as f64 * STEP);
+                written.push(Written { token: *token, at: at[i] as f64 * STEP, line: (opened, closes.max(opened)) });
+            }
+            if !written.is_empty() {
+                language = Some(spoken);
+            }
+            words(&written, t, t.unspaced(spoken), (seek - moved) as f64 / RATE as f64, &mut out);
         }
-        if !written.is_empty() {
-            language = Some(spoken);
-        }
-        words(&written, &t, t.unspaced(spoken), (seek - moved) as f64 / RATE as f64, &mut out);
+        self.language.set(language);
+        progress(100);
+        Ok(out)
     }
-    progress(100);
-    Ok(out)
+
+    /// The second each known word starts at in `samples`. Each comes with about when it is sung; the model, made
+    /// to write just those words, listens hardest for each where it is.
+    pub fn place(
+        &self,
+        samples: &[f32],
+        known: &[(&str, f64)],
+        progress: &dyn Fn(i32) -> bool,
+    ) -> Result<Vec<f64>, String> {
+        let (t, writer) = (&self.t, &self.writer);
+        let mut out: Vec<f64> = Vec::with_capacity(known.len());
+        while out.len() < known.len() {
+            if !progress((out.len() * 100 / known.len()) as i32) {
+                return Err("stopped".into());
+            }
+            let first = out.len();
+            let opens = (known[first].1 - LEAD).max(0.0);
+            let seek = (opens * RATE as f64) as usize;
+            let real = &samples[seek.min(samples.len())..samples.len().min(seek + WINDOW)];
+            if real.len() < RATE / 2 {
+                out.extend(known[first..].iter().map(|k| k.1));
+                break;
+            }
+            let sound = self.sound(real)?;
+            let spoken = match self.language.get() {
+                Some(spoken) => spoken,
+                None => {
+                    let (mut scores, _) = writer.feed(&[t.start], &sound, &mut Vec::new())?;
+                    chances(&mut scores);
+                    let spoken = t.languages.clone().max_by(|a, b| scores[*a].total_cmp(&scores[*b]));
+                    self.language.set(spoken);
+                    spoken.unwrap_or(t.languages.start)
+                }
+            };
+            // The tokens of each word taken, and the token each word opens with.
+            let mut ids = vec![t.start, spoken as i32, t.write, t.untimed];
+            let lead = ids.len();
+            let mut first_of = Vec::new();
+            for (word, near) in &known[first..] {
+                let spelled = t.spell(word);
+                let fits = ids.len() + spelled.len() <= LONGEST && *near < opens + TAKEN;
+                if !first_of.is_empty() && !fits {
+                    break;
+                }
+                first_of.push(ids.len() - lead);
+                ids.extend(spelled);
+            }
+            let tokens = ids.len() - lead + 1;
+            let (_, looked) = writer.read(&ids, &sound, &mut Vec::new(), tokens)?;
+            let frames = real.len().div_ceil(HOP * 2).clamp(1, HEARD);
+            let cost = costs(&looked, frames);
+            let at = path(&cost, tokens, frames);
+            for (w, token) in first_of.iter().enumerate() {
+                let until = first_of.get(w + 1).map_or(frames, |next| at[*next].max(at[*token] + 1)).min(frames);
+                let row = &cost[token * frames..][at[*token]..until.max(at[*token] + 1).min(frames)];
+                let peak = row.iter().enumerate().min_by(|a, b| a.1.total_cmp(b.1)).map_or(0, |m| m.0) + at[*token];
+                out.push((opens + peak as f64 * STEP - LAG).max(0.0));
+            }
+        }
+        progress(100);
+        Ok(out)
+    }
 }
 
 #[cfg(test)]
@@ -559,7 +736,7 @@ mod tests {
         let samples: Vec<f32> =
             wav[44..].as_chunks::<2>().0.iter().map(|&b| f32::from(i16::from_le_bytes(b)) / 32768.0).collect();
         let [encoder, decoder, tokens] = crate::word_timing::MODELS.map(|(name, _)| models.join(name));
-        let heard = hear(&encoder, &decoder, &tokens, &samples, &|_| true).unwrap();
+        let heard = Ear::open(&encoder, &decoder, &tokens).unwrap().hear(&samples, &|_| true).unwrap();
         for h in &heard {
             println!("{:7.2} {:7.2} {}", h.start, h.end, h.text);
         }

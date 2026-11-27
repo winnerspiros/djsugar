@@ -358,6 +358,29 @@ fn words(page: &Value) -> Option<String> {
     out
 }
 
+/// The songs YouTube Music plays after `video`: its radio, without the song itself. Nobody need be signed in.
+pub fn radio(video: &str) -> Result<Vec<Hit>> {
+    let list = format!("RDAMVM{video}");
+    let next = ask("next", json!({ "videoId": video, "playlistId": list, "isAudioOnly": true }))?;
+    let mut out: Vec<Hit> = Vec::new();
+    walk(&next, &mut |m| {
+        if let Some(v) = m.get("playlistPanelVideoRenderer") {
+            let id = v["videoId"].as_str().unwrap_or_default();
+            if !id.is_empty() && id != video && out.iter().all(|h| h.id != id) {
+                out.push(Hit {
+                    id: id.to_owned(),
+                    title: text(&v["title"]),
+                    artist: v["longBylineText"]["runs"][0]["text"].as_str().unwrap_or_default().to_owned(),
+                    seconds: clock(&text(&v["lengthText"])),
+                    art: picture(&v["thumbnail"]),
+                });
+            }
+        }
+        false
+    });
+    Ok(out)
+}
+
 /// What YouTube Music calls `video` as a song, with its words when it has them. Nobody need be signed in.
 pub fn song_of(video: &str) -> Result<Song> {
     let (mut song, lyrics) = playing(&ask("next", json!({ "videoId": video }))?);

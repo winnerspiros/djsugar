@@ -44,6 +44,7 @@ pub mod lyrics;
 pub mod meter;
 pub mod midi_clock;
 mod output;
+pub mod packed;
 pub mod paths;
 pub mod patterns;
 pub mod phrases;

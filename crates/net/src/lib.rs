@@ -39,6 +39,8 @@ pub enum Error {
     Refused(String),
     /// The DJ called the download off.
     Stopped,
+    /// The server holding the file doesn't answer from this connection.
+    Unreachable,
 }
 
 /// Told how much of a download has arrived, of how much; answers false to call it off.
@@ -65,6 +67,7 @@ impl std::fmt::Display for Error {
             Self::Parse(what) => write!(f, "unexpected reply: {what}"),
             Self::Refused(why) => f.write_str(why),
             Self::Stopped => f.write_str("stopped"),
+            Self::Unreachable => f.write_str("the server can't be reached on this connection"),
         }
     }
 }

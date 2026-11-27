@@ -205,6 +205,11 @@ impl Ui {
         self.state.typing()
     }
 
+    /// Whether a text field was touched since this was last asked.
+    pub fn keys_asked(&mut self) -> bool {
+        self.state.keys_asked()
+    }
+
     /// Every control on screen as its target name and x, y, w, h, for scripted tests.
     pub fn targets(&self) -> Vec<(String, [f32; 4])> {
         self.state.hits.iter().map(|h| (format!("{:?}", h.target), [h.rect.x, h.rect.y, h.rect.w, h.rect.h])).collect()

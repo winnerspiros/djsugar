@@ -172,6 +172,9 @@ fn main() {
         save(&r, &out.join(format!("{name}-menu.png")));
         settings(&mut ui, &mut r, &out, name, &mut faults);
         four(&mut ui, &mut r, &out, name, &mut faults);
+        // Whatever was fading in has finished, so two frames differ only if the new GPU draws differently.
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        ui.render(&mut r);
         let before = pixels(&r);
         r = Renderer::offscreen(w, h).expect("second renderer");
         ui.render(&mut r);
@@ -539,7 +542,14 @@ fn typing(ui: &mut Ui, r: &mut Renderer<'_>, name: &str, out: &Path, faults: &mu
     if !ui.typing() {
         faults.push(format!("{name}: tapping the search field does not start typing"));
     }
-    ui.text("daft ");
+    ui.text("gone");
+    ui.render(r);
+    if !ui.tap("HubClear") || !ui.query().is_empty() || !ui.typing() {
+        faults.push(format!("{name}: the X does not empty the search field and leave it ready"));
+    }
+    // The space bar reaches a field as a key, not as text.
+    ui.text("daft");
+    ui.key(Key::Space, Mods::default());
     ui.release_all();
     ui.render(r);
     ui.tap("HubFocus");
