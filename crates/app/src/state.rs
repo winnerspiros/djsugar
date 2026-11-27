@@ -3647,7 +3647,10 @@ impl State {
                 let (cx, cy) = (r.x + r.w * 0.5, r.y + r.h * 0.5);
                 let (px, py) = (x - delta.0 - cx, y - delta.1 - cy);
                 let turn = (px * (y - cy) - py * (x - cx)).atan2(px * (x - cx) + py * (y - cy));
-                self.jog[d].turn += turn;
+                // Near the spindle a small wobble of the finger is a large angle: the motion comes in over the inner
+                // third of the platter, so the record never jumps.
+                let grip = ((x - cx).hypot(y - cy) / (r.w.min(r.h) / 6.0)).min(1.0);
+                self.jog[d].turn += grip * turn;
             }
             Target::Gain(d) => {
                 let v = (self.decks[d].gain - delta.1 / 160.0).clamp(0.0, 1.0);

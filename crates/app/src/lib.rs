@@ -501,9 +501,10 @@ pub(crate) mod android {
         Some(bytes)
     }
 
-    /// Whether the app may use what `name` names for this system version; when not, the user is asked.
+    /// Whether the app may use all that `names` names for this system version; the user is asked, in one go, for
+    /// what it may not: the system shows one question at a time and drops a second one asked meanwhile.
     #[allow(unsafe_code, reason = "JNI hands us raw VM and activity pointers")]
-    fn permit(app: &AndroidApp, name: impl Fn(i32) -> &'static str) -> jni::errors::Result<bool> {
+    fn permit(app: &AndroidApp, names: impl Fn(i32) -> Vec<&'static str>) -> jni::errors::Result<bool> {
         use jni::objects::{JObject, JValue};
         use jni::{jni_sig, jni_str};
         let vm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) };
@@ -511,17 +512,20 @@ pub(crate) mod android {
             let activity = unsafe { JObject::from_raw(env, app.activity_as_ptr().cast()) };
             let sdk =
                 env.get_static_field(jni_str!("android/os/Build$VERSION"), jni_str!("SDK_INT"), jni_sig!("I"))?.i()?;
-            let perm = env.new_string(name(sdk))?;
-            let state = env
-                .call_method(
-                    &activity,
-                    jni_str!("checkSelfPermission"),
-                    jni_sig!("(Ljava/lang/String;)I"),
-                    &[JValue::Object(&perm)],
-                )?
-                .i()?;
-            if state != 0 {
-                let list = env.new_object_array(1, jni_str!("java/lang/String"), &perm)?;
+            let mut missing = Vec::new();
+            for name in names(sdk) {
+                let perm = env.new_string(name)?;
+                let sig = jni_sig!("(Ljava/lang/String;)I");
+                let args = [JValue::Object(&perm)];
+                if env.call_method(&activity, jni_str!("checkSelfPermission"), sig, &args)?.i()? != 0 {
+                    missing.push(perm);
+                }
+            }
+            if let Some(first) = missing.first() {
+                let list = env.new_object_array(missing.len() as i32, jni_str!("java/lang/String"), first)?;
+                for (i, perm) in missing.iter().enumerate().skip(1) {
+                    list.set_element(env, i, perm)?;
+                }
                 env.call_method(
                     &activity,
                     jni_str!("requestPermissions"),
@@ -529,7 +533,7 @@ pub(crate) mod android {
                     &[JValue::Object(&list), JValue::Int(1)],
                 )?;
             }
-            Ok(state == 0)
+            Ok(missing.is_empty())
         })
     }
 
@@ -564,7 +568,7 @@ pub(crate) mod android {
 
     /// Whether the microphone may be used; when not, the user is asked.
     pub(crate) fn mic() -> bool {
-        APP.get().is_some_and(|app| permit(app, |_| "android.permission.RECORD_AUDIO").unwrap_or(false))
+        APP.get().is_some_and(|app| permit(app, |_| vec!["android.permission.RECORD_AUDIO"]).unwrap_or(false))
     }
 
     /// Hides the status and navigation bars; a swipe from the edge shows them for a moment.
@@ -676,8 +680,14 @@ pub(crate) mod android {
             crate::store::set_dir(dir);
         }
         unpack_mappings(&app);
+        // The music, and from Android 12 the Bluetooth controllers paired with the phone.
         let _ = permit(&app, |sdk| {
-            if sdk >= 33 { "android.permission.READ_MEDIA_AUDIO" } else { "android.permission.READ_EXTERNAL_STORAGE" }
+            let music = if sdk >= 33 {
+                "android.permission.READ_MEDIA_AUDIO"
+            } else {
+                "android.permission.READ_EXTERNAL_STORAGE"
+            };
+            if sdk >= 31 { vec![music, "android.permission.BLUETOOTH_CONNECT"] } else { vec![music] }
         });
         sugar_net::youtube::set_po_token_source(crate::potoken::mint);
         crate::stage("permissions");

@@ -495,6 +495,8 @@ fn watch_devices(
         }
         if rescan || last_scan.is_none_or(|t| t.elapsed() >= RESCAN) {
             last_scan = Some(Instant::now());
+            #[cfg(target_os = "android")]
+            crate::ble::wake();
             let mut ports: Vec<String> = input
                 .iter()
                 .flat_map(|input| input.ports().iter().filter_map(|p| input.port_name(p).ok()).collect::<Vec<_>>())

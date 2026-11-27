@@ -32,7 +32,20 @@ frozen() {
   adb shell dumpsys window | grep -q "Application Not Responding: $PKG" && return 0
   adb logcat -d -b events | grep -q "am_anr.*$PKG"
 }
+# Android ends every app that is reading from Google Play services at the moment those restart, as they do on a
+# fresh emulator. That is the system's doing: the app is started again, twice at most, and the run goes on.
+EXCUSED="" EXCUSES=0
+ended_by_system() {
+  local last
+  last=$(adb logcat -d | grep "Killing .*$PKG.*depends on provider com.google.android.gms" | tail -1)
+  [ -n "$last" ] && [ "$last" != "$EXCUSED" ] && [ "$EXCUSES" -lt 2 ] || return 1
+  EXCUSED=$last EXCUSES=$((EXCUSES + 1))
+  echo "::warning::the system ended the app with Google Play services at: $1"
+  adb shell am start -W -n $ACT > /dev/null
+  sleep 5
+}
 alive() {
+  adb shell pidof $PKG > /dev/null || ended_by_system "$1" || fail "app died: $1"
   adb shell pidof $PKG > /dev/null || fail "app died: $1"
   if frozen; then shot "frozen-$(echo "$1" | tr -c 'a-z0-9' '-')"; fail "app not responding after: $1"; fi
 }

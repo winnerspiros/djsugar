@@ -1501,6 +1501,18 @@ fn soften_scrub(s: [f32; 2], speed: f64, sr: f64, state: &mut [f32; 2]) -> [f32;
     out
 }
 
+/// A gain step this large is a cut, a fader flicked for a scratch, not a fader move.
+const CUT_STEP: f32 = 0.25;
+/// How long a cut takes.
+const CUT_RAMP: f64 = 0.001;
+
+/// A fader's gain at frame `f` of a buffer it crosses from one value to another. A move is spread over the whole
+/// buffer, which keeps it free of zipper noise; a cut is done in a millisecond, so its click stays a click.
+fn cut_ramp((from, to): (f32, f32), f: usize, frames: usize, rate: f64) -> f32 {
+    let over = if (to - from).abs() >= CUT_STEP { ((CUT_RAMP * rate) as usize).clamp(1, frames) } else { frames };
+    from + (to - from) * ((f + 1) as f32 / over as f32).min(1.0)
+}
+
 /// The low-pass cutoff of waveform scrubbing at normal speed; it falls in
 /// proportion as the speed rises.
 const SCRUB_TONE_HZ: f64 = 12_000.0;
@@ -3711,7 +3723,7 @@ impl Engine {
                 if external {
                     continue;
                 }
-                let g = lerp(p.vol) * lerp(p.xf) * duck_buf[i][f];
+                let g = cut_ramp(p.vol, f, frames, out_rate) * cut_ramp(p.xf, f, frames, out_rate) * duck_buf[i][f];
                 let to = if unducked == Some(i) { &mut keep } else { &mut main };
                 to[0] += s[0] * g;
                 to[1] += s[1] * g;
@@ -4048,6 +4060,19 @@ impl DryChain {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_fader_cut_lands_in_a_millisecond_and_a_move_takes_the_buffer() {
+        let (frames, rate) = (1024, 48_000.0);
+        let cut = |f| cut_ramp((1.0, 0.0), f, frames, rate);
+        assert!(cut(0) < 1.0 && cut(0) > 0.9);
+        assert_eq!(cut(47), 0.0);
+        assert_eq!(cut(frames - 1), 0.0);
+        let moved = |f| cut_ramp((0.5, 0.6), f, frames, rate);
+        assert!((moved(511) - 0.55).abs() < 1e-4);
+        assert!((moved(frames - 1) - 0.6).abs() < 1e-6);
+        assert_eq!(cut_ramp((0.0, 1.0), 3, 4, rate), 1.0);
+    }
     use crate::beats::BeatGrid;
     use crate::inputs::AUXILIARY;
     use crate::loader::prepare;

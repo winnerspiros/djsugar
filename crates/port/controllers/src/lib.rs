@@ -2,6 +2,8 @@
 //! a `.midi.xml` file binding MIDI messages to controls or script functions, plus JavaScript that implements anything
 //! beyond a direct binding (jog wheels, shift layers, LEDs).
 
+#[cfg(target_os = "android")]
+mod ble;
 mod controller;
 pub mod format;
 pub mod hid;

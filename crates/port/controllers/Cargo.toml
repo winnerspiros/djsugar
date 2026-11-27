@@ -15,4 +15,8 @@ djsugar-js = { path = "../js" }
 serde_json = "1"
 djsugar-hid = { path = "../hid" }
 
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+jni-min-helper = "0.3"
+
 [lints]

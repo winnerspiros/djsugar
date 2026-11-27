@@ -1233,6 +1233,11 @@ mod tests {
             let link = rack.take_plugin_link().unwrap();
             let mut opts = HostOptions::new(helper(), SR);
             opts.poll = Duration::from_millis(2);
+            // The rig plays a buffer a millisecond, ten times the real pace, so on a busy machine a helper that
+            // waits its turn for a moment would count as hung. Only the plugin that does hang keeps the real limit.
+            if effect != "test-hang" {
+                opts.limits.max_missed = 4000;
+            }
             let host = PluginHost::start(&reg, link, opts);
             host.set_plugins(vec![PluginEntry {
                 key: effect.into(),

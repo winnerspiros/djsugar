@@ -3214,6 +3214,8 @@ dependencies = [
  "djsugar-hid",
  "djsugar-js",
  "djsugar-script",
+ "jni 0.21.1",
+ "jni-min-helper",
  "midir",
  "roxmltree",
  "serde_json",
