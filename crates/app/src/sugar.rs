@@ -31,7 +31,21 @@ pub const CUES: [u32; 8] = [
     rgb(0xaf52de),
 ];
 const CUE_NAMES: [&str; 8] = ["Pink", "Red", "Orange", "Yellow", "Green", "Cyan", "Blue", "Purple"];
-pub const DECK: [u32; 2] = [rgb(0x3a8dff), rgb(0xf0443a)];
+pub const DECK: [u32; 4] = [rgb(0x3a8dff), rgb(0xf0443a), rgb(0xffb340), rgb(0xb07cff)];
+/// The decks' letters.
+pub const NAMES: [&str; 4] = ["A", "B", "C", "D"];
+
+/// With four decks, the letter of the deck behind `d`: tapped, it comes forward. Lit while that deck plays.
+pub fn layer_chip(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
+    let behind = (d + 2) % 4;
+    let t = Target::Layer(d % 2);
+    let plays = s.telemetry.decks[behind].playing;
+    let fill = if s.pressed(t) { theme::PRESSED } else { theme::CONTROL };
+    p.outlined(r.x, r.y, r.w, r.h, r.w.min(r.h) * 0.3, fill, 1.0, if plays { DECK[behind] } else { theme::BORDER });
+    let ink = Style::new((r.h * 0.55).max(8.0), Weight::Bold, if plays { DECK[behind] } else { theme::DIM });
+    theme::centred(p, r, ink, NAMES[behind]);
+    hit(s, r, t);
+}
 
 const LOGO: Style = Style::new(16.0, Weight::Bold, rgb(0xe63380));
 const TAB: Style = Style::new(11.0, Weight::Bold, TEXT);
@@ -72,7 +86,7 @@ fn downloads(p: &mut Painter, s: &State, r: Rect) -> f32 {
     p.rect(r.x, y0, r.w, 1.0, 0.0, EDGE);
     for (n, (title, deck, f)) in all.iter().take(shown).enumerate() {
         let y = y0 + 1.0 + n as f32 * rh;
-        let tint = DECK[(*deck).min(1)];
+        let tint = DECK[(*deck).min(3)];
         let more = all.len() - shown;
         let pct = if n + 1 == shown && more > 0 {
             format!("{:.0}%  +{more}", f * 100.0)
@@ -396,9 +410,10 @@ fn side_row(p: &mut Painter, s: &mut State, b: Rect, names: (&str, &str), load: 
     if !names.1.is_empty() {
         p.text_in(b.x + 10.0, b.y + 28.0, b.w - right - 14.0, ARTIST, names.1);
     }
-    for (d, target) in load.into_iter().enumerate() {
-        let k = Rect::new(b.x + b.w - right + d as f32 * 30.0, b.y + 5.0, 26.0, 24.0);
-        button(p, s, k, ["A", "B"][d], false, DECK[d], target);
+    for (side, target) in load.into_iter().enumerate() {
+        let d = s.fore()[side];
+        let k = Rect::new(b.x + b.w - right + side as f32 * 30.0, b.y + 5.0, 26.0, 24.0);
+        button(p, s, k, NAMES[d], false, DECK[d], target);
     }
     if let Some(target) = off {
         let close = Rect::new(b.x + b.w - 32.0, b.y + 3.0, 28.0, 28.0);
@@ -440,7 +455,7 @@ fn side_list(p: &mut Painter, s: &mut State, r: Rect) {
     for n in 0..rows {
         let names = s.sidelist[n].1.clone();
         let names = (names.first().map_or("", String::as_str), names.get(1).map_or("", String::as_str));
-        let load = [Target::SideLoad(n, 0), Target::SideLoad(n, 1)];
+        let load = s.fore().map(|d| Target::SideLoad(n, d));
         side_row(p, s, Rect::new(x, y, w, 34.0), names, load, Some(Target::SideRemove(n)));
         y += QUEUE_ROW;
     }
@@ -481,7 +496,7 @@ fn side_related(p: &mut Painter, s: &mut State, r: Rect) {
             if y + QUEUE_ROW <= r.y + r.h {
                 let e = &s.entries[t as usize];
                 let (title, artist) = (e.title.to_string(), e.artist.to_string());
-                let load = [Target::RelatedLoad(row, 0), Target::RelatedLoad(row, 1)];
+                let load = s.fore().map(|d| Target::RelatedLoad(row, d));
                 side_row(p, s, Rect::new(x, y, w, 34.0), (&title, &artist), load, unlink.then_some(Target::Unlink(n)));
                 y += QUEUE_ROW;
             }
@@ -562,7 +577,7 @@ fn side_auto(p: &mut Painter, s: &mut State, r: Rect) {
         hit(s, b, Target::QueueRow(n));
         // A track on a deck shows which, until it has played and leaves the list.
         let deck = held.iter().position(|&row| row == Some(n));
-        let place = deck.map_or_else(|| (n + 1).to_string(), |d| ["A", "B"][d].to_string());
+        let place = deck.map_or_else(|| (n + 1).to_string(), |d| NAMES[d].to_string());
         let ink = if deck.is_some() { theme::AUTOMIX } else { theme::FAINT };
         p.text(b.x + 9.0, b.y + 21.0, Style { colour: ink, ..TAB }, &place);
         let (title, artist) = (s.queue[n].1.first().cloned(), s.queue[n].1.get(1).cloned());
@@ -617,7 +632,7 @@ fn side_cues(p: &mut Painter, s: &mut State, r: Rect) {
         r.y + 14.0,
         r.w - 24.0,
         Style { colour: DECK[d], ..SMALL },
-        &format!("DECK {}  {}", ["A", "B"][d], l.entry.title),
+        &format!("DECK {}  {}", NAMES[d], l.entry.title),
     );
     let mut y = r.y + 26.0;
     for n in 0..8 {
@@ -725,9 +740,10 @@ fn toolbar(p: &mut Painter, s: &mut State, r: Rect) {
         format!("REC {}:{:02}", t / 60, t % 60)
     });
     let rec_label = rec.as_deref().unwrap_or("REC");
+    let [left, right] = s.fore();
     let items: [(&str, bool, Target); 6] = [
-        ("LOAD 1", s.browser == Some(0), Target::Browse(0)),
-        ("LOAD 2", s.browser == Some(1), Target::Browse(1)),
+        (["LOAD 1", "LOAD 3"][left / 2], s.browser == Some(left), Target::Browse(left)),
+        (["LOAD 2", "LOAD 4"][right / 2], s.browser == Some(right), Target::Browse(right)),
         ("FX", s.show_fx, Target::ToggleFx),
         ("SMPL", s.show_samplers, Target::ToggleSamplers),
         ("AUTO", s.auto.is_some(), Target::AutoDj),
@@ -918,8 +934,8 @@ fn effects(p: &mut Painter, s: &mut State, r: Rect) {
     let top = (r.h * 0.46).round();
     let kinds = djsugar_engine::AVAILABLE_EFFECTS.len() as u8 + 1;
     let name_ink = Style::new(12.0, Weight::Regular, theme::DIM);
-    for d in 0..2 {
-        let x0 = r.x + d as f32 * half;
+    for d in s.fore() {
+        let x0 = r.x + (d % 2) as f32 * half;
         let mix_w = 84.0_f32.min(half * 0.2);
         let cell = ((half - mix_w) / 3.0).floor();
         let (slots, mix) = s.fx[d];
@@ -976,7 +992,7 @@ fn effects(p: &mut Painter, s: &mut State, r: Rect) {
         }
         let m = Rect::new(x0 + 3.0 * cell, r.y, half - 3.0 * cell, r.h);
         let label = Style { colour: DECK[d], ..SMALL };
-        let text = ["FX 1 MIX", "FX 2 MIX"][d];
+        let text = ["FX 1 MIX", "FX 2 MIX", "FX 3 MIX", "FX 4 MIX"][d];
         p.text(m.x + (m.w - p.text_width(label, text)) * 0.5, m.y + top * 0.5 + 4.0, label, text);
         let kw = (m.h - top - 8.0).min(30.0);
         knob(
@@ -1080,9 +1096,12 @@ fn samplers(p: &mut Painter, s: &mut State, r: Rect) {
 }
 
 fn waveforms(p: &mut Painter, s: &mut State, r: Rect) {
-    let h = (r.h / 2.0).floor();
-    for d in 0..2 {
-        scrolling(p, s, Rect::new(r.x, r.y + d as f32 * h, r.w, h - 1.0), d);
+    // All four where there is room for them, else the two decks that are forward.
+    let all = s.four() && r.h >= 4.0 * 34.0;
+    let decks = if all { vec![0, 1, 2, 3] } else { s.fore().to_vec() };
+    let h = (r.h / decks.len() as f32).floor();
+    for (n, d) in decks.into_iter().enumerate() {
+        scrolling(p, s, Rect::new(r.x, r.y + n as f32 * h, r.w, h - 1.0), d);
     }
 }
 
@@ -1179,9 +1198,7 @@ fn cue_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     hit(s, screen, Target::CueMenuClose);
     let now = usize::from(s.decks[d].cue_colours[i]) % CUES.len();
     let lines = [
-        Line::item(format!("Hot cue {}", i + 1), Target::MenuBody)
-            .enabled(false)
-            .hint(format!("Deck {}", ["A", "B"][d])),
+        Line::item(format!("Hot cue {}", i + 1), Target::MenuBody).enabled(false).hint(format!("Deck {}", NAMES[d])),
         Line::Rule,
         Line::sub("Colour", 0).hint(CUE_NAMES[now]),
         Line::Rule,
@@ -1217,7 +1234,7 @@ fn grid_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let bpm = s.decks[d].beat().map_or_else(String::new, |(g, _)| format!("{:.2} BPM", g.bpm));
     let op = |text: &str, o: GridOp, on: bool| Line::item(text, Target::GridOp(o)).enabled(on);
     let lines = [
-        Line::item(format!("Beat grid, deck {}", ["A", "B"][d]), Target::MenuBody).enabled(false).hint(bpm),
+        Line::item(format!("Beat grid, deck {}", NAMES[d]), Target::MenuBody).enabled(false).hint(bpm),
         Line::Rule,
         op("Downbeat here", GridOp::Here, edits),
         op("Move earlier", GridOp::Earlier, edits).hint("-10 ms"),
@@ -1244,7 +1261,12 @@ fn mini_deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let r = Rect::new(r.x + 4.0, r.y + 4.0, r.w - 8.0, r.h - 8.0);
     let bw = 48.0f32.min(r.h);
     transport(p, s, Rect::new(r.x, r.y, bw, r.h), d);
-    let rest = Rect::new(r.x + bw + 6.0, r.y, r.w - bw - 6.0, r.h);
+    let mut rest = Rect::new(r.x + bw + 6.0, r.y, r.w - bw - 6.0, r.h);
+    if s.four() {
+        let c = 22.0f32.min(rest.h);
+        layer_chip(p, s, Rect::new(rest.x + rest.w - c, rest.y, c, c), d);
+        rest.w -= c + 6.0;
+    }
     let ih = (rest.h * 0.55).min(40.0);
     info(p, s, Rect::new(rest.x, rest.y, rest.w, ih), d);
     if rest.h - ih > 14.0 {
@@ -1733,6 +1755,7 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let title = if e.artist.is_empty() { e.title.to_string() } else { format!("{} - {}", e.artist, e.title) };
     let held = s.playlists.iter().filter(|(_, k)| k.contains(&key)).count();
     let worn = s.tags.iter().filter(|(_, k)| k.contains(&key)).count();
+    let decks = if s.four() { 4 } else { 2 };
     let free = |d: usize| !(s.settings.on(crate::settings::Opt::Protect) && s.telemetry.decks[d].playing);
     let stars = (1..=5u8).map(|n| (Pick::Star(n <= saved.rating), Target::MenuRate(n))).collect();
     let mut colours = vec![(Pick::Clear(saved.colour == 0), Target::MenuColour(0))];
@@ -1753,11 +1776,11 @@ fn track_menu(p: &mut Painter, s: &mut State, w: f32, h: f32) {
         Line::Rule,
         Line::Picks {
             label: "Load on Deck",
-            picks: (0..2).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuDeck(d))).collect(),
+            picks: (0..decks).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuDeck(d))).collect(),
         },
         Line::Picks {
             label: "Play on Deck",
-            picks: (0..2).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuPlay(d))).collect(),
+            picks: (0..decks).map(|d| (Pick::Deck(d as u8 + 1, free(d)), Target::MenuPlay(d))).collect(),
         },
         Line::item("Add to Automix", Target::MenuQueue),
         Line::item("Add to Sidelist", Target::MenuSide),
@@ -2033,7 +2056,7 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
         if picked {
             p.rect(r.x + 4.0, y, r.w - 8.0, row, 3.0, fade(ACCENT, 0x58));
         } else if let Some(d) = deck {
-            p.rect(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(DECK[d.min(1)], 0x50));
+            p.rect(r.x + 6.0, y, r.w - 12.0, row, 4.0, fade(DECK[d.min(3)], 0x50));
         } else if n % 2 == 1 {
             p.rect(r.x + 4.0, y, r.w - 8.0, row, 0.0, rgb(0x161819));
         }
@@ -2094,10 +2117,10 @@ fn table(p: &mut Painter, s: &mut State, r: Rect) {
     let name = &s.entries[i as usize].title;
     let bw = 96.0f32.min(r.w * 0.2);
     p.text_in(r.x + 12.0, y + 25.0, r.w - 2.0 * bw - 36.0, TITLE, name);
-    for d in 0..2 {
-        let b = Rect::new(r.x + r.w - (2 - d) as f32 * (bw + 6.0), y + 6.0, bw, bar - 12.0);
+    for d in s.fore() {
+        let b = Rect::new(r.x + r.w - (2 - d % 2) as f32 * (bw + 6.0), y + 6.0, bw, bar - 12.0);
         p.rect(b.x, b.y, b.w, b.h, 5.0, DECK[d]);
-        let label = ["DECK A", "DECK B"][d];
+        let label = &format!("DECK {}", NAMES[d]);
         p.text(b.x + (b.w - p.text_width(TAB, label)) * 0.5, b.y + b.h * 0.5 + 4.0, TAB, label);
         hit(s, b, Target::LoadSelected(d));
     }
@@ -2223,7 +2246,8 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
     p.text(xr.x + 10.0, xr.y + xr.h - 10.0, label, across);
     p.text(xr.x + 10.0, xr.y + 18.0, label, up);
     let name = Style::new(20.0, Weight::Bold, if live { TEXT } else { fade(TEXT, 0x50) });
-    let sn = if aim == 0 { st.scene.name() } else { ["DECK A", "DECK B"][(aim - 1).min(1)] };
+    const AIMS: [&str; 5] = ["MASTER", "DECK A", "DECK B", "DECK C", "DECK D"];
+    let sn = if aim == 0 { st.scene.name() } else { AIMS[aim.min(4)] };
     p.text(xr.x + (xr.w - p.text_width(name, sn)) * 0.5, xr.y + xr.h * 0.5 + 7.0, name, sn);
     let (px, py) = (xr.x + st.xy.0 * xr.w, xr.y + (1.0 - st.xy.1) * xr.h);
     if live {
@@ -2244,8 +2268,8 @@ fn station(p: &mut Painter, s: &mut State, r: Rect) {
         if wide { Rect::new(hb.x - n * 68.0, hb.y, 62.0, 24.0) } else { Rect::new(hb.x, hb.y + n * 30.0, 62.0, 24.0) }
     };
     if wide || xr.h >= 100.0 {
-        let to = ["MASTER", "DECK A", "DECK B"][aim.min(2)];
-        button(p, s, at(1.0), to, aim > 0, DECK[aim.saturating_sub(1).min(1)], Target::XyAim);
+        let to = AIMS[aim.min(4)];
+        button(p, s, at(1.0), to, aim > 0, DECK[aim.saturating_sub(1).min(3)], Target::XyAim);
         button(p, s, at(2.0), "RESET", false, ACCENT, Target::XyReset);
     }
 }
@@ -2279,10 +2303,10 @@ fn picker(p: &mut Painter, s: &mut State, w: f32, h: f32) {
     let r = Rect::new(20.0, 20.0, w - 40.0, h - 40.0);
     theme::card(p, r, DECK[d]);
     hit(s, r, Target::Picker);
-    let bank = ["A", "B", "C", "D"][s.bank[d] % 4];
-    let head = format!("DECK {} SAMPLE PAD {bank}{}", ["A", "B"][d], pad + 1);
+    let bank = NAMES[s.bank[d % 2] % 4];
+    let head = format!("DECK {} SAMPLE PAD {bank}{}", NAMES[d], pad + 1);
     p.text(r.x + 12.0, r.y + 22.0, TAB, &head);
-    let current = s.pads[d][s.bank[d] * 8 + pad];
+    let current = s.pads[d % 2][s.bank[d % 2] * 8 + pad];
     let name = crate::state::sample_name(s, current);
     let cs = Style { colour: DECK[d], ..TAB };
     p.text(r.x + 24.0 + p.text_width(TAB, &head), r.y + 22.0, cs, &name);
@@ -2547,12 +2571,13 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
             button(p, s, b, "OPEN", false, green, Target::HubOpen(i));
             continue;
         }
-        for (d, &colour) in DECK.iter().enumerate() {
-            let b = Rect::new(list.x + list.w - (2 - d) as f32 * (bw + 6.0), y + 7.0, bw, HUB_ROW - 14.0);
+        for d in s.fore() {
+            let colour = DECK[d];
+            let b = Rect::new(list.x + list.w - (2 - d % 2) as f32 * (bw + 6.0), y + 7.0, bw, HUB_ROW - 14.0);
             let getting = s.hub.fetching.iter().find(|f| f.0 == s.hub.hits[i].id && f.1 == d).map(|f| f.2);
             let label = match getting {
                 Some(f) => format!("{:.0}%", f * 100.0),
-                None => format!("DECK {}", ["A", "B"][d]),
+                None => format!("DECK {}", NAMES[d]),
             };
             button(p, s, b, &label, getting.is_some(), colour, Target::HubLoad(i, d));
             if let Some(f) = getting {
@@ -2587,14 +2612,14 @@ fn skin_knob(p: &mut Painter, cx: f32, cy: f32, rad: f32) {
 /// Both decks' summaries side by side, or stacked when a column is too narrow; returns the height used.
 fn minis(p: &mut Painter, s: &mut State, r: Rect) -> f32 {
     if r.w >= 560.0 {
-        for d in 0..2 {
-            mini_deck(p, s, Rect::new(r.x + d as f32 * r.w * 0.5, r.y, r.w * 0.5, r.h), d);
+        for d in s.fore() {
+            mini_deck(p, s, Rect::new(r.x + (d % 2) as f32 * r.w * 0.5, r.y, r.w * 0.5, r.h), d);
         }
         return r.h;
     }
     let h = (r.h * 0.5).max(52.0);
-    for d in 0..2 {
-        mini_deck(p, s, Rect::new(r.x, r.y + d as f32 * h, r.w, h), d);
+    for d in s.fore() {
+        mini_deck(p, s, Rect::new(r.x, r.y + (d % 2) as f32 * h, r.w, h), d);
     }
     2.0 * h
 }
@@ -2660,7 +2685,7 @@ fn browser(p: &mut Painter, s: &mut State, w: f32, h: f32, top: f32) {
     section(p, r, INK);
     p.outlined(r.x, r.y, r.w, r.h, 0.0, 0, 1.5, DECK[d]);
     let head = Style::new(14.0, Weight::Bold, DECK[d]);
-    let x = r.x + 24.0 + p.text(r.x + 12.0, r.y + 25.0, head, ["Load to deck A", "Load to deck B"][d]);
+    let x = r.x + 24.0 + p.text(r.x + 12.0, r.y + 25.0, head, &format!("Load to deck {}", NAMES[d]));
     let (q, st) = if s.query.is_empty() {
         ("Type to search", Style { colour: DARK, ..TITLE })
     } else {
@@ -2713,7 +2738,7 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     let t = s.telemetry.decks[d];
     let art = r.h;
     p.rect(r.x, r.y, art, art, 4.0, fade(DECK[d], 0x40));
-    let num = ["A", "B"][d];
+    let num = NAMES[d];
     let big = Style::new(art * 0.42, Weight::Bold, DECK[d]);
     p.text(r.x + (art - p.text_width(big, num)) * 0.5, r.y + art * 0.66, big, num);
     let right = 150.0f32.min(r.w * 0.4);

@@ -150,6 +150,11 @@ impl Ui {
         self.state.dismiss()
     }
 
+    /// The deck shown on each side.
+    pub fn fore(&self) -> [usize; 2] {
+        self.state.fore()
+    }
+
     /// Whether any key has been moved from where it shipped.
     pub fn moved_keys(&self) -> bool {
         !self.state.binds.is_empty()

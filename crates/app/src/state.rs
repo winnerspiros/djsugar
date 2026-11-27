@@ -123,6 +123,8 @@ pub enum Target {
     /// A choice picked for a setting.
     PrefPick(crate::settings::Opt, u8),
     Rescan,
+    /// Brings the other deck of a side forward, with four decks in use.
+    Layer(usize),
     /// Waits for the key to put an action on, by the key it shipped on; and every key back as shipped.
     Bind(char),
     BindReset,
@@ -704,6 +706,24 @@ pub fn keymap(c: char) -> Option<Target> {
     })
 }
 
+/// A keyboard action for the left or right deck, aimed at the deck shown on that side.
+fn on_fore(t: Target, fore: [usize; 2]) -> Target {
+    let at = |d: usize| fore[d.min(1)];
+    match t {
+        Target::Play(d) => Target::Play(at(d)),
+        Target::Cue(d) => Target::Cue(at(d)),
+        Target::Jump(d, n) => Target::Jump(at(d), n),
+        Target::Sync(d) => Target::Sync(at(d)),
+        Target::Pfl(d) => Target::Pfl(at(d)),
+        Target::Pad(d, n) => Target::Pad(at(d), n),
+        Target::LoopIn(d) => Target::LoopIn(at(d)),
+        Target::LoopOut(d) => Target::LoopOut(at(d)),
+        Target::LoopToggle(d) => Target::LoopToggle(at(d)),
+        Target::LoopSize(d, n) => Target::LoopSize(at(d), n),
+        other => other,
+    }
+}
+
 type Done = (Job, Option<Loaded>);
 
 enum Job {
@@ -800,7 +820,9 @@ pub struct State {
     /// The playlist being renamed, and the name so far.
     pub naming: Option<Shelf>,
     /// Each deck's effect unit: three slots (effect, on, knob), then the dry/wet mix.
-    pub fx: [FxUnit; 2],
+    pub fx: [FxUnit; DECKS],
+    /// With four decks, whether each side shows its second deck (C on the left, D on the right).
+    pub layer: [bool; 2],
     /// The slot whose effect list is open.
     pub fx_menu: Option<(usize, usize)>,
     /// The slot whose parameters are open, and where they stand.
@@ -1014,6 +1036,7 @@ impl State {
             found: 0,
             mixes: 0,
             health: library::Health::default(),
+            layer: [false; 2],
             binds: crate::store::load_keys(),
             binding: None,
             mix_held: [None, None],
@@ -1687,7 +1710,7 @@ impl State {
     }
 
     fn remember(&mut self) {
-        for d in 0..2 {
+        for d in 0..DECKS {
             let deck = &self.decks[d];
             let Some(key) = Self::track_key(deck) else { continue };
             let grid = deck.loaded.as_ref().and_then(|l| l.grid).map(|g| (g.bpm, g.first_beat));
@@ -1919,6 +1942,17 @@ impl State {
     }
 
     /// The library's folders, sorted, each once.
+    /// Whether decks C and D are in use, each behind the deck on its side.
+    pub fn four(&self) -> bool {
+        self.settings.on(crate::settings::Opt::FourDecks)
+    }
+
+    /// The deck shown on each side: A and B, or with four decks whichever of each pair is forward.
+    pub fn fore(&self) -> [usize; 2] {
+        let four = self.four();
+        [usize::from(four && self.layer[0]) * 2, 1 + usize::from(four && self.layer[1]) * 2]
+    }
+
     fn check_health(&mut self) {
         let tracks = &self.entries[SAMPLES.len().min(self.entries.len())..];
         let keys = self.playlists.iter().chain(&self.tags).flat_map(|(_, k)| k.iter().map(String::as_str));
@@ -1975,11 +2009,11 @@ impl State {
     /// A key let go: ends a held temporary tempo change.
     pub fn key_up(&mut self, key: Key) {
         match key {
-            Key::F(n @ (3 | 4 | 7 | 8)) => self.send(Command::Nudge(usize::from(n > 4), 0.0)),
+            Key::F(n @ (3 | 4 | 7 | 8)) => self.send(Command::Nudge(self.fore()[usize::from(n > 4)], 0.0)),
             Key::Char(c) => {
                 let k = crate::settings::resolve(&self.binds, unshift(c).to_ascii_lowercase());
                 if let Some(Target::Cue(d)) = k.and_then(keymap) {
-                    self.end_preview(d);
+                    self.end_preview(self.fore()[d]);
                 }
             }
             _ => {}
@@ -2158,7 +2192,7 @@ impl State {
             Key::Home => self.select_by(isize::MIN / 2),
             Key::End => self.select_by(isize::MAX / 2),
             Key::Left | Key::Right if m.shift => {
-                let d = usize::from(key == Key::Right);
+                let d = self.fore()[usize::from(key == Key::Right)];
                 if m.alt {
                     self.press(Target::Eject(d), 0.0, 0.0);
                 } else {
@@ -2211,12 +2245,12 @@ impl State {
         let shift = m.shift || unshift(c) != c;
         let Some(k) = crate::settings::resolve(&self.binds, unshift(c).to_ascii_lowercase()) else { return };
         if let 'b' | 'n' = k {
-            let d = usize::from(k == 'n');
+            let d = self.fore()[usize::from(k == 'n')];
             self.decks[d].kills[0] = !self.decks[d].kills[0];
             self.send(Command::Kill(d, self.decks[d].kills));
             return;
         }
-        let Some(t) = keymap(k) else { return };
+        let Some(t) = keymap(k).map(|t| on_fore(t, self.fore())) else { return };
         if !shift {
             self.pointer_target(t);
             return;
@@ -2261,7 +2295,7 @@ impl State {
         if !(1..=8).contains(&n) {
             return;
         }
-        let (d, i) = (usize::from(n > 4), (n - 1) % 4);
+        let (d, i) = (self.fore()[usize::from(n > 4)], (n - 1) % 4);
         let small = usize::from(m.shift);
         let dir = if i % 2 == 0 { -1.0 } else { 1.0 };
         if i < 2 {
@@ -2354,8 +2388,8 @@ impl State {
         self.history.retain(|&i| i as usize != index);
         self.history.insert(0, index as u32);
         // A track loaded while the other deck plays is taken to be played with that one.
-        if self.telemetry.decks[1 - deck].playing
-            && let Some(with) = self.decks[1 - deck].loaded.as_ref().map(|l| entry_key(&l.entry))
+        if self.telemetry.decks[deck ^ 1].playing
+            && let Some(with) = self.decks[deck ^ 1].loaded.as_ref().map(|l| entry_key(&l.entry))
             && crate::related::pair(&mut self.played, &with, &entry_key(&self.entries[index]))
         {
             crate::store::save_played(&self.played);
@@ -2448,7 +2482,7 @@ impl State {
         {
             self.picker = Some((d, p));
             self.find_sounds();
-            let at = self.pads[d][self.bank[d] * 8 + p];
+            let at = self.pads[d % 2][self.bank[d % 2] * 8 + p];
             self.picker_scroll = (at / self.picker_grid.cols.max(1)) as f32 * self.picker_grid.cell.1;
         }
     }
@@ -2480,7 +2514,7 @@ impl State {
             1.0
         };
         self.send_gain(d);
-        if s.on(Opt::TempoMatch) && self.telemetry.decks[1 - d.min(1)].playing {
+        if s.on(Opt::TempoMatch) && self.telemetry.decks[d.min(DECKS - 1) ^ 1].playing {
             self.match_tempo(d);
         }
         if s.on(Opt::KeyMatch) {
@@ -2571,6 +2605,13 @@ impl State {
                     self.send(Command::Rate(d, r));
                 }
             }
+            Opt::FourDecks if v == 0 => {
+                self.layer = [false; 2];
+                self.station.aim = self.station.aim.min(2);
+                for d in 2..DECKS {
+                    self.send(Command::Play(d, false));
+                }
+            }
             Opt::ReverseFader => {
                 let x = self.crossfader_out();
                 self.send(Command::Crossfader(x));
@@ -2622,7 +2663,7 @@ impl State {
     /// The sound on the pad being picked, when it is one of the user's own.
     pub fn picked_sound(&self) -> Option<&(String, std::path::PathBuf)> {
         let (d, p) = self.picker?;
-        self.pads[d][self.bank[d] * 8 + p].checked_sub(SAMPLES.len()).and_then(|n| self.sounds.get(n))
+        self.pads[d % 2][self.bank[d % 2] * 8 + p].checked_sub(SAMPLES.len()).and_then(|n| self.sounds.get(n))
     }
 
     /// Starts a take from the microphone, or ends the one running and keeps it as a sound of the user's own.
@@ -2661,7 +2702,7 @@ impl State {
         self.find_sounds();
         let Some(i) = self.sounds.iter().position(|s| s.1 == path).map(|n| SAMPLES.len() + n) else { return };
         if let Some((d, p)) = self.picker {
-            self.pads[d][self.bank[d] * 8 + p] = i;
+            self.pads[d % 2][self.bank[d % 2] * 8 + p] = i;
             crate::store::save_pads(&self.pads, SAMPLES.len(), &self.sounds);
         }
         self.sample(i);
@@ -2791,7 +2832,7 @@ impl State {
     /// Sets deck `d`'s tempo fader so it plays at the other deck's tempo, folded to the nearest octave.
     /// Returns false when either deck has no beat grid.
     fn match_tempo(&mut self, d: usize) -> bool {
-        let o = 1 - d.min(1);
+        let o = d.min(DECKS - 1) ^ 1;
         let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return false };
         let (Some(g), Some(og)) = (me.grid, other.grid) else { return false };
         let other_speed = 1.0 + f64::from(self.decks[o].rate) * self.settings.rate_range();
@@ -2812,7 +2853,7 @@ impl State {
         if !self.match_tempo(d) {
             return;
         }
-        let o = 1 - d.min(1);
+        let o = d.min(DECKS - 1) ^ 1;
         let (Some(me), Some(other)) = (&self.decks[d].loaded, &self.decks[o].loaded) else { return };
         let (Some(g), Some(og)) = (me.grid, other.grid) else { return };
         let (rate, orate) = (me.track.rate, other.track.rate);
@@ -2853,7 +2894,8 @@ impl State {
 
     fn grid_edit(&mut self, d: usize, op: GridOp) {
         let pos = self.telemetry.decks[d].position;
-        let other = self.decks[1 - d].beat().map(|(g, b)| (g, b, self.telemetry.decks[1 - d].position));
+        let o = d ^ 1;
+        let other = self.decks[o].beat().map(|(g, b)| (g, b, self.telemetry.decks[o].position));
         let deck = &mut self.decks[d];
         match op {
             GridOp::Lock => return deck.grid_locked = !deck.grid_locked,
@@ -3016,7 +3058,7 @@ impl State {
                 self.focus = d;
                 if on
                     && self.settings.on(crate::settings::Opt::SyncOnPlay)
-                    && self.telemetry.decks[1 - d.min(1)].playing
+                    && self.telemetry.decks[d.min(DECKS - 1) ^ 1].playing
                 {
                     self.sync(d);
                 }
@@ -3053,7 +3095,7 @@ impl State {
             }
             Target::Mode(d, m) => {
                 if m == Mode::Samples && self.decks[d].mode == m {
-                    self.bank[d] = (self.bank[d] + 1) % BANKS;
+                    self.bank[d % 2] = (self.bank[d % 2] + 1) % BANKS;
                 }
                 self.decks[d].mode = m;
             }
@@ -3244,6 +3286,11 @@ impl State {
                 self.pref_menu = None;
                 self.submenu = None;
             }
+            Target::Layer(side) => {
+                if let Some(l) = self.layer.get_mut(side) {
+                    *l = !*l;
+                }
+            }
             Target::Bind(action) => self.binding = (self.binding != Some(action)).then_some(action),
             Target::BindReset => {
                 self.binds.clear();
@@ -3266,7 +3313,8 @@ impl State {
             }
             Target::XyAim => {
                 self.xy_let_go();
-                self.station.aim = (self.station.aim + 1) % (DECKS + 1);
+                let decks = if self.four() { DECKS } else { 2 };
+                self.station.aim = (self.station.aim + 1) % (decks + 1);
             }
             Target::XyReset => {
                 if self.station.before.is_none()
@@ -3760,7 +3808,7 @@ impl State {
                     let row = ((y - r.y + self.picker_scroll) / g.cell.1) as usize;
                     let i = row * g.cols + col;
                     if d.last.0 >= r.x && y >= r.y && col < g.cols && i < SAMPLES.len() + self.sounds.len() {
-                        self.pads[deck][self.bank[deck] * 8 + pad] = i;
+                        self.pads[deck % 2][self.bank[deck % 2] * 8 + pad] = i;
                         self.sample(i);
                         crate::store::save_pads(&self.pads, SAMPLES.len(), &self.sounds);
                     }
@@ -3814,8 +3862,8 @@ impl State {
     }
 
     /// The box around each deck's controls on screen now.
-    pub(crate) fn deck_zones(&self) -> [Option<Rect>; 2] {
-        let mut zones = [None; 2];
+    pub(crate) fn deck_zones(&self) -> [Option<Rect>; DECKS] {
+        let mut zones = [None; DECKS];
         for h in &self.hits {
             let d = match h.target {
                 Target::Jog(d)

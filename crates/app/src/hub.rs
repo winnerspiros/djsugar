@@ -584,7 +584,7 @@ impl Hub {
         let (id, art, wanted) = (h.id.clone(), h.art.clone(), h.clone());
         self.fetching.push((id.clone(), deck, 0.0));
         self.names.push((id.clone(), h.title.clone(), h.artist.clone()));
-        self.status = format!("Getting \"{}\" for deck {}", h.title, ["A", "B"][deck.min(1)]);
+        self.status = format!("Getting \"{}\" for deck {}", h.title, crate::sugar::NAMES[deck.min(3)]);
         let (c, tx, dir, sv) = (self.clients.clone(), self.tx.clone(), self.cache.clone(), self.service);
         std::thread::spawn(move || {
             let last = std::sync::Mutex::new(0u8);
@@ -723,7 +723,7 @@ impl Hub {
                     self.fetching.retain(|x| x.0 != id);
                     let (title, artist) = self.named(&id);
                     self.names.retain(|n| n.0 != id);
-                    self.status = format!("Loaded \"{title}\" to deck {}", ["A", "B"][deck.min(1)]);
+                    self.status = format!("Loaded \"{title}\" to deck {}", crate::sugar::NAMES[deck.min(3)]);
                     ready.push((path, title, artist, deck, sv.title()));
                 }
                 Reply::Thumb(id, art, round) => {

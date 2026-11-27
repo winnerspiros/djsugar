@@ -26,6 +26,7 @@ pub enum Opt {
     BpmRange,
     SampleRate,
     Buffer,
+    FourDecks,
     TempoMatch,
     SyncOnPlay,
     EndWarning,
@@ -92,7 +93,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 38] = [
+pub const OPTIONS: [Spec; 39] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -259,6 +260,14 @@ pub const OPTIONS: [Spec; 38] = [
         title: "Buffer size",
         detail: "Smaller answers faster; larger is safer from dropouts.",
         kind: Kind::Menu(&["Device default", "64", "128", "256", "512", "1024", "2048"]),
+        default: 0,
+    },
+    Spec {
+        opt: Opt::FourDecks,
+        key: "four_decks",
+        title: "Four decks",
+        detail: "Decks C and D sit behind A and B; the letter beside a deck's own brings the other forward.",
+        kind: Kind::Switch,
         default: 0,
     },
     Spec {
@@ -476,6 +485,8 @@ pub fn page(
             Row::Opt(Opt::EndWarning),
             Row::Opt(Opt::SkipNonMusic),
             Row::Opt(Opt::Stems),
+            Row::Heading("LAYOUT"),
+            Row::Opt(Opt::FourDecks),
             Row::Heading("TEMPO AND KEY ON LOAD"),
             Row::Opt(Opt::TempoMatch),
             Row::Opt(Opt::KeyMatch),

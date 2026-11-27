@@ -7,7 +7,7 @@ use sugar_ui::{Painter, Style, Weight, rgb};
 
 use crate::classic::{bold, fader, knob, mmss, overview, vu_meter};
 use crate::state::{FX_PADS, LOOP_BEATS, Mode, State, Target, beats_label, pad_name};
-use crate::sugar::{DECK, cue_colour, fade, hit};
+use crate::sugar::{DECK, NAMES, cue_colour, fade, hit, layer_chip};
 use crate::theme::{BORDER, CONTROL, DIM, PANEL, PRESSED, RAISED, SEPARATOR, TEXT, WELL, centred};
 
 const PINK: u32 = rgb(0xff4fa8);
@@ -21,9 +21,10 @@ pub const HEIGHT: f32 = 281.0;
 pub fn row(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, BLACK);
     let side = ((r.w - MIXER - 2.0) * 0.5).floor();
-    deck(p, s, Rect::new(r.x, r.y, side, r.h), 0);
+    let [left, right] = s.fore();
+    deck(p, s, Rect::new(r.x, r.y, side, r.h), left);
     mixer(p, s, Rect::new(r.x + side + 1.0, r.y, r.w - 2.0 * side - 2.0, r.h));
-    deck(p, s, Rect::new(r.x + r.w - side, r.y, side, r.h), 1);
+    deck(p, s, Rect::new(r.x + r.w - side, r.y, side, r.h), right);
 }
 
 /// A pill: dark, or washed in its tint when on.
@@ -60,7 +61,7 @@ fn candy(p: &mut Painter, s: &mut State, b: Rect, u: f32, (lit, tint): (bool, u3
 }
 
 fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
-    let mirrored = d == 1;
+    let mirrored = d % 2 == 1;
     p.rect(r.x, r.y, r.w, r.h, 0.0, PANEL);
     let u = (r.h / 26.0).clamp(8.0, 15.0);
     let dia = (r.h - 2.0 * u).min(r.w * if r.w > 700.0 { 0.36 } else { 0.27 });
@@ -102,12 +103,12 @@ fn deck(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
 
 /// The deck's letter on its colour, then the title over the artist.
 fn title(p: &mut Painter, s: &mut State, r: Rect, d: usize, u: f32) {
-    let mirrored = d == 1;
+    let mirrored = d % 2 == 1;
     let b = u * 2.0;
     let bx = if mirrored { r.x + r.w - b } else { r.x };
     let badge = Rect::new(bx, r.y + (r.h - b) * 0.5, b, b);
     p.rect(badge.x, badge.y, badge.w, badge.h, u * 0.6, DECK[d]);
-    centred(p, badge, bold(u * 1.1, INK), ["A", "B"][d]);
+    centred(p, badge, bold(u * 1.1, INK), NAMES[d]);
     let deck = &s.decks[d];
     let (name, artist, ink) = match &deck.loaded {
         Some(l) => (l.entry.title.to_string(), l.entry.artist.to_string(), TEXT),
@@ -120,12 +121,19 @@ fn title(p: &mut Painter, s: &mut State, r: Rect, d: usize, u: f32) {
     }
     let big = bold(u * 1.35, ink);
     let small = Style::new((u * 1.05).round().max(8.0), Weight::Regular, DIM);
+    let mut lead = b + u * 0.6;
+    if s.four() {
+        let c = (u * 1.6).round();
+        let cx = if mirrored { bx - u * 0.5 - c } else { bx + b + u * 0.5 };
+        layer_chip(p, s, Rect::new(cx, r.y + (r.h - c) * 0.5, c, c), d);
+        lead += c + u * 0.5;
+    }
     let counter = counter(p, s, r, d, u);
-    let w = r.w - b - u * 0.6 - counter;
+    let w = r.w - lead - counter;
     let top = if artist.is_empty() { r.y + (r.h - big.px) * 0.5 - u * 0.15 } else { r.y };
     for (st, text, base) in [(big, &name, top + big.px), (small, &artist, top + big.px + small.px + u * 0.4)] {
         let tw = p.text_width(st, text).min(w);
-        let x = if mirrored { r.x + counter + w - tw } else { r.x + b + u * 0.6 };
+        let x = if mirrored { r.x + counter + w - tw } else { r.x + lead };
         p.text_in(x, base, w, st, text);
     }
 }
@@ -153,7 +161,7 @@ fn counter(p: &mut Painter, s: &State, r: Rect, d: usize, u: f32) -> f32 {
     }
     // The label hugs the row's end, so a short one leaves no hole there.
     let text = if room > 0.0 && !label.is_empty() { p.text_width(st, &label) + u * 0.6 } else { 0.0 };
-    let x = if d == 1 { r.x } else { r.x + r.w - squares - text };
+    let x = if d % 2 == 1 { r.x } else { r.x + r.w - squares - text };
     let y = r.y + (r.h - cell - gap - 3.0) * 0.5;
     let playing = s.telemetry.decks[d].playing;
     for i in 0..4u8 {
@@ -183,7 +191,7 @@ fn counter(p: &mut Painter, s: &State, r: Rect, d: usize, u: f32) -> f32 {
 
 /// The time left, large, then the tempo and key chips and the key shift.
 fn readout(p: &mut Painter, s: &mut State, r: Rect, d: usize, u: f32) {
-    let mirrored = d == 1;
+    let mirrored = d % 2 == 1;
     let deck = &s.decks[d];
     let at = s.telemetry.decks[d].position;
     let rate = f64::from(deck.rate) * s.settings.rate_range();
@@ -250,7 +258,7 @@ const MODES: [(Mode, &str); 5] =
 /// What the pads play, as one segmented pill, then the loop: its size between halve and
 /// double, IN and OUT.
 fn tool_row(p: &mut Painter, s: &mut State, r: Rect, d: usize, u: f32) {
-    let mirrored = d == 1;
+    let mirrored = d % 2 == 1;
     let px = (u * 0.9).clamp(8.0, 11.0);
     // The loop's cells, as many as fit beside the modes: all five, the size and its steps, or none.
     let n = if r.w >= 370.0 {
@@ -456,8 +464,8 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     let body = Rect::new(r.x + 8.0, r.y + 8.0, r.w - 16.0, r.h - 16.0 - xf - 6.0);
     // EQ and filter knobs down the outsides.
     let kh = body.h / 4.0;
-    for d in 0..2 {
-        let x = if d == 0 { body.x } else { body.x + body.w - 44.0 };
+    for d in s.fore() {
+        let x = if d % 2 == 0 { body.x } else { body.x + body.w - 44.0 };
         for (n, label) in ["HIGH", "MID", "LOW", "CFX"].into_iter().enumerate() {
             let b = Rect::new(x, body.y + n as f32 * kh, 44.0, kh);
             let v = s.decks[d].knobs[n];
@@ -476,8 +484,8 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     let inner = Rect::new(body.x + 44.0, body.y, body.w - 88.0, body.h);
     let cw = 34.0;
     let mid = inner.w - 2.0 * cw - 8.0;
-    for d in 0..2 {
-        let x = if d == 0 { inner.x } else { inner.x + inner.w - cw };
+    for d in s.fore() {
+        let x = if d % 2 == 0 { inner.x } else { inner.x + inner.w - cw };
         let v = s.decks[d].gain;
         let top = (size * 0.72).round() + 11.0;
         knob(p, s, Rect::new(x, inner.y, cw, top), (v, true, DECK[d]), "GAIN", Target::Gain(d));
@@ -493,8 +501,8 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     let ph = 22.0;
     let pw = ((mid - 4.0) * 0.5).floor().min(34.0);
     let px = mx + (mid - 2.0 * pw - 4.0) * 0.5;
-    for d in 0..2 {
-        let b = Rect::new(px + d as f32 * (pw + 4.0), inner.y, pw, ph);
+    for d in s.fore() {
+        let b = Rect::new(px + (d % 2) as f32 * (pw + 4.0), inner.y, pw, ph);
         let on = s.decks[d].pfl;
         let t = Target::Pfl(d);
         let down = s.pressed(t);
@@ -524,8 +532,8 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     }
     let my = inner.y + ph + 10.0;
     let mh = inner.y + inner.h - my;
-    for (deck, dx) in s.telemetry.decks.iter().zip([-13.0, 3.0]) {
-        let peak = deck.peak;
+    for (d, dx) in s.fore().into_iter().zip([-13.0, 3.0]) {
+        let peak = s.telemetry.decks[d].peak;
         let x = mx + mid * 0.5 + dx;
         vu_meter(p, Rect::new(x, my, 4.0, mh), peak);
         vu_meter(p, Rect::new(x + 6.0, my, 4.0, mh), peak);

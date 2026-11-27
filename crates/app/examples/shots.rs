@@ -112,7 +112,12 @@ fn main() {
     }
     let mut faults = Vec::new();
     let mut perf = Vec::new();
+    // DJSUGAR_SHOTS names the one size to draw, for a quick look at a change.
+    let only = std::env::var("DJSUGAR_SHOTS").ok();
     for (name, w, h, scale) in SIZES {
+        if only.as_deref().is_some_and(|o| o != name) {
+            continue;
+        }
         let mut r = Renderer::offscreen(w, h).expect("offscreen renderer");
         let mut ui = Ui::new(read_dir_sample);
         ui.resize(w, h, scale);
@@ -166,6 +171,7 @@ fn main() {
         menu(&mut ui, &mut r, (name, scale), &mut faults);
         save(&r, &out.join(format!("{name}-menu.png")));
         settings(&mut ui, &mut r, &out, name, &mut faults);
+        four(&mut ui, &mut r, &out, name, &mut faults);
         let before = pixels(&r);
         r = Renderer::offscreen(w, h).expect("second renderer");
         ui.render(&mut r);
@@ -606,6 +612,45 @@ fn menu(ui: &mut Ui, r: &mut Renderer<'_>, (name, scale): (&str, f32), faults: &
         }
     } else {
         faults.push(format!("{name}: no Tags submenu"));
+    }
+}
+
+/// Four decks switched on, deck C brought forward, then two decks again.
+fn four(ui: &mut Ui, r: &mut Renderer<'_>, out: &Path, name: &str, faults: &mut Vec<String>) {
+    for on in [true, false] {
+        for tap in ["AppMenu", "Prefs(0)", "Prefs(1)", "Pref(FourDecks)", "PrefsClose"] {
+            if !ui.tap(tap) {
+                faults.push(format!("{name}: four decks: no {tap}"));
+                return;
+            }
+            ui.render(r);
+        }
+        while ui.back() {}
+        ui.render(r);
+        ui.render(r);
+        if !on {
+            if ui.fore() != [0, 1] {
+                faults.push(format!("{name}: decks C and D stay forward with four decks off"));
+            }
+            return;
+        }
+        // Once among the tracks, once on the decks.
+        for (view, side, fore) in [("", 1, [0, 3]), ("View(Dj)", 0, [2, 3])] {
+            ui.tap(view);
+            ui.render(r);
+            if !ui.tap(&format!("Layer({side})")) {
+                faults.push(format!("{name}: four decks: nothing brings the deck behind forward {view}"));
+                continue;
+            }
+            ui.render(r);
+            ui.render(r);
+            if ui.fore() != fore {
+                faults.push(format!("{name}: decks {:?} are forward, not {fore:?}", ui.fore()));
+            }
+        }
+        save(r, &out.join(format!("{name}-four.png")));
+        ui.tap("View(Lib)");
+        ui.render(r);
     }
 }
 

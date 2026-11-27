@@ -5,7 +5,7 @@ use sugar_layout::Rect;
 use sugar_ui::{Painter, Style, Weight, rgb};
 
 use crate::state::{FX_PADS, LOOP_BEATS, Mode, STEMS, State, Target, beats_label, pad_name};
-use crate::sugar::{DECK, cue_colour, fade, hit};
+use crate::sugar::{DECK, NAMES, cue_colour, fade, hit, layer_chip};
 use crate::theme::{
     BACKDROP, BORDER, CONTROL, DIM, FAINT, PANEL, PRESSED, RAISED, SEPARATOR, TEXT as WHITE, WELL, centred,
 };
@@ -35,19 +35,20 @@ fn button(p: &mut Painter, s: &mut State, r: Rect, label: &str, (on, colour): (b
 
 pub fn dj(p: &mut Painter, s: &mut State, r: Rect, stacked: bool) {
     p.rect(r.x, r.y, r.w, r.h, 0.0, BACKDROP);
+    let [left, right] = s.fore();
     if stacked || r.w < MIXER.0 * 3.2 {
         // Portrait: decks stacked full width, the mixer between them.
         let mh = MIXER.1.min(r.h * 0.34).round();
         let dh = ((r.h - mh - 2.0) * 0.5).floor();
-        deck(p, s, Rect::new(r.x, r.y, r.w, dh), 0, false);
+        deck(p, s, Rect::new(r.x, r.y, r.w, dh), left, false);
         mixer(p, s, Rect::new(r.x, r.y + dh + 1.0, r.w, mh));
-        deck(p, s, Rect::new(r.x, r.y + r.h - dh, r.w, dh), 1, false);
+        deck(p, s, Rect::new(r.x, r.y + r.h - dh, r.w, dh), right, false);
     } else {
         let mw = MIXER.0;
         let dw = ((r.w - mw - 2.0) * 0.5).floor();
-        deck(p, s, Rect::new(r.x, r.y, dw, r.h), 0, false);
+        deck(p, s, Rect::new(r.x, r.y, dw, r.h), left, false);
         mixer(p, s, Rect::new(r.x + dw + 1.0, r.y, mw, r.h));
-        deck(p, s, Rect::new(r.x + r.w - dw, r.y, dw, r.h), 1, true);
+        deck(p, s, Rect::new(r.x + r.w - dw, r.y, dw, r.h), right, true);
     }
 }
 
@@ -120,6 +121,10 @@ fn header(p: &mut Painter, s: &mut State, r: Rect, d: usize, mirrored: bool) {
         // Tapping the cover ejects the track.
         hit(s, art, Target::Eject(d));
     }
+    if s.four() {
+        let c = row.take(22.0, 8.0);
+        layer_chip(p, s, Rect::new(c.x, c.y + (c.h - 22.0) * 0.5, 22.0, 22.0), d);
+    }
     let key_w = 64.0_f32.min(r.w * 0.14);
     let time_w = 82.0_f32.min(r.w * 0.18);
     let text_w = (row.left() - key_w - time_w - 20.0).max(40.0);
@@ -178,7 +183,7 @@ fn artwork(p: &mut Painter, r: Rect, art: &crate::state::Art) {
 fn cover(p: &mut Painter, r: Rect, d: usize, loaded: bool) {
     let top = if loaded { fade(DECK[d], 0xb0) } else { RAISED };
     p.gradient(r.x, r.y, r.w, r.h, 4.0, top, rgb(0x101012), 1.0, BORDER);
-    centred(p, r, bold(r.h * 0.42, fade(WHITE, if loaded { 0xe0 } else { 0x40 })), ["A", "B"][d]);
+    centred(p, r, bold(r.h * 0.42, fade(WHITE, if loaded { 0xe0 } else { 0x40 })), NAMES[d]);
 }
 
 /// The key in its own column, with the semitone shift and the sync leader's badge.
@@ -474,7 +479,8 @@ fn mixer(p: &mut Painter, s: &mut State, r: Rect) {
     let cw = ((top.w - 4.0) / 4.0).floor();
     let col = |i: f32| Rect::new(top.x + i * (cw + 1.333), top.y, cw, top.h);
     // Columns from the outside in: deck 1 EQ, deck 1 channel, deck 2 channel, deck 2 EQ.
-    for (d, eq, ch) in [(0, col(0.0), col(1.0)), (1, col(3.0), col(2.0))] {
+    let [left, right] = s.fore();
+    for (d, eq, ch) in [(left, col(0.0), col(1.0)), (right, col(3.0), col(2.0))] {
         eq_column(p, s, eq, d);
         channel(p, s, ch, d);
     }
