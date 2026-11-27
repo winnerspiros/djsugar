@@ -249,8 +249,8 @@ impl Ui {
     }
 }
 
-/// Startup and failure notes: Android's log on phones, stderr elsewhere.
-pub fn diag(msg: &str) {
+/// A line for the system's own log: Android's, under the tag `djsugar`, on phones and stderr elsewhere.
+pub fn system_log(msg: &str) {
     #[cfg(target_os = "android")]
     {
         #[allow(unsafe_code, reason = "liblog is the platform log sink")]
@@ -267,7 +267,12 @@ pub fn diag(msg: &str) {
     }
     #[cfg(not(target_os = "android"))]
     eprintln!("djsugar: {msg}");
-    log::note(msg);
+}
+
+/// Startup and failure notes, which reach the system's log whether or not the DJ keeps one.
+pub fn diag(msg: &str) {
+    system_log(msg);
+    log::keep(msg);
 }
 
 /// Logs how long a startup stage took since the process began.
@@ -367,6 +372,7 @@ pub mod native {
             crate::stage("window");
             let renderer = Renderer::new(window.clone(), size.width, size.height).unwrap_or_else(|e| fail(&e));
             crate::stage("gpu ready");
+            crate::log::drawn_by(&renderer.about);
             self.gpu = Some(Gpu { window, renderer });
             self.ime = false;
             self.resize();

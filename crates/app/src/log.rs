@@ -15,7 +15,13 @@ const LONGEST: u64 = 2 << 20;
 /// The most of the log's end that is handed to another app.
 const SENT: usize = 96 << 10;
 
+/// Where the log is kept. On a phone that is the app's own folder on shared storage, `Android/data/app.djsugar/files`,
+/// which a file manager or a computer can open.
 pub fn path() -> Option<std::path::PathBuf> {
+    #[cfg(target_os = "android")]
+    if let Some(dir) = crate::android::app().and_then(|a| a.external_data_path()) {
+        return Some(dir.join("log.txt"));
+    }
     crate::store::dir().map(|d| d.join("log.txt"))
 }
 
@@ -40,11 +46,34 @@ pub fn set(on: bool) {
         drop(file);
         let (os, arch) = (std::env::consts::OS, std::env::consts::ARCH);
         note(&format!("log on: DJ Sugar {} on {os} {arch}", env!("CARGO_PKG_VERSION")));
+        let drawn = DRAWN.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+        if !drawn.is_empty() {
+            note(&format!("drawn by {drawn}"));
+        }
     }
+}
+
+static DRAWN: Mutex<String> = Mutex::new(String::new());
+
+/// Tells the log what draws the screen, for its first lines.
+#[cfg_attr(target_os = "linux", allow(dead_code, reason = "Linux draws through its own window code"))]
+pub fn drawn_by(about: &str) {
+    about.clone_into(&mut DRAWN.lock().unwrap_or_else(std::sync::PoisonError::into_inner));
+    crate::diag(&format!("drawn by {about}"));
 }
 
 /// Adds a line, when the log is on.
 pub fn note(text: &str) {
+    if !on() {
+        return;
+    }
+    #[cfg(target_os = "android")]
+    crate::system_log(text);
+    keep(text);
+}
+
+/// Adds a line to the file alone, when the log is on.
+pub fn keep(text: &str) {
     if !on() {
         return;
     }

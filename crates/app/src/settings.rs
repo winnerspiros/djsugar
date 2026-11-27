@@ -275,7 +275,7 @@ pub const OPTIONS: [Spec; 40] = [
         opt: Opt::Log,
         key: "log",
         title: "Keep a log",
-        detail: "Writes what the app does and what the services answer to a file, for reporting a problem.",
+        detail: "Writes what the app does and what the services answer to log.txt in the app's folder, on a phone Android/data/app.djsugar/files, and to the system's log.",
         kind: Kind::Switch,
         default: 0,
     },

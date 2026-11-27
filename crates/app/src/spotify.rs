@@ -69,6 +69,23 @@ fn closest(found: &[Hit], seconds: u32) -> Option<&Hit> {
     found.iter().find(|h| seconds > 0 && h.seconds.abs_diff(seconds) <= 3).or(found.first())
 }
 
+static ACCOUNT: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+
+/// Tells where the account is kept, so lyrics can be asked for from anywhere.
+pub fn kept_in(dir: &Path) {
+    let _ = ACCOUNT.set(dir.to_path_buf());
+}
+
+/// Spotify's lyrics for a track of any origin: the track is looked up by name and must run as long, to the
+/// few seconds. None without an account, a match or lyrics.
+pub fn words(artist: &str, title: &str, seconds: f64) -> Option<String> {
+    let dir = ACCOUNT.get().filter(|d| djsugar_spotify::logged_in(d))?;
+    let found = list(dir, &search(&format!("{artist} {title}")), None).ok()?;
+    let long = seconds.round() as u32;
+    let same = found.hits.iter().find(|h| !h.id.starts_with(LIST) && long > 0 && h.seconds.abs_diff(long) <= 3)?;
+    djsugar_spotify::lyrics(dir, &same.id).ok().flatten()
+}
+
 /// The track as a file in `cache`. Spotify gives the name and the lyrics; the sound is its match on YouTube,
 /// looked for once and remembered.
 pub fn fetch(

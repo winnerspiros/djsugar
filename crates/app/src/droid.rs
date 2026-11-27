@@ -63,6 +63,7 @@ impl Shell {
         crate::stage("window");
         let renderer = Renderer::new(window.clone(), size.0, size.1).unwrap_or_else(|e| fail(&e));
         crate::stage("gpu ready");
+        crate::log::drawn_by(&renderer.about);
         self.gpu = Some((window, renderer));
         self.size = (0, 0);
         self.keyboard = false;

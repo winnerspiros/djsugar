@@ -1708,7 +1708,7 @@ impl State {
                 let lyrics = match &entry.source {
                     Source::File(p) if !detail.is_empty() => {
                         let found = crate::lyrics::find(p, &entry.artist, &entry.title, secs, false);
-                        if found.lines.is_empty() && online {
+                        if online && found.lines.iter().all(|l| l.start.is_none()) {
                             let (tx, p, e) = (tx.clone(), p.clone(), entry.clone());
                             let d = if let Job::Deck(d) = job { d } else { 0 };
                             std::thread::spawn(move || {

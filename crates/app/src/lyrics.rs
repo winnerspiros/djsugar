@@ -110,11 +110,26 @@ fn timed(text: &Option<String>) -> bool {
     text.as_ref().is_some_and(|t| t.contains('['))
 }
 
-/// Lyrics found online. Every name the track may go by is asked of LRCLIB and NetEase, with its length and then
-/// without, until one has timed lines; plain words, from those or from lyrics.ovh, are the last resort.
-fn fetch(artist: &str, title: &str, seconds: f64) -> Option<String> {
-    let names = names(artist, title);
-    let mut plain: Option<String> = None;
+/// The YouTube video a downloaded file is of, from its name.
+fn video(path: &std::path::Path) -> Option<&str> {
+    let stem = path.file_stem()?.to_str()?;
+    let made = stem.len() == 11 && stem.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+    (made && matches!(path.extension()?.to_str()?, "m4a" | "webm")).then_some(stem)
+}
+
+/// Lyrics found online, timed ones wanted most. A downloaded video goes by its YouTube Music name first; LRCLIB,
+/// NetEase and a signed-in Spotify are asked for timed lines. Plain words are the last resort: YouTube Music's,
+/// those services', lyrics.ovh's, or what is written under the video.
+fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option<String> {
+    let mut names = names(artist, title);
+    let song = video.and_then(|v| sugar_net::ytmusic::song_of(v).ok()).unwrap_or_default();
+    if !song.title.is_empty() && !song.artist.is_empty() {
+        crate::log::note(&format!("lyrics: the video is \"{}\" by \"{}\"", song.title, song.artist));
+        let known = self::names(&song.artist, &song.title);
+        names.retain(|n| !known.contains(n));
+        names.splice(0..0, known);
+    }
+    let mut plain: Option<String> = song.words;
     let mut asked = 0;
     for length in [seconds, 0.0] {
         for (a, t) in &names {
@@ -139,30 +154,41 @@ fn fetch(artist: &str, title: &str, seconds: f64) -> Option<String> {
             }
         }
     }
+    if let Some((a, t)) = names.first() {
+        let got = crate::spotify::words(a, t, seconds);
+        if timed(&got) {
+            crate::log::note(&format!("lyrics timed from spotify as \"{a}\" \"{t}\""));
+            return got;
+        }
+        plain = plain.or(got);
+    }
+    let under = video.and_then(|v| sugar_net::said::find(v).ok().flatten());
+    if timed(&under) {
+        crate::log::note("lyrics timed from what is written under the video");
+        return under;
+    }
     if plain.is_none() {
-        plain = names.iter().find_map(|(a, t)| sugar_net::lyricsovh::find(a, t).ok().flatten());
+        plain = names.iter().find_map(|(a, t)| sugar_net::lyricsovh::find(a, t).ok().flatten()).or(under);
     }
     let what = if plain.is_some() { "plain words only" } else { "nothing" };
     crate::log::note(&format!("lyrics for \"{artist}\" \"{title}\": {what} after {asked} asks"));
     plain
 }
 
-/// Lyrics for a file: its `.lrc` beside it, else what is found online, saved beside it for next time.
+/// Lyrics for a file: its `.lrc` beside it, else what is found online, saved beside it for next time. Words kept
+/// without times are asked for again, in case somebody has timed them since.
 pub fn find(path: &std::path::Path, artist: &str, title: &str, seconds: f64, online: bool) -> Lyrics {
     let lrc = path.with_extension("lrc");
-    if let Ok(t) = std::fs::read_to_string(&lrc) {
-        return Lyrics::parse(&t);
+    let kept = std::fs::read_to_string(&lrc).ok();
+    if !online || timed(&kept) {
+        return kept.map(|t| Lyrics::parse(&t)).unwrap_or_default();
     }
-    if !online {
-        return Lyrics::default();
+    let found = fetch(video(path), artist, title, seconds);
+    if found.is_some() && (kept.is_none() || timed(&found)) {
+        let _ = std::fs::write(&lrc, found.as_deref().unwrap_or_default());
+        return found.map(|t| Lyrics::parse(&t)).unwrap_or_default();
     }
-    match fetch(artist, title, seconds) {
-        Some(t) => {
-            let _ = std::fs::write(&lrc, &t);
-            Lyrics::parse(&t)
-        }
-        _ => Lyrics::default(),
-    }
+    kept.map(|t| Lyrics::parse(&t)).unwrap_or_default()
 }
 
 /// The vocal level, of 255, from which a moment counts as sung.
@@ -226,7 +252,22 @@ mod tests {
     #[test]
     #[ignore = "network"]
     fn finds_timed_words_for_a_video_name() {
-        let l = fetch("DuaLipaVEVO", "Dua Lipa - Levitating (Official Video)", 203.0).unwrap();
+        let l = fetch(None, "DuaLipaVEVO", "Dua Lipa - Levitating (Official Video)", 203.0).unwrap();
+        assert!(l.contains("[0"), "{l}");
+    }
+
+    #[test]
+    fn downloaded_videos_are_known_by_their_names() {
+        assert_eq!(video(std::path::Path::new("/c/TUVcZfQe-Kw.m4a")), Some("TUVcZfQe-Kw"));
+        assert_eq!(video(std::path::Path::new("/c/fJ9rUzIMcZQ.webm")), Some("fJ9rUzIMcZQ"));
+        assert_eq!(video(std::path::Path::new("/music/Some song.m4a")), None);
+        assert_eq!(video(std::path::Path::new("/music/elevenchars.mp3")), None);
+    }
+
+    #[test]
+    #[ignore = "network"]
+    fn a_video_with_an_odd_name_is_found_by_what_it_is() {
+        let l = fetch(Some("TUVcZfQe-Kw"), "", "dl lev mv", 231.0).unwrap();
         assert!(l.contains("[0"), "{l}");
     }
 

@@ -56,6 +56,8 @@ pub struct Renderer<'w> {
     atlas: wgpu::Texture,
     pictures: wgpu::Texture,
     fresh: bool,
+    /// The graphics card and the way it is driven, for a log.
+    pub about: String,
 }
 
 #[derive(Debug)]
@@ -103,6 +105,7 @@ impl<'w> Renderer<'w> {
             ..Default::default()
         }))
         .map_err(RendererError::Device)?;
+        let info = adapter.get_info();
         let target = target(&device);
 
         let viewport = device.create_buffer(&wgpu::BufferDescriptor {
@@ -244,6 +247,10 @@ impl<'w> Renderer<'w> {
             atlas,
             pictures,
             fresh: true,
+            about: format!(
+                "{:?} on {} ({} {}), {:?}",
+                info.backend, info.name, info.driver, info.driver_info, info.device_type
+            ),
         };
         r.write_viewport();
         Ok(r)

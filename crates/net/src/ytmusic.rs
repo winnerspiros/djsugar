@@ -303,6 +303,70 @@ impl Account {
     }
 }
 
+/// A video as the song YouTube Music takes it for.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Song {
+    pub title: String,
+    pub artist: String,
+    /// Its words, without times.
+    pub words: Option<String>,
+}
+
+fn ask(endpoint: &str, mut body: Value) -> Result<Value> {
+    body["context"] = json!({ "client": { "clientName": "WEB_REMIX", "clientVersion": VERSION, "hl": "en" } });
+    let req = agent()
+        .post(format!("{ORIGIN}/youtubei/v1/{endpoint}?prettyPrint=false"))
+        .config()
+        .timeout_global(Some(TIMEOUT))
+        .build()
+        .header("Content-Type", "application/json")
+        .header("User-Agent", AGENT)
+        .header("Origin", ORIGIN)
+        .header("X-YouTube-Client-Name", "67")
+        .header("X-YouTube-Client-Version", VERSION);
+    match read(req.send(body.to_string()))? {
+        (200..=299, text) => serde_json::from_str(&text).map_err(|_| Error::Parse("not JSON")),
+        (s, _) => Err(Error::Status(s)),
+    }
+}
+
+/// The song a watch page plays and the page that holds its lyrics.
+fn playing(next: &Value) -> (Song, Option<String>) {
+    let (mut song, mut lyrics) = (Song::default(), None);
+    walk(next, &mut |m| {
+        if let Some(v) = m.get("playlistPanelVideoRenderer").filter(|_| song.title.is_empty()) {
+            song.title = text(&v["title"]);
+            song.artist = v["longBylineText"]["runs"][0]["text"].as_str().unwrap_or_default().to_owned();
+        }
+        let page = m.get("browseEndpoint").and_then(|b| b["browseId"].as_str()).filter(|id| id.starts_with("MPLY"));
+        lyrics = page.map(str::to_owned).or(lyrics.take());
+        false
+    });
+    (song, lyrics)
+}
+
+/// The words on a lyrics page.
+fn words(page: &Value) -> Option<String> {
+    let mut out = None;
+    walk(page, &mut |m| {
+        if let Some(shelf) = m.get("musicDescriptionShelfRenderer") {
+            let lines = text(&shelf["description"]).replace('\r', "").replace(['[', ']'], "");
+            out = Some(lines.trim().to_owned()).filter(|t| !t.is_empty());
+        }
+        out.is_some()
+    });
+    out
+}
+
+/// What YouTube Music calls `video` as a song, with its words when it has them. Nobody need be signed in.
+pub fn song_of(video: &str) -> Result<Song> {
+    let (mut song, lyrics) = playing(&ask("next", json!({ "videoId": video }))?);
+    if let Some(page) = lyrics {
+        song.words = ask("browse", json!({ "browseId": page })).ok().and_then(|p| words(&p));
+    }
+    Ok(song)
+}
+
 fn cookie<'a>(cookies: &'a str, name: &str) -> &'a str {
     cookies.split(';').find_map(|p| p.trim().strip_prefix(name)?.strip_prefix('=')).unwrap_or("")
 }
@@ -513,6 +577,30 @@ mod tests {
             (out[0].id.as_str(), out[0].title.as_str(), out[0].artist.as_str()),
             ("playlist:VLPL1", "Mix", "9 songs")
         );
+    }
+
+    #[test]
+    fn a_watch_page_names_its_song_and_its_lyrics() {
+        let next = json!({ "tabs": [
+            { "content": [{ "playlistPanelVideoRenderer": { "title": { "runs": [{ "text": "Song" }] },
+                "longBylineText": { "runs": [{ "text": "Singer" }, { "text": " \u{2022} " }, { "text": "1M views" }] } } }] },
+            { "endpoint": { "browseEndpoint": { "browseId": "MPLYt_abc" } } },
+            { "endpoint": { "browseEndpoint": { "browseId": "MPTRt_abc" } } }] });
+        let (song, lyrics) = playing(&next);
+        assert_eq!((song.title.as_str(), song.artist.as_str()), ("Song", "Singer"));
+        assert_eq!(lyrics.as_deref(), Some("MPLYt_abc"));
+        let page = json!({ "x": { "musicDescriptionShelfRenderer": { "description": { "runs": [{ "text": "One\r\nTwo" }] } } } });
+        assert_eq!(words(&page).as_deref(), Some("One\nTwo"));
+        assert_eq!(words(&json!({})), None);
+    }
+
+    #[test]
+    #[ignore = "network"]
+    fn names_a_real_video() {
+        let song = song_of("TUVcZfQe-Kw").unwrap();
+        assert_eq!(song.artist, "Dua Lipa");
+        assert!(song.title.starts_with("Levitating"), "{}", song.title);
+        assert!(song.words.is_some_and(|w| w.lines().count() > 20));
     }
 
     #[test]

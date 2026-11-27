@@ -265,6 +265,7 @@ impl Hub {
     pub fn new(cache: PathBuf) -> Self {
         let (tx, rx) = channel();
         let spotify = cache.with_file_name("spotify");
+        crate::spotify::kept_in(&spotify);
         let youtube = ytmusic::Account::open(cache.with_file_name("youtube_account"));
         let soundcloud_file = cache.with_file_name("soundcloud_account");
         let soundcloud = SoundCloud::new();
