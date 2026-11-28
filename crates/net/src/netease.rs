@@ -28,10 +28,15 @@ pub fn find(artist: &str, title: &str, seconds: f64) -> Result<Option<String>> {
 }
 
 fn get(url: &str) -> Result<Value> {
+    get_from(url, "https://music.163.com")
+}
+
+/// A service's JSON answer, asked for as its own site would.
+pub(crate) fn get_from(url: &str, site: &str) -> Result<Value> {
     let call = agent()
         .get(url)
         .header("User-Agent", "Mozilla/5.0")
-        .header("Referer", "https://music.163.com")
+        .header("Referer", site)
         .config()
         .timeout_global(Some(TIMEOUT))
         .build()
@@ -50,10 +55,13 @@ fn pick(v: &Value, seconds: f64) -> Option<u64> {
 }
 
 /// The timed lines with words in them, credits left out.
-fn clean(lrc: &str) -> String {
+pub(crate) fn clean(lrc: &str) -> String {
     let keep = |l: &&str| {
         let words = l.rsplit(']').next().unwrap_or("").trim();
-        l.starts_with('[') && !words.is_empty() && !CREDITS.iter().any(|c| words.starts_with(c))
+        l.starts_with('[')
+            && l.as_bytes().get(1).is_some_and(u8::is_ascii_digit)
+            && !words.is_empty()
+            && !CREDITS.iter().any(|c| words.starts_with(c))
     };
     lrc.lines().map(str::trim).filter(keep).collect::<Vec<_>>().join("\n")
 }

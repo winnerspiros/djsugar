@@ -151,7 +151,7 @@ fn b64_url(b: &[u8]) -> String {
 }
 
 /// Decodes either base64 alphabet; '.' stands in for padding in the service's replies.
-fn b64_decode(s: &str) -> Option<Vec<u8>> {
+pub(crate) fn b64_decode(s: &str) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(s.len() * 3 / 4);
     let (mut acc, mut bits) = (0u32, 0u32);
     for c in s.bytes() {

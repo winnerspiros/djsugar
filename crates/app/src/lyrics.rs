@@ -131,7 +131,7 @@ pub fn video(path: &std::path::Path) -> Option<&str> {
 }
 
 /// Lyrics found online, timed ones wanted most. A downloaded video goes by its YouTube Music name first; LRCLIB,
-/// NetEase and a signed-in Spotify are asked for timed lines. Plain words are the last resort: YouTube Music's,
+/// NetEase, KuGou, QQ Music and a signed-in Spotify are asked for timed lines. Plain words are the last resort: YouTube Music's,
 /// those services', lyrics.ovh's, or what is written under the video.
 fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option<String> {
     let mut names = names(artist, title);
@@ -146,11 +146,15 @@ fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option
     let mut asked = 0;
     for length in [seconds, 0.0] {
         for (a, t) in &names {
-            let from: [(&str, Finder); 2] =
-                [("lrclib", sugar_net::lrclib::find), ("netease", sugar_net::netease::find)];
+            let from: [(&str, Finder); 4] = [
+                ("lrclib", sugar_net::lrclib::find),
+                ("netease", sugar_net::netease::find),
+                ("kugou", sugar_net::kugou::find),
+                ("qq", sugar_net::qq::find),
+            ];
             for (who, find) in from {
-                // NetEase takes its first hit when no length is given, which is too loose to trust.
-                if length <= 0.0 && (who == "netease" || seconds <= 0.0) {
+                // The others take their first hit when no length is given, which is too loose to trust.
+                if length <= 0.0 && (who != "lrclib" || seconds <= 0.0) {
                     continue;
                 }
                 asked += 1;

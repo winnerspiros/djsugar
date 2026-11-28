@@ -3039,6 +3039,12 @@ fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             p.rect(r.x + (cue / len) as f32 * r.w, r.y, 1.0, r.h, 0.0, CUES[usize::from(c) % 8]);
         }
     }
+    if let Some((from, to)) = s.mix_span(d) {
+        let (x0, x1) = (r.x + r.w * from, r.x + r.w * to);
+        p.rect(x0, r.y + 1.0, x1 - x0, r.h - 2.0, 0.0, fade(theme::AUTOMIX, 0x2e));
+        p.rect(x0, r.y + 1.0, 1.0, r.h - 2.0, 0.0, theme::AUTOMIX);
+        p.rect(x1 - 1.0, r.y + 1.0, 1.0, r.h - 2.0, 0.0, theme::AUTOMIX);
+    }
     p.rect(r.x + r.w * played - 1.0, r.y, 2.0, r.h, 1.0, TEXT);
     hit(s, r, Target::Overview(d));
 }
