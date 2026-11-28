@@ -704,11 +704,8 @@ impl Hub {
                 let wanted = if sv == Service::YouTube { &large[..] } else { &[] };
                 let _ = wanted.iter().chain([&art]).find(|url| sugar_net::http::save_art(url, path).is_ok());
                 // Asked once a track; a failed ask is made again the next time it is got.
-                if sv == Service::YouTube
-                    && !crate::skips::file(path).is_file()
-                    && let Ok(parts) = sugar_net::sponsorblock::segments(&id)
-                {
-                    crate::skips::save(path, &parts);
+                if sv == Service::YouTube {
+                    crate::skips::ask(path);
                 }
             }
             let took = began.elapsed().as_millis();

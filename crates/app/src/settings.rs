@@ -45,6 +45,7 @@ pub enum Opt {
     SkipNonMusic,
     VinylStop,
     Stems,
+    LyricsByEar,
 }
 
 /// How a setting is shown: a switch, or choices side by side or in a menu.
@@ -94,7 +95,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 40] = [
+pub const OPTIONS: [Spec; 41] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -394,8 +395,8 @@ pub const OPTIONS: [Spec; 40] = [
     Spec {
         opt: Opt::SkipNonMusic,
         key: "skip_non_music",
-        title: "Skip what is not music",
-        detail: "A playing YouTube track jumps past the parts SponsorBlock marks (sponsors, talk, intros, outros) and past silence at its ends.",
+        title: "SponsorBlock",
+        detail: "A playing YouTube track jumps past what its viewers marked as not the song (sponsors, talk, video scenes, intros, outros) and past silence at its ends. Off, nothing is asked of SponsorBlock.",
         kind: Kind::Switch,
         default: 1,
     },
@@ -409,11 +410,19 @@ pub const OPTIONS: [Spec; 40] = [
     },
     Spec {
         opt: Opt::Stems,
-        key: "stems",
+        key: "stems_on_load",
         title: "Stems",
-        detail: "A loaded track is split into drums, bass, instruments and vocals for the STEMS pads. The first time downloads the model (79 MB).",
+        detail: "A loaded track is split into drums, bass, instruments and vocals for the STEMS pads.",
         kind: Kind::Switch,
-        default: 0,
+        default: 1,
+    },
+    Spec {
+        opt: Opt::LyricsByEar,
+        key: "lyrics_by_ear",
+        title: "Lyrics by ear",
+        detail: "A loaded track is listened to: lyrics without times get them word by word, times that are off are set right, and a track without lyrics has its words written down.",
+        kind: Kind::Switch,
+        default: 1,
     },
 ];
 
@@ -546,6 +555,7 @@ pub fn page(
             Row::Opt(Opt::KeyNotation),
             Row::Heading("LYRICS"),
             Row::Opt(Opt::LyricsOnline),
+            Row::Opt(Opt::LyricsByEar),
         ],
         4 => {
             let mut v = vec![Row::Heading("MUSIC FOLDERS")];

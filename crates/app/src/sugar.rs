@@ -1270,6 +1270,17 @@ fn scrolling(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
             p.rect(x, mid - md_h, 1.0, md_h * 2.0, 0.0, fade(rgb(0xf5a02a), a));
             p.rect(x, mid - hi_h, 1.0, hi_h * 2.0, 0.0, fade(rgb(0xffd98a), a));
         }
+        // What will be jumped past: dimmed, with a hatched edge above and below.
+        if s.settings.on(crate::settings::Opt::SkipNonMusic) {
+            let rate = f64::from(l.track.rate.max(1));
+            for &(a, b) in &l.skips {
+                let x0 = (((a * rate - left) / per_px) as f32).max(0.0);
+                let x1 = (((b * rate - left) / per_px) as f32).min(r.w);
+                if x1 > x0 {
+                    skipped(p, Rect::new(r.x + x0, r.y, x1 - x0, r.h));
+                }
+            }
+        }
         for (n, cue) in deck.cues.iter().enumerate() {
             let Some(c) = cue else { continue };
             let x = ((c - left) / per_px) as f32;
@@ -2777,32 +2788,16 @@ fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
     let has = |d: usize| s.decks[d].loaded.as_ref().is_some_and(|l| !l.lyrics.lines.is_empty());
     let Some(d) = (0..2).find(|&d| s.telemetry.decks[d].playing && has(d)).or_else(|| (0..2).find(|&d| has(d))) else {
         p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, "No lyrics for the loaded tracks");
-        // A track on file can be listened to, and its words written down.
-        let file = |d: usize| {
-            s.decks[d].loaded.as_ref().is_some_and(|l| matches!(l.entry.source, crate::library::Source::File(_)))
-        };
-        let heard = (0..2).find(|&d| s.telemetry.decks[d].playing && file(d)).or_else(|| (0..2).find(|&d| file(d)));
-        if let Some(d) = s.hearing.or(heard) {
-            let on = s.hearing.is_some();
-            button(
-                p,
-                s,
-                Rect::new(r.x + r.w - 72.0, r.y + 6.0, 62.0, 22.0),
-                "LISTEN",
-                on,
-                ACCENT,
-                Target::TimeLyrics(d),
-            );
+        if let Some((_, now)) = &s.hearing {
+            p.text_in(r.x + 12.0, r.y + 62.0, r.w - 24.0, Style { colour: theme::DIM, ..ARTIST }, now);
         }
         return;
     };
-    if s.decks[d]
-        .loaded
-        .as_ref()
-        .is_some_and(|l| l.lyrics.untimed() && matches!(l.entry.source, crate::library::Source::File(_)))
+    // A track being listened to says how far along that is, where its lyrics are headed.
+    if let (Some((file, now)), Some(l)) = (&s.hearing, &s.decks[d].loaded)
+        && matches!(&l.entry.source, crate::library::Source::File(f) if f == file)
     {
-        let on = s.hearing == Some(d);
-        button(p, s, Rect::new(r.x + r.w - 62.0, r.y + 6.0, 52.0, 22.0), "TIME", on, ACCENT, Target::TimeLyrics(d));
+        p.text_in(r.x + 70.0, r.y + 20.0, r.w - 82.0, Style { colour: theme::DIM, ..SMALL }, now);
     }
     // The words can be moved by hand; let go, they glide back to the line being sung.
     let body = Rect::new(r.x, r.y + 30.0, r.w, r.h - 34.0);
@@ -2996,6 +2991,18 @@ fn info(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     hit(s, Rect::new(r.x + r.w - right, r.y, right, r.h), Target::Grid(d));
 }
 
+/// Marks a stretch of a waveform as one playback jumps past.
+fn skipped(p: &mut Painter, r: Rect) {
+    p.rect(r.x, r.y, r.w, r.h, 0.0, fade(rgb(0x000000), 0xa0));
+    let mut x = r.x;
+    while x < r.x + r.w {
+        let w = 4.0f32.min(r.x + r.w - x);
+        p.rect(x, r.y, w, 2.0, 0.0, theme::DIM);
+        p.rect(x, r.y + r.h - 2.0, w, 2.0, 0.0, theme::DIM);
+        x += 8.0;
+    }
+}
+
 fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
     p.rect(r.x, r.y, r.w, r.h, 3.0, DEEP);
     let deck = &s.decks[d];
@@ -3009,6 +3016,13 @@ fn overview(p: &mut Painter, s: &mut State, r: Rect, d: usize) {
         let a = f32::from(l.overview[i]) / 255.0 * r.h * 0.48;
         let ink = if (c as f32) < played * cols as f32 { DARK } else { DECK[d] };
         p.rect(r.x + c as f32, r.y + r.h * 0.5 - a, 1.0, a * 2.0 + 0.5, 0.0, ink);
+    }
+    if s.settings.on(crate::settings::Opt::SkipNonMusic) {
+        let secs = deck.seconds(len).max(0.001);
+        for &(a, b) in &l.skips {
+            let (x0, x1) = ((a / secs).min(1.0) as f32 * r.w, (b / secs).min(1.0) as f32 * r.w);
+            skipped(p, Rect::new(r.x + x0, r.y, (x1 - x0).max(1.0), r.h));
+        }
     }
     for (cue, &c) in deck.cues.iter().zip(&deck.cue_colours) {
         if let Some(cue) = cue {

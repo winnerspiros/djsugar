@@ -57,6 +57,11 @@ pub(crate) fn model_or_fetch(name: &str, models: &[(&str, &str)]) -> Result<Path
     result.map(|()| path).map_err(|e| format!("couldn't download {name}: {e}"))
 }
 
+/// Has the model that splits tracks on hand, downloading it if it isn't yet.
+pub fn fetch() -> Result<(), String> {
+    model_or_fetch(SPLEETER, &MODELS).map(drop)
+}
+
 /// Where the separation models are kept: `DJSUGAR_MODELS`, else `models`
 /// in the cache folder (they can always be downloaded again).
 pub fn models_dir() -> Option<PathBuf> {

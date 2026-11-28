@@ -54,6 +54,8 @@ const MINI: (f32, f32) = (400.0, 150.0);
 impl Ui {
     pub fn new(read: Reader) -> Self {
         log::hook();
+        // Before any other thread starts: the models share few cores, and leave the rest to the sound.
+        djsugar_engine::background::configure();
         stage("ui");
         let engine = crate::bridge::Bridge::start(read);
         let out_rate = engine.rate();
@@ -63,6 +65,7 @@ impl Ui {
         crate::models::install();
         let mut state = State::new(engine, read, status, out_rate);
         log::set(state.settings.on(settings::Opt::Log));
+        models::ready(state.settings.on(settings::Opt::Stems), state.settings.on(settings::Opt::LyricsByEar));
         state.scan();
         // The YouTube player script takes seconds to load; have it ready before the first download.
         std::thread::spawn(|| sugar_net::cipher::load().ok());

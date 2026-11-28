@@ -44,8 +44,6 @@ pub enum Target {
     Mode(usize, Mode),
     Sync(usize),
     AutoDj,
-    /// Times a deck's untimed lyrics from its vocals.
-    TimeLyrics(usize),
     Jog(usize),
     Overview(usize),
     Library,
@@ -394,10 +392,6 @@ impl Default for Station {
 }
 
 pub const LONG_PRESS_MS: u128 = 450;
-/// What the status line says once lyrics have their times.
-const TIMED: &str = "The lyrics follow the vocals now";
-/// And once a track without lyrics has had its words written down.
-const WRITTEN: &str = "The words were written down by ear, and may be off here and there";
 /// The gap a list pulled down at its top must open, in pixels, for letting go to refresh it. The list resists:
 /// the gap is half the finger's travel.
 pub const PULL: f32 = 60.0;
@@ -745,6 +739,40 @@ fn on_fore(t: Target, fore: [usize; 2]) -> Target {
 
 type Done = (Job, Option<Loaded>);
 
+/// Gets the file on deck `d` the lyrics it lacks, sending them as they come: those found `online` first, and
+/// where nobody has timed them, or written any, by `ear`.
+fn words(
+    d: usize,
+    path: &std::sync::Arc<std::path::Path>,
+    entry: &Entry,
+    secs: f64,
+    kept: Vec<djsugar_engine::lyrics::Line>,
+    (online, ear): (bool, bool),
+    tx: &Sender<Done>,
+) {
+    let mut kept = crate::lyrics::Lyrics { lines: kept };
+    if online {
+        let found = crate::lyrics::find(path, &entry.artist, &entry.title, secs, true);
+        if !found.lines.is_empty() {
+            kept = crate::lyrics::Lyrics { lines: found.lines.clone() };
+            let _ = tx.send((Job::Lyrics(d, path.clone(), found), None));
+        }
+    }
+    if !ear {
+        return;
+    }
+    // Listening gives way to the sound and the screen.
+    djsugar_engine::background::lower_priority();
+    let (line, file) = (tx.clone(), path.clone());
+    let said: crate::lyrics::Said = std::sync::Arc::new(move |now| {
+        let _ = line.send((Job::Hearing(Some((file.clone(), now))), None));
+    });
+    if let Some(heard) = crate::lyrics::by_ear(path, kept, said) {
+        let _ = tx.send((Job::Lyrics(d, path.clone(), heard), None));
+    }
+    let _ = tx.send((Job::Hearing(None), None));
+}
+
 enum Job {
     Deck(usize),
     Sample(usize, bool),
@@ -754,8 +782,10 @@ enum Job {
     Failed(String),
     /// Lyrics found online for the track now on a deck, by its file.
     Lyrics(usize, std::sync::Arc<std::path::Path>, crate::lyrics::Lyrics),
-    /// Listening to a track for its words has ended.
-    Heard,
+    /// What is not music in the file on a deck has been learnt.
+    Skips(usize, std::sync::Arc<std::path::Path>),
+    /// How far listening to a file for its words has come; None once it has ended.
+    Hearing(Option<(std::sync::Arc<std::path::Path>, String)>),
 }
 
 struct Drag {
@@ -804,8 +834,8 @@ pub struct State {
     read: Reader,
     jobs: (Sender<Done>, Receiver<Done>),
     pub status: Option<String>,
-    /// The deck whose track is being listened to for its words.
-    pub hearing: Option<usize>,
+    /// The file being listened to for its words, and how far that has come.
+    pub hearing: Option<(std::sync::Arc<std::path::Path>, String)>,
     /// The message on screen, and when it came.
     pub toast: Option<(String, std::time::Instant)>,
     /// Only the mini player is shown.
@@ -1147,6 +1177,7 @@ impl State {
         s.send_phones();
         s.send(Command::VinylStop(s.settings.on(crate::settings::Opt::VinylStop)));
         djsugar_engine::separation::set_on_load(s.settings.on(crate::settings::Opt::Stems));
+        crate::skips::set_on(s.settings.on(crate::settings::Opt::SkipNonMusic));
         s
     }
 
@@ -1317,7 +1348,14 @@ impl State {
                 }
                 (Job::Sample(..), None) => {}
                 (Job::Failed(why), _) => self.status = Some(why),
-                (Job::Heard, _) => self.hearing = None,
+                (Job::Hearing(now), _) => self.hearing = now,
+                (Job::Skips(d, path), _) => {
+                    if let Some(l) = &mut self.decks[d].loaded
+                        && matches!(&l.entry.source, Source::File(p) if *p == path)
+                    {
+                        l.skips = crate::skips::find(&path, &l.track);
+                    }
+                }
                 (Job::Lyrics(d, path, ly), _) => {
                     if let Some(l) = &mut self.decks[d].loaded
                         && matches!(&l.entry.source, Source::File(p) if *p == path)
@@ -1366,6 +1404,7 @@ impl State {
                 }
             }
             self.telemetry = c.poll();
+            djsugar_engine::background::set_playing(self.telemetry.decks.iter().any(|d| d.playing));
             if let Some((d, slot)) = self.fx_edit {
                 self.fx_params = c.fx_params(d, slot);
             }
@@ -1793,6 +1832,7 @@ impl State {
         let (tx, read) = (self.jobs.0.clone(), self.read);
         let detail = matches!(job, Job::Deck(_));
         let online = self.settings.on(crate::settings::Opt::LyricsOnline);
+        let ear = self.settings.on(crate::settings::Opt::LyricsByEar);
         std::thread::spawn(move || {
             let bytes = match &entry.source {
                 Source::Sample(name) => read(name),
@@ -1823,13 +1863,20 @@ impl State {
                 let lyrics = match &entry.source {
                     Source::File(p) if !detail.is_empty() => {
                         let found = crate::lyrics::find(p, &entry.artist, &entry.title, secs, false);
-                        if online && found.lines.iter().all(|l| l.start.is_none()) {
-                            let (tx, p, e) = (tx.clone(), p.clone(), entry.clone());
-                            let d = if let Job::Deck(d) = job { d } else { 0 };
+                        let lacks = (online || ear)
+                            && (found.lines.iter().all(|l| l.start.is_none()) || ear && crate::lyrics::unchecked(p));
+                        if let Job::Deck(d) = job
+                            && (lacks || crate::skips::unasked(p))
+                        {
+                            crate::lyrics::want(d, p);
+                            let (tx, p, e, kept) = (tx.clone(), p.clone(), entry.clone(), found.lines.clone());
                             std::thread::spawn(move || {
-                                let ly = crate::lyrics::find(&p, &e.artist, &e.title, secs, true);
-                                if !ly.lines.is_empty() {
-                                    let _ = tx.send((Job::Lyrics(d, p, ly), None));
+                                // First, as what is marked in a video says where its lyrics are late.
+                                if crate::skips::ask(&p) {
+                                    let _ = tx.send((Job::Skips(d, p.clone()), None));
+                                }
+                                if lacks {
+                                    words(d, &p, &e, secs, kept, (online, ear), &tx);
                                 }
                             });
                         }
@@ -2802,6 +2849,7 @@ impl State {
             Opt::CueMix | Opt::SplitCue | Opt::Ducking | Opt::DuckDepth => self.send_phones(),
             Opt::VinylStop => self.send(Command::VinylStop(v != 0)),
             Opt::Stems => djsugar_engine::separation::set_on_load(v != 0),
+            Opt::SkipNonMusic => crate::skips::set_on(v != 0),
             Opt::AutoGain | Opt::GainTarget => {
                 for d in 0..self.decks.len() {
                     let target = self.settings.gain_target();
@@ -3289,37 +3337,6 @@ impl State {
             Target::CutSave => self.cut_save(),
             Target::CutClose => self.cut_close(),
             Target::AutoDj => self.toggle_auto(),
-            Target::TimeLyrics(d) => {
-                let Some(l) = &self.decks[d].loaded else { return };
-                let Source::File(path) = l.entry.source.clone() else { return };
-                if self.hearing.is_some() {
-                    return;
-                }
-                let lyrics = crate::lyrics::Lyrics { lines: l.lyrics.lines.clone() };
-                let tx = self.jobs.0.clone();
-                self.hearing = Some(d);
-                self.status = Some("Listening to the track for its words".into());
-                std::thread::spawn(move || {
-                    let line = tx.clone();
-                    let said: crate::lyrics::Said = std::sync::Arc::new(move |now| {
-                        let _ = line.send((Job::Failed(now), None));
-                    });
-                    let heard = if lyrics.lines.is_empty() {
-                        crate::lyrics::write(&path, said).map(|ly| (ly, WRITTEN))
-                    } else {
-                        crate::lyrics::time(&path, lyrics, said).map(|ly| (ly, TIMED))
-                    };
-                    let said = match heard {
-                        Ok((ly, done)) => {
-                            let _ = tx.send((Job::Lyrics(d, path, ly), None));
-                            done.to_owned()
-                        }
-                        Err(why) => why,
-                    };
-                    let _ = tx.send((Job::Failed(said), None));
-                    let _ = tx.send((Job::Heard, None));
-                });
-            }
             Target::MenuQueue => {
                 if let Some(i) = self.track_menu.take() {
                     let e = &self.entries[i as usize];

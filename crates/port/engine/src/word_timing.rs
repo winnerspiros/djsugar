@@ -7,10 +7,11 @@ use std::path::Path;
 use crate::lyrics::{Line, Word};
 use crate::whisper::Ear;
 
-/// The model: what hears the sound, what writes the words, and the words it knows. About 290 MB together.
+/// The model: what hears the sound, what writes the words, and the words it knows. Whisper base from
+/// `onnx-community/whisper-base_timestamped`, its weights packed by [`crate::packed`]: 78 MB together.
 pub const MODELS: [(&str, &str); 3] = [
-    ("whisper-base-encoder.onnx", "7fcea817bb2be4d86729b521e5a7fcbec28fa743edfed67e882b33ff15852540"),
-    ("whisper-base-decoder.onnx", "cec3e1ce94220497665b629710fb24f049025d4f88673563f38e475af6b8a06d"),
+    ("whisper-base-encoder.onnx", "32485cd13b70b0d2e0f77a6f8829f473ffa532a9d82dd77bda069731b8c27c41"),
+    ("whisper-base-decoder.onnx", "48570f25bb75414a3ec14c709fcd66ef2cfb963c97b3da0ad10b04f8da3e9c69"),
     ("whisper-base-tokens.json", "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566"),
 ];
 
@@ -50,17 +51,166 @@ pub fn time_words(path: &Path, lines: &[Line], report: Report) -> Result<Vec<Lin
             true
         })?;
         let mut timed = align(lines, &heard)?;
-        place(ear, samples, &mut timed, &|p| told(Stage::Listening(66 + p / 3)))?;
+        place(ear, samples, &mut timed, false, &|p| told(Stage::Listening(66 + p / 3)))?;
         Ok(timed)
     })
 }
 
+/// The tag of lyrics whose times this app has held against the track, so that it doesn't again.
+pub const CHECKED: &str = "[re:DJ Sugar checked]";
+
+/// How far, in seconds, lyrics that came with times may be from the singing and be left as they are.
+const CLOSE: f64 = 0.2;
+/// And how far the lines at any one place may be.
+const FAR: f64 = 1.0;
+/// How many lines are listened for at each of the places lyrics are checked at.
+const SAMPLE: usize = 5;
+/// How far a line may land from where the lines around it did, in seconds, and still count as found; and the
+/// share of lines that must be, for what was heard to be the words that are written.
+const AGREES: f64 = 0.7;
+const FOUND: f64 = 0.75;
+
+/// Holds timed lyrics against the track at `path`: they can drift, or be off by what a video adds to the song.
+/// Words are then set where they are heard; None when they were right, or aren't what is sung. `moved` is the
+/// lines shifted by the parts known not to be the song, taken when that alone puts them right.
+pub fn check_words(
+    path: &Path,
+    lines: &[Line],
+    moved: Option<&[Line]>,
+    report: Report,
+) -> Result<Option<Vec<Line>>, String> {
+    let told = report.clone();
+    listen(path, report, |ear, samples| {
+        let hear = || {
+            ear.hear(samples, &|p| {
+                told(Stage::Listening(10 + p * 3 / 5));
+                true
+            })
+        };
+        if let Some(moved) = moved {
+            if !right(ear, samples, &worded(lines))? && right(ear, samples, &worded(moved))? {
+                return Ok(Some(moved.to_vec()));
+            }
+        }
+        mend(ear, samples, lines, hear, &|p| told(Stage::Listening(p)))
+    })
+}
+
+/// `lines` with each word given a time, spread over its line where the lyrics time lines only.
+fn worded(lines: &[Line]) -> Vec<Line> {
+    let mut worded = lines.to_vec();
+    for i in 0..worded.len() {
+        let until = lines[i + 1..].iter().find_map(|l| l.start);
+        let words = lines[i].word_times(until);
+        worded[i].words = words.into_iter().map(|(start, _, text)| Word { start, text }).collect();
+    }
+    worded
+}
+
+/// Whether the lines are sung where they say, going by four places along the track: close on the whole, and
+/// at none of them far off, as they are from where a video puts something into the song. Lyrics too short
+/// to tell are taken to be.
+fn right(ear: &Ear, samples: &[f32], worded: &[Line]) -> Result<bool, String> {
+    let sung: Vec<usize> = (0..worded.len()).filter(|&i| !worded[i].words.is_empty()).collect();
+    if sung.len() < SAMPLE * 3 {
+        return Ok(true);
+    }
+    let mut all = Vec::new();
+    for part in [1, 3, 5, 7] {
+        let from = (sung.len() * part / 8).min(sung.len() - SAMPLE);
+        let known: Vec<(&str, f64)> = sung[from..from + SAMPLE]
+            .iter()
+            .flat_map(|&i| worded[i].words.iter().map(|w| (w.text.as_str(), w.start)))
+            .collect();
+        let found = ear.place(samples, &known, false, &|_| true)?;
+        let (mut word, mut off) = (0, Vec::new());
+        for &i in &sung[from..from + SAMPLE] {
+            off.push((found[word] - known[word].1).abs());
+            word += worded[i].words.len();
+        }
+        off.sort_by(f64::total_cmp);
+        if off[SAMPLE / 2] > FAR {
+            return Ok(false);
+        }
+        all.extend(off);
+    }
+    all.sort_by(f64::total_cmp);
+    Ok(all[all.len() / 2] <= CLOSE)
+}
+
+fn mend(
+    ear: &Ear,
+    samples: &[f32],
+    lines: &[Line],
+    hear: impl FnOnce() -> Result<Vec<Heard>, String>,
+    told: &dyn Fn(i32),
+) -> Result<Option<Vec<Line>>, String> {
+    let mut worded = worded(lines);
+    let sung: Vec<usize> = (0..worded.len()).filter(|&i| !worded[i].words.is_empty()).collect();
+    if right(ear, samples, &worded)? {
+        return Ok(None);
+    }
+    told(8);
+    // Off: the words are found by what is sung, wherever in the track that is, and whatever else is in it.
+    let plain: Vec<Line> = lines.iter().map(|l| Line { text: l.text.clone(), ..Line::default() }).collect();
+    if let Ok(mut timed) = align(&plain, &hear()?) {
+        place(ear, samples, &mut timed, false, &|p| told(70 + p * 3 / 10))?;
+        // The whole track heard tells better than four places did: lines that came as near as this are kept.
+        let off: Vec<f64> = sung.iter().filter_map(|&i| Some((timed[i].start? - lines[i].start?).abs())).collect();
+        let mut all = off.clone();
+        all.sort_by(f64::total_cmp);
+        let far = off.windows(SAMPLE).any(|run| {
+            let mut run = run.to_vec();
+            run.sort_by(f64::total_cmp);
+            run[SAMPLE / 2] > FAR
+        });
+        let near = !all.is_empty() && all[all.len() / 2] <= CLOSE && !far;
+        return Ok((!near).then_some(timed));
+    }
+    // Too few were made out for that: they are followed from where they were said to be.
+    place(ear, samples, &mut worded, true, &|p| told(70 + p * 3 / 10))?;
+    let found = agree(lines, &mut worded, &sung);
+    Ok((found as f64 >= sung.len() as f64 * FOUND).then_some(worded))
+}
+
+/// Moves each line of `worded` that landed far from where those around it did, going by where `lines` had
+/// them, as they moved instead: it wasn't found. How many of the `sung` lines were.
+fn agree(lines: &[Line], worded: &mut [Line], sung: &[usize]) -> usize {
+    // Only lines with a time on both sides say anything about how far they moved.
+    let sung: Vec<(usize, f64)> = sung.iter().filter_map(|&i| Some((i, worded[i].start? - lines[i].start?))).collect();
+    let moved: Vec<f64> = sung.iter().map(|s| s.1).collect();
+    let mut found = 0;
+    for (n, &(i, _)) in sung.iter().enumerate() {
+        let mut around = moved[n.saturating_sub(3)..(n + 4).min(moved.len())].to_vec();
+        around.sort_by(f64::total_cmp);
+        let back = around[around.len() / 2] - moved[n];
+        if back.abs() <= AGREES {
+            found += 1;
+            continue;
+        }
+        let line = &mut worded[i];
+        line.start = line.start.map(|s| s + back);
+        line.end = line.end.map(|e| e + back);
+        line.words.iter_mut().for_each(|w| w.start += back);
+    }
+    let mut last = 0.0f64;
+    for word in worded.iter_mut().flat_map(|l| l.words.iter_mut()) {
+        last = word.start.max(last);
+        word.start = last;
+    }
+    for line in worded.iter_mut().filter(|l| !l.words.is_empty()) {
+        line.start = Some(line.words[0].start);
+    }
+    settle(worded);
+    found
+}
+
 /// Listens again for the words of `timed`, now that about when each is sung is known, and sets each where the
 /// model is found listening for it.
-fn place(ear: &Ear, samples: &[f32], timed: &mut [Line], told: &dyn Fn(i32)) -> Result<(), String> {
+fn place(ear: &Ear, samples: &[f32], timed: &mut [Line], follow: bool, told: &dyn Fn(i32)) -> Result<(), String> {
     let known: Vec<(&str, f64)> =
         timed.iter().flat_map(|l| l.words.iter().map(|w| (w.text.as_str(), w.start))).collect();
-    let placed = ear.place(samples, &known, &|p| {
+    let placed = ear.place(samples, &known, follow, &|p| {
         told(p);
         true
     })?;
@@ -74,7 +224,26 @@ fn place(ear: &Ear, samples: &[f32], timed: &mut [Line], told: &dyn Fn(i32)) -> 
         line.start = line.words.first().map(|w| w.start);
         line.end = line.end.map(|e| e.max(last));
     }
+    settle(timed);
     Ok(())
+}
+
+/// Keeps the lines whose words weren't made out between their neighbours, which have just moved.
+fn settle(timed: &mut [Line]) {
+    let mut next = f64::INFINITY;
+    for line in timed.iter_mut().rev() {
+        if line.words.is_empty() {
+            line.start = line.start.map(|s| s.min(next));
+        }
+        next = line.start.unwrap_or(next);
+    }
+    let mut last = 0.0f64;
+    for line in timed.iter_mut() {
+        if line.words.is_empty() {
+            line.start = line.start.map(|s| s.max(last));
+        }
+        last = line.start.unwrap_or(last);
+    }
 }
 
 /// Every written word of `lines`: its line, its text with the space after, and its plain form.
@@ -105,6 +274,11 @@ pub fn hear(path: &Path, report: Report) -> Result<Vec<Heard>, String> {
 }
 
 /// Has the model, fetched if it must be, do `work` on the sound of the track at `path`.
+/// Has the model on hand, downloading it if it isn't yet.
+pub fn fetch() -> Result<(), String> {
+    MODELS.iter().try_for_each(|(name, _)| crate::separation::model_or_fetch(name, &MODELS).map(drop))
+}
+
 fn listen<T>(path: &Path, report: Report, work: impl FnOnce(&Ear, &[f32]) -> Result<T, String>) -> Result<T, String> {
     if MODELS.iter().any(|(name, _)| crate::separation::model(name).is_none()) {
         report(Stage::Downloading);
@@ -440,7 +614,7 @@ mod tests {
                 |timed: &[Line]| timed.iter().flat_map(|l| l.words.iter().map(|w| w.start)).collect::<Vec<_>>();
             let rough = starts(&timed);
             assert_eq!(rough.len(), marks.len(), "{}", track.display());
-            listen(&track, std::sync::Arc::new(|_| ()), |ear, samples| place(ear, samples, &mut timed, &|_| ()))
+            listen(&track, std::sync::Arc::new(|_| ()), |ear, samples| place(ear, samples, &mut timed, false, &|_| ()))
                 .unwrap();
             let ours = starts(&timed);
             let off: Vec<f64> = ours.iter().zip(&marks).map(|(a, b)| a - b).collect();
@@ -456,6 +630,56 @@ mod tests {
     }
 
     /// How far off the marks a run was: the mean and middle distance, the lean, and the share within some bounds.
+    /// Run as [`lands_on_marked_words`]: each track's lines are given times that start late and fall further
+    /// behind, as lyrics found online can be, and are to come back to where the words were marked.
+    #[test]
+    #[ignore = "the model files and marked tracks of one's own"]
+    fn mends_lines_that_drift() {
+        let Some(folder) = std::env::var_os("DJSUGAR_MARKED") else { return };
+        let mut tracks: Vec<_> = std::fs::read_dir(folder).unwrap().flatten().map(|e| e.path()).collect();
+        tracks.retain(|p| p.extension().is_some_and(|e| e == "mp3"));
+        tracks.sort();
+        for track in tracks {
+            let text = std::fs::read_to_string(track.with_extension("txt")).unwrap();
+            let marks = std::fs::read_to_string(track.with_extension("csv")).unwrap();
+            let marks: Vec<f64> = marks.lines().skip(1).filter_map(|l| l.split(',').next()?.parse().ok()).collect();
+            let name = track.file_stem().unwrap().to_str().unwrap().to_owned();
+            let mut word = 0;
+            let mut right = Vec::new();
+            for text in text.lines().filter(|l| !l.trim().is_empty()) {
+                right.push(Line { start: Some(marks[word]), ..line(text) });
+                word += words_of(text).len();
+            }
+            assert_eq!(word, marks.len(), "{}", track.display());
+            // The last: a video with twelve seconds of something else in it two thirds of the way through.
+            let cases = [
+                ("right", 0.0, 1.0, 0.0),
+                ("late", 0.4, 1.0, 0.0),
+                ("drifting", 0.3, 1.01, 0.0),
+                ("cut", 0.0, 1.0, 12.0),
+            ];
+            for (what, late, slow, cut) in cases {
+                let given: Vec<Line> = right
+                    .iter()
+                    .enumerate()
+                    .map(|(i, l)| {
+                        let cut = if i * 3 >= right.len() * 2 { cut } else { 0.0 };
+                        Line { start: l.start.map(|s| s * slow + late + cut), ..l.clone() }
+                    })
+                    .collect();
+                let mended = listen(&track, std::sync::Arc::new(|_| ()), |ear, samples| {
+                    mend(ear, samples, &given, || Ok(kept(&track)), &|_| ())
+                })
+                .unwrap();
+                let lines = mended.as_deref().unwrap_or(&given);
+                let off: Vec<f64> =
+                    lines.iter().zip(&right).map(|(a, b)| a.start.unwrap() - b.start.unwrap()).collect();
+                let said = if mended.is_some() { "mended" } else { "left" };
+                println!("{what:9} {said:7} {}", report(&off, &name));
+            }
+        }
+    }
+
     fn report(off: &[f64], name: &str) -> String {
         let mut far: Vec<f64> = off.iter().map(|o| o.abs()).collect();
         far.sort_by(f64::total_cmp);
@@ -475,6 +699,19 @@ mod tests {
             within(0.3),
             within(1.0),
         )
+    }
+
+    #[test]
+    fn lines_not_made_out_stay_between_their_neighbours() {
+        let at = |start: f64, words: &[f64]| Line {
+            start: Some(start),
+            words: words.iter().map(|&start| Word { start, text: "a".into() }).collect(),
+            ..line("a")
+        };
+        let mut timed = [at(25.2, &[25.2]), at(34.0, &[]), at(33.8, &[33.8]), at(30.0, &[]), at(40.4, &[40.4])];
+        settle(&mut timed);
+        let starts: Vec<f64> = timed.iter().filter_map(|l| l.start).collect();
+        assert_eq!(starts, [25.2, 33.8, 33.8, 33.8, 40.4]);
     }
 
     #[test]

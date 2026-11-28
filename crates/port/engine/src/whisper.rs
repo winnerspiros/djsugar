@@ -40,6 +40,10 @@ const UNSURE: f32 = -1.0;
 /// words are taken, seconds.
 const LEAD: f64 = 1.0;
 const TAKEN: f64 = 26.0;
+/// Following words whose times slip: how far apart the middle half of a window's words may land from where they
+/// were said to be and still be believed, and the most one window may move the next, seconds.
+const AGREED: f64 = 0.5;
+const SLIP: f64 = 0.75;
 /// How long after a word starts the model listens hardest for it: measured against words marked by hand.
 const LAG: f64 = 0.03;
 /// The longest a word is taken to last, seconds; and the first of a line, which is listened for through the pause before it.
@@ -633,21 +637,26 @@ impl Ear {
     }
 
     /// The second each known word starts at in `samples`. Each comes with about when it is sung; the model, made
-    /// to write just those words, listens hardest for each where it is.
+    /// to write just those words, listens hardest for each where it is. With `follow`, words said to be sung at
+    /// times that slip further and further from the singing are followed there.
     pub fn place(
         &self,
         samples: &[f32],
         known: &[(&str, f64)],
+        follow: bool,
         progress: &dyn Fn(i32) -> bool,
     ) -> Result<Vec<f64>, String> {
         let (t, writer) = (&self.t, &self.writer);
         let mut out: Vec<f64> = Vec::with_capacity(known.len());
+        // How far the words found so far are from where they were said to be: followed, the next are looked for
+        // as far on.
+        let mut moved = 0.0f64;
         while out.len() < known.len() {
             if !progress((out.len() * 100 / known.len()) as i32) {
                 return Err("stopped".into());
             }
             let first = out.len();
-            let opens = (known[first].1 - LEAD).max(0.0);
+            let opens = (known[first].1 + moved - LEAD).max(0.0);
             let seek = (opens * RATE as f64) as usize;
             let real = &samples[seek.min(samples.len())..samples.len().min(seek + WINDOW)];
             if real.len() < RATE / 2 {
@@ -671,7 +680,7 @@ impl Ear {
             let mut first_of = Vec::new();
             for (word, near) in &known[first..] {
                 let spelled = t.spell(word);
-                let fits = ids.len() + spelled.len() <= LONGEST && *near < opens + TAKEN;
+                let fits = ids.len() + spelled.len() <= LONGEST && *near + moved < opens + TAKEN;
                 if !first_of.is_empty() && !fits {
                     break;
                 }
@@ -688,6 +697,12 @@ impl Ear {
                 let row = &cost[token * frames..][at[*token]..until.max(at[*token] + 1).min(frames)];
                 let peak = row.iter().enumerate().min_by(|a, b| a.1.total_cmp(b.1)).map_or(0, |m| m.0) + at[*token];
                 out.push((opens + peak as f64 * STEP - LAG).max(0.0));
+            }
+            let mut off: Vec<f64> = out[first..].iter().zip(&known[first..]).map(|(found, k)| found - k.1).collect();
+            off.sort_by(f64::total_cmp);
+            // Only words that mostly agree say where the rest are, and no stretch moves them far at once.
+            if follow && off[off.len() * 3 / 4] - off[off.len() / 4] <= AGREED {
+                moved += (off[off.len() / 2] - moved).clamp(-SLIP, SLIP);
             }
         }
         progress(100);

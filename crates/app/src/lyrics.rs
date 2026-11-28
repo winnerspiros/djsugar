@@ -1,4 +1,5 @@
 use djsugar_engine::lyrics::{self as lrc, Line};
+use djsugar_engine::word_timing::CHECKED;
 
 /// A track's lyrics: LRC, enhanced LRC timed by word, or plain text.
 #[derive(Debug, Default)]
@@ -111,7 +112,7 @@ fn timed(text: &Option<String>) -> bool {
 }
 
 /// The YouTube video a downloaded file is of, from its name.
-fn video(path: &std::path::Path) -> Option<&str> {
+pub fn video(path: &std::path::Path) -> Option<&str> {
     let stem = path.file_stem()?.to_str()?;
     let made = stem.len() == 11 && stem.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
     (made && matches!(path.extension()?.to_str()?, "m4a" | "webm")).then_some(stem)
@@ -219,10 +220,78 @@ fn report(said: Said) -> djsugar_engine::word_timing::Report {
     use djsugar_engine::word_timing::Stage;
     std::sync::Arc::new(move |stage| {
         said(match stage {
-            Stage::Downloading => "Downloading what listens for the words, 290 MB, this once".to_owned(),
-            Stage::Listening(part) => format!("Listening for the words: {part}%"),
+            Stage::Downloading => "Getting ready to listen".to_owned(),
+            Stage::Listening(part) => format!("Listening {part}%"),
         });
     })
+}
+
+/// The file each deck holds: only those are worth listening to.
+static WANTED: std::sync::Mutex<Vec<(usize, std::path::PathBuf)>> = std::sync::Mutex::new(Vec::new());
+
+/// Notes that `deck` now holds the file at `path`.
+pub fn want(deck: usize, path: &std::path::Path) {
+    let mut wanted = WANTED.lock().unwrap_or_else(|e| e.into_inner());
+    wanted.retain(|(d, _)| *d != deck);
+    wanted.push((deck, path.to_owned()));
+}
+
+/// Gives a file's lyrics what they lack by listening to it, one track at a time: times for words that have none,
+/// or the words themselves. None when the track has left its deck meanwhile, or nothing sung was made out.
+pub fn by_ear(path: &std::path::Path, lyrics: Lyrics, said: Said) -> Option<Lyrics> {
+    static TURN: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _turn = TURN.lock().unwrap_or_else(|e| e.into_inner());
+    if !WANTED.lock().unwrap_or_else(|e| e.into_inner()).iter().any(|(_, p)| p == path) {
+        return None;
+    }
+    let heard = if lyrics.lines.is_empty() {
+        write(path, said).map(Some)
+    } else if lyrics.untimed() {
+        time(path, lyrics, said).map(Some)
+    } else if unchecked(path) {
+        check(path, &lyrics, said)
+    } else {
+        Ok(None)
+    };
+    heard.map_err(|why| crate::log::note(&format!("lyrics not heard: {why}"))).ok().flatten()
+}
+
+/// Whether the timed lyrics kept beside the file at `path` have yet to be held against it: those found online
+/// or put there by hand. What this app heard itself, it need not check.
+pub fn unchecked(path: &std::path::Path) -> bool {
+    std::fs::read_to_string(path.with_extension("lrc")).is_ok_and(|kept| {
+        timed(&Some(kept.clone())) && !lrc::is_auto(&kept) && !kept.lines().take(20).any(|l| l.trim() == CHECKED)
+    })
+}
+
+/// Holds a file's timed lyrics against the singing, once: Some, with every word where it is heard, when they
+/// were off. The `.lrc` is marked either way, so the track is not listened to again.
+fn check(path: &std::path::Path, lyrics: &Lyrics, said: Said) -> Result<Option<Lyrics>, String> {
+    let began = std::time::Instant::now();
+    // Lyrics timed to the song are late in its video by what the video adds; viewers may have marked that.
+    let parts = crate::skips::marked(path);
+    let on = |at: f64| crate::skips::within(&parts, at);
+    let moved: Vec<Line> = lyrics
+        .lines
+        .iter()
+        .map(|l| Line {
+            start: l.start.map(on),
+            end: l.end.map(on),
+            words: l.words.iter().map(|w| lrc::Word { start: on(w.start), text: w.text.clone() }).collect(),
+            text: l.text.clone(),
+        })
+        .collect();
+    let moved = (!parts.is_empty()).then_some(&moved[..]);
+    let mended = djsugar_engine::word_timing::check_words(path, &lyrics.lines, moved, report(said))?;
+    let what = if mended.is_some() { "were off and are set by ear" } else { "are left as they came" };
+    crate::log::note(&format!("lyrics checked in {:.0} s: the times {what}", began.elapsed().as_secs_f64()));
+    let lrc = path.with_extension("lrc");
+    let kept = match &mended {
+        Some(lines) => lrc::to_lrc(lines),
+        None => std::fs::read_to_string(&lrc).unwrap_or_default(),
+    };
+    let _ = std::fs::write(lrc, format!("{CHECKED}\n{kept}"));
+    Ok(mended.map(|lines| Lyrics { lines }))
 }
 
 /// Times a file's untimed lyrics and keeps them beside it as an `.lrc`: each word where it is heard sung, or, when
@@ -240,7 +309,7 @@ pub fn time(path: &std::path::Path, mut lyrics: Lyrics, said: Said) -> Result<Ly
         }
     }
     crate::log::note(&format!("lyrics timed in {:.0} s", began.elapsed().as_secs_f64()));
-    let _ = std::fs::write(path.with_extension("lrc"), lrc::to_lrc(&lyrics.lines));
+    let _ = std::fs::write(path.with_extension("lrc"), format!("{CHECKED}\n{}", lrc::to_lrc(&lyrics.lines)));
     Ok(lyrics)
 }
 
