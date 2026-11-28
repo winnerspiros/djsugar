@@ -186,7 +186,7 @@ struct Pacing {
 #[derive(Debug, Default)]
 pub struct YouTube {
     state: Mutex<Pacing>,
-    /// The cookies of the account downloads are asked for as, when there is one.
+    /// The cookies of the account that asks for what nobody is given, when one is signed in.
     account: Mutex<String>,
     /// Region for searches, two letters ("US", "GR").
     pub region: String,
@@ -216,7 +216,7 @@ impl YouTube {
         s
     }
 
-    /// Asks for downloads as the account these cookies are of; none asks as nobody.
+    /// The account to ask for a download as where asking as nobody is refused; none leaves it at that.
     pub fn sign(&self, cookies: &str) {
         let mut account = self.account.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         if *account != cookies {
@@ -379,9 +379,10 @@ impl YouTube {
         let mut last = Error::Refused("All InnerTube clients failed".into());
         let mut refused = 0;
         let cookies = self.account.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
-        // An account is asked for first, and whatever the pacing: it is not what gets flagged.
-        let asked = SIGNED_CLIENTS.iter().filter(|_| !cookies.is_empty()).map(|c| (c, true));
-        let asked = asked.chain(PLAYER_CLIENTS.iter().filter(|_| !self.resting()).map(|c| (c, false)));
+        // Nobody asks first. Where that is refused a signed in account asks, whatever the pacing: it is not
+        // what gets flagged.
+        let asked = PLAYER_CLIENTS.iter().filter(|_| !self.resting()).map(|c| (c, false));
+        let asked = asked.chain(SIGNED_CLIENTS.iter().filter(|_| !cookies.is_empty()).map(|c| (c, true)));
         {
             let mut player: Option<Result<crate::cipher::Player>> = None;
             for (c, signed) in asked {
@@ -436,7 +437,7 @@ impl YouTube {
                 // A bot check gates that client only; the next may still answer.
                 if let Some(why) = bot_check(status, &v, &raw) {
                     crate::note(&format!("youtube {video} as {}: {why}", c.name));
-                    refused += 1;
+                    refused += usize::from(!signed);
                     last = Error::Refused(why);
                     continue;
                 }

@@ -1180,7 +1180,6 @@ impl State {
         s.send(Command::VinylStop(s.settings.on(crate::settings::Opt::VinylStop)));
         djsugar_engine::separation::set_on_load(s.settings.on(crate::settings::Opt::Stems));
         crate::skips::set_on(s.settings.on(crate::settings::Opt::SkipNonMusic));
-        crate::hub::set_account(s.settings.on(crate::settings::Opt::AccountDownloads));
         s
     }
 
@@ -2853,7 +2852,6 @@ impl State {
             Opt::VinylStop => self.send(Command::VinylStop(v != 0)),
             Opt::Stems => djsugar_engine::separation::set_on_load(v != 0),
             Opt::SkipNonMusic => crate::skips::set_on(v != 0),
-            Opt::AccountDownloads => crate::hub::set_account(v != 0),
             Opt::AutoGain | Opt::GainTarget => {
                 for d in 0..self.decks.len() {
                     let target = self.settings.gain_target();
