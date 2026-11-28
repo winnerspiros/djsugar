@@ -32,10 +32,21 @@ pub const OVERVIEW_SLICES: usize = 256;
 #[cfg(test)]
 pub(crate) static TEST_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
+/// The cache folder the app was given, where the system has no place of its own for one to be worked out.
+static GIVEN: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+/// Sets the cache folder: a phone app is told its own, and has no home folder to look under.
+pub fn set_dir(dir: PathBuf) {
+    let _ = GIVEN.set(dir);
+}
+
 /// DJ Sugar's cache folder (`DJSUGAR_CACHE` overrides it).
 pub fn cache_dir() -> Option<PathBuf> {
     #[cfg(test)]
     if let Some(dir) = TEST_DIR.get() {
+        return Some(dir.clone());
+    }
+    if let Some(dir) = GIVEN.get() {
         return Some(dir.clone());
     }
     if let Some(dir) = std::env::var_os("DJSUGAR_CACHE") {

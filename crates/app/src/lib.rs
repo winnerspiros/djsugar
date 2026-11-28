@@ -750,6 +750,7 @@ pub(crate) mod android {
         std::panic::set_hook(Box::new(|info| crate::diag(&format!("panicked: {info}"))));
         let _ = APP.set(app.clone());
         if let Some(dir) = app.internal_data_path() {
+            djsugar_engine::cache::set_dir(dir.join("cache"));
             crate::store::set_dir(dir);
         }
         unpack_mappings(&app);

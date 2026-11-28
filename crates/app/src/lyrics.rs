@@ -55,8 +55,20 @@ fn bare(title: &str) -> String {
         }
     }
     let low = out.to_lowercase();
-    let cut =
-        [" ft.", " ft ", " feat.", " feat ", " featuring ", " | ", " // "].iter().filter_map(|m| low.find(m)).min();
+    let said = [
+        " ft.",
+        " ft ",
+        " feat.",
+        " feat ",
+        " featuring ",
+        " | ",
+        " // ",
+        " - official",
+        " - music video",
+        " - lyric video",
+        " - lyrics",
+    ];
+    let cut = said.iter().filter_map(|m| low.find(m)).min();
     // The lower-case copy can be longer or shorter in bytes; only cut where both agree.
     let out = match cut {
         Some(n) if low.len() == out.len() => &out[..n],
@@ -115,7 +127,7 @@ fn timed(text: &Option<String>) -> bool {
 pub fn video(path: &std::path::Path) -> Option<&str> {
     let stem = path.file_stem()?.to_str()?;
     let made = stem.len() == 11 && stem.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
-    (made && matches!(path.extension()?.to_str()?, "m4a" | "webm")).then_some(stem)
+    (made && matches!(path.extension()?.to_str()?, "m4a" | "webm" | "aac")).then_some(stem)
 }
 
 /// Lyrics found online, timed ones wanted most. A downloaded video goes by its YouTube Music name first; LRCLIB,
@@ -354,6 +366,8 @@ mod tests {
 
     #[test]
     fn video_names_become_song_names() {
+        let greek = names("Katerina Lioliou", "Κατερίνα Λιόλιου - Λογαριασμός - Official Music Video");
+        assert_eq!(greek[0], ("Κατερίνα Λιόλιου".to_string(), "Λογαριασμός".to_string()));
         let n = names("DuaLipaVEVO", "Dua Lipa - Levitating (Official Video) [4K]");
         assert_eq!(n[0], ("Dua Lipa".to_string(), "Levitating".to_string()));
         assert!(n.contains(&(String::new(), "Dua Lipa - Levitating".to_string())));

@@ -104,6 +104,21 @@ pub const PLAYER_CLIENTS: [Client; 8] = [
     PLAYSTATION,
 ];
 
+/// Who to ask as a signed in account, in order: the television, whose files need no token, then the browser
+/// that is given a stream of pieces.
+pub const SIGNED_CLIENTS: [Client; 2] = [
+    PLAYER_CLIENTS[0],
+    Client {
+        js: true,
+        ..client(
+            "WEB_EMBEDDED_PLAYER",
+            "2.20260708.00.00",
+            "56",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Safari/605.1.15,gzip(gfe)",
+        )
+    },
+];
+
 /// Who to ask for searches, in order.
 pub const SEARCH_CLIENTS: [Client; 3] = [
     VR,
@@ -147,6 +162,10 @@ pub struct Format {
     pub bitrate: u64,
     /// Bytes, when the listing says.
     pub size: Option<u64>,
+    /// The link is of a playlist of short pieces, not of one file.
+    pub pieces: bool,
+    /// When the link starts to be answered: not before the advert ahead of the video would have played.
+    pub ready: Option<Instant>,
 }
 
 impl Format {
@@ -167,6 +186,8 @@ struct Pacing {
 #[derive(Debug, Default)]
 pub struct YouTube {
     state: Mutex<Pacing>,
+    /// The cookies of the account downloads are asked for as, when there is one.
+    account: Mutex<String>,
     /// Region for searches, two letters ("US", "GR").
     pub region: String,
 }
@@ -193,6 +214,14 @@ impl YouTube {
         let s = Self { region: region.to_string(), ..Self::default() };
         s.lock().visitor = visitor.to_string();
         s
+    }
+
+    /// Asks for downloads as the account these cookies are of; none asks as nobody.
+    pub fn sign(&self, cookies: &str) {
+        let mut account = self.account.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        if *account != cookies {
+            *account = cookies.to_string();
+        }
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Pacing> {
@@ -261,10 +290,26 @@ impl YouTube {
         if !visitor.is_empty() {
             m.insert("visitorData".into(), visitor.into());
         }
+        if c.name == "WEB_EMBEDDED_PLAYER" {
+            // The player set in another site's page: it is told which, and any will do.
+            return json!({ "client": m, "thirdParty": { "embedUrl": "https://www.reddit.com/" } });
+        }
         json!({ "client": m })
     }
 
-    fn post(&self, endpoint: &str, c: &Client, mut body: Value, timeout: Duration) -> Result<(u16, Value, String)> {
+    fn post(&self, endpoint: &str, c: &Client, body: Value, timeout: Duration) -> Result<(u16, Value, String)> {
+        self.post_as(endpoint, c, body, timeout, "")
+    }
+
+    /// Asks as `c`; with `cookies`, as the account they are of.
+    fn post_as(
+        &self,
+        endpoint: &str,
+        c: &Client,
+        mut body: Value,
+        timeout: Duration,
+        cookies: &str,
+    ) -> Result<(u16, Value, String)> {
         self.pace();
         body["context"] = self.context(c);
         let mut req = agent()
@@ -278,7 +323,14 @@ impl YouTube {
             .header("X-YouTube-Client-Version", c.version)
             .header("Origin", "https://www.youtube.com");
         let visitor = self.visitor();
-        if !visitor.is_empty() {
+        if !cookies.is_empty() {
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+            req = req
+                .header("Cookie", cookies)
+                .header("Authorization", crate::ytmusic::signed(cookies, now, "https://www.youtube.com"))
+                .header("X-Origin", "https://www.youtube.com")
+                .header("X-Goog-AuthUser", "0");
+        } else if !visitor.is_empty() {
             req = req.header("X-Goog-Visitor-Id", &visitor);
         }
         let (status, text) = read(req.send(body.to_string()))?;
@@ -326,9 +378,13 @@ impl YouTube {
         }
         let mut last = Error::Refused("All InnerTube clients failed".into());
         let mut refused = 0;
-        if !self.resting() {
+        let cookies = self.account.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+        // An account is asked for first, and whatever the pacing: it is not what gets flagged.
+        let asked = SIGNED_CLIENTS.iter().filter(|_| !cookies.is_empty()).map(|c| (c, true));
+        let asked = asked.chain(PLAYER_CLIENTS.iter().filter(|_| !self.resting()).map(|c| (c, false)));
+        {
             let mut player: Option<Result<crate::cipher::Player>> = None;
-            for c in &PLAYER_CLIENTS {
+            for (c, signed) in asked {
                 let sts = if c.js {
                     match player.get_or_insert_with(crate::cipher::load) {
                         Ok(p) => Some(p.sts),
@@ -349,10 +405,28 @@ impl YouTube {
                 if let Some(sts) = sts {
                     body["playbackContext"]["contentPlaybackContext"]["signatureTimestamp"] = sts.into();
                 }
+                if c.name == "WEB_EMBEDDED_PLAYER" {
+                    // The page a site sets the player in carries a mark the player sends back.
+                    let page = agent()
+                        .get(format!("https://www.youtube.com/embed/{video}"))
+                        .config()
+                        .timeout_global(Some(SEARCH_TIMEOUT))
+                        .build()
+                        .header("User-Agent", c.agent)
+                        .header("Referer", "https://www.reddit.com/")
+                        .header("Cookie", &cookies);
+                    let text = read(page.call()).map(|r| r.1).unwrap_or_default();
+                    let mark =
+                        text.split_once("\"encryptedHostFlags\":\"").and_then(|(_, rest)| rest.split('"').next());
+                    if let Some(mark) = mark {
+                        body["playbackContext"]["contentPlaybackContext"]["encryptedHostFlags"] = mark.into();
+                    }
+                }
                 if let Some(t) = tokens.filter(|t| !t.player.is_empty()) {
                     body["playbackContext"]["serviceIntegrityDimensions"] = json!({ "poToken": t.player });
                 }
-                let (status, v, raw) = match self.post("player", c, body, SEARCH_TIMEOUT) {
+                let whose = if signed { cookies.as_str() } else { "" };
+                let (status, v, raw) = match self.post_as("player", c, body, SEARCH_TIMEOUT, whose) {
                     Ok(r) => r,
                     Err(e) => {
                         last = e;
@@ -368,7 +442,13 @@ impl YouTube {
                 }
                 let formats = player_formats(&v).and_then(|f| {
                     if c.js {
-                        f.into_iter().map(unlocked).collect()
+                        // One link that will not unlock leaves the others.
+                        let open: Vec<Format> = f.into_iter().filter_map(|f| unlocked(f).ok()).collect();
+                        if open.is_empty() {
+                            Err(Error::Refused("The player script unlocked no link".into()))
+                        } else {
+                            Ok(open)
+                        }
                     } else {
                         Ok(f.into_iter().filter(|f| f.sig.is_none()).collect())
                     }
@@ -383,7 +463,7 @@ impl YouTube {
                 }
             }
             // Every client refused: back off before asking again.
-            if refused == PLAYER_CLIENTS.len() {
+            if refused >= PLAYER_CLIENTS.len() {
                 self.flag();
             }
         }
@@ -420,7 +500,7 @@ impl YouTube {
     /// Downloads a video's audio into `dir` as `<id>.m4a` or `<id>.webm`,
     /// trying each offered format until one arrives. Returns the file.
     pub fn fetch(&self, video: &str, dir: &Path, progress: crate::Progress<'_>) -> Result<PathBuf> {
-        for ext in ["m4a", "webm"] {
+        for ext in ["m4a", "webm", "aac"] {
             let f = dir.join(format!("{video}.{ext}"));
             if f.is_file() {
                 return Ok(f);
@@ -438,9 +518,30 @@ impl YouTube {
         let tokens = minted.as_ref().ok().cloned();
         let out = self.each_source(video, tokens.as_ref(), |formats, ua| {
             let mut last = Error::Refused("No usable audio stream URL".into());
+            let mut refused_files = false;
             for f in formats {
-                let to = dir.join(format!("{video}.{}", f.ext()));
                 let headers: &[(&str, &str)] = if ua.is_empty() { &[] } else { &[("User-Agent", ua)] };
+                while f.ready.is_some_and(|at| at > Instant::now()) {
+                    if !progress(0, 1) {
+                        return Err(Error::Stopped);
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+                if refused_files && !f.pieces {
+                    continue;
+                }
+                if f.pieces {
+                    match crate::hls::fetch(&f.url, headers, &dir.join(video), progress) {
+                        Ok(to) => {
+                            crate::note("youtube: fetched as a stream of pieces");
+                            return Ok(to);
+                        }
+                        Err(Error::Stopped) => return Err(Error::Stopped),
+                        Err(e) => last = e,
+                    }
+                    continue;
+                }
+                let to = dir.join(format!("{video}.{}", f.ext()));
                 // Proxied mirror links carry no signature, so they take no token.
                 let url = match &tokens {
                     Some(t) if !ua.is_empty() && !t.streaming.is_empty() && !f.url.contains("pot=") => {
@@ -451,9 +552,26 @@ impl YouTube {
                 match download(&url, headers, &to, f.size, CHUNKS, progress) {
                     Ok(_) => return Ok(to),
                     Err(Error::Stopped) => return Err(Error::Stopped),
-                    Err(Error::Status(403)) => return Err(Error::Status(403)),
-                    // A client's formats all sit on one server.
-                    Err(Error::Unreachable) => return Err(Error::Unreachable),
+                    // A client's files are all refused alike; its stream of pieces is another matter.
+                    Err(Error::Status(403)) => {
+                        last = Error::Status(403);
+                        refused_files = true;
+                    }
+                    // A client's formats all sit on one server: the others the link names hold the file too.
+                    Err(Error::Unreachable) => {
+                        for other in elsewhere(&url) {
+                            match download(&other, headers, &to, f.size, CHUNKS, progress) {
+                                Ok(_) => {
+                                    crate::note("youtube: fetched from another server");
+                                    return Ok(to);
+                                }
+                                Err(Error::Stopped) => return Err(Error::Stopped),
+                                Err(_) => {}
+                            }
+                        }
+                        last = Error::Unreachable;
+                        refused_files = true;
+                    }
                     Err(e) => last = e,
                 }
             }
@@ -622,6 +740,14 @@ fn unescape(s: &str) -> String {
 
 /// A link with its signature and `n` value unlocked by the player script.
 fn unlocked(f: Format) -> Result<Format> {
+    if f.pieces {
+        // A playlist link carries the value as a step of its path.
+        let Some(n) = f.url.split_once("/n/").and_then(|(_, rest)| rest.split('/').next()) else { return Ok(f) };
+        let (_, new) = crate::cipher::solve(None, &unescape(n))?;
+        let url =
+            if new.is_empty() { f.url.clone() } else { f.url.replacen(&format!("/n/{n}/"), &format!("/n/{new}/"), 1) };
+        return Ok(Format { url, ..f });
+    }
     let n = f.url.split(['?', '&']).find_map(|kv| kv.strip_prefix("n=")).map(unescape);
     if f.sig.is_none() && n.is_none() {
         return Ok(f);
@@ -646,15 +772,81 @@ fn rank(mut f: Vec<Format>) -> Vec<Format> {
     f
 }
 
+/// A stream link on the other servers it says hold the file: a link names the nearest first, often one inside
+/// the phone company's network, which not every connection reaches.
+fn elsewhere(url: &str) -> Vec<String> {
+    let Some((head, rest)) = url.split_once("://") else { return Vec::new() };
+    let Some((host, tail)) = rest.split_once('/') else { return Vec::new() };
+    let Some((front, domain)) = host.split_once("---").and_then(|(f, h)| Some((f, h.split_once('.')?.1))) else {
+        return Vec::new();
+    };
+    let value = |key: &str| {
+        let query = tail.split_once('?').map_or("", |q| q.1);
+        query.split('&').find_map(|pair| pair.strip_prefix(key)?.strip_prefix('=')).unwrap_or_default().to_string()
+    };
+    // The numbered front is the one that serves there; the link's own front is only sent back to the first.
+    let fronts = [format!("rr{}", value("fvip")), format!("r{}", value("fvip")), front.to_string()];
+    let mut out: Vec<String> = Vec::new();
+    for node in value("mn").replace("%2C", ",").split(',').skip(1).filter(|n| !n.is_empty()) {
+        for front in &fronts {
+            let link = format!("{head}://{front}---{node}.{domain}/{tail}&fallback_count=1");
+            if !out.contains(&link) {
+                out.push(link);
+            }
+        }
+    }
+    out
+}
+
 /// Audio URLs of a player reply, best first; scrambled ones carry what unlocks them.
+/// The longest a download waits for the adverts ahead of a video.
+const ADVERTS: f64 = 45.0;
+
+/// How long the adverts ahead of a video play, or until they can be skipped: its links are refused until then.
+pub fn advert(v: &Value) -> Duration {
+    fn each(v: &Value, secs: &mut f64) {
+        match v {
+            Value::Object(m) => {
+                if let Some(ad) = m.get("instreamVideoAdRenderer") {
+                    let length = ad["playerVars"].as_str().and_then(|q| {
+                        form(q)
+                            .into_iter()
+                            .find(|(k, _)| k == "length_seconds")
+                            .and_then(|(_, n)| n.parse::<f64>().ok())
+                    });
+                    *secs += ad["skipOffsetMilliseconds"].as_f64().map(|ms| ms / 1000.0).or(length).unwrap_or(0.0);
+                } else {
+                    m.values().for_each(|v| each(v, secs));
+                }
+            }
+            Value::Array(a) => a.iter().for_each(|v| each(v, secs)),
+            _ => {}
+        }
+    }
+    let mut secs = 0.0;
+    let first =
+        |p: &&Value| p["adPlacementRenderer"]["config"]["adPlacementConfig"]["kind"] == "AD_PLACEMENT_KIND_START";
+    let ahead =
+        |s: &&Value| s["adSlotRenderer"]["adSlotMetadata"]["triggerEvent"] == "SLOT_TRIGGER_EVENT_BEFORE_CONTENT";
+    v["adPlacements"].as_array().into_iter().flatten().filter(first).for_each(|p| each(p, &mut secs));
+    v["adSlots"].as_array().into_iter().flatten().filter(ahead).for_each(|s| each(s, &mut secs));
+    Duration::from_secs_f64(secs.clamp(0.0, ADVERTS).ceil())
+}
+
 pub fn player_formats(v: &Value) -> Result<Vec<Format>> {
     let state = v["playabilityStatus"]["status"].as_str().unwrap_or("");
     if state != "OK" {
         let why = v["playabilityStatus"]["reason"].as_str().filter(|s| !s.is_empty()).unwrap_or(state);
         return Err(Error::Refused(format!("YouTube: {why}")));
     }
-    let list = v["streamingData"]["adaptiveFormats"].as_array().ok_or(Error::Parse("no formats"))?;
-    let f: Vec<Format> = list
+    let pieces = v["streamingData"]["hlsManifestUrl"].as_str().filter(|u| !u.is_empty());
+    let list = v["streamingData"]["adaptiveFormats"].as_array().map_or(&[][..], Vec::as_slice);
+    if list.is_empty() && pieces.is_none() {
+        return Err(Error::Parse("no formats"));
+    }
+    let wait = advert(v);
+    let ready = (!wait.is_zero()).then(|| Instant::now() + wait);
+    let mut f: Vec<Format> = list
         .iter()
         .filter_map(|f| {
             let mime = f["mimeType"].as_str()?;
@@ -673,13 +865,20 @@ pub fn player_formats(v: &Value) -> Result<Vec<Format>> {
                 m4a: mime.contains("mp4"),
                 bitrate: f["bitrate"].as_u64().unwrap_or(0),
                 size: f["contentLength"].as_str().and_then(|n| n.parse().ok()),
+                pieces: false,
+                ready,
             })
         })
         .collect();
+    f = rank(f);
+    // The stream of pieces comes last: it carries the picture too, so it is the larger download.
+    if let Some(link) = pieces {
+        f.push(Format { url: link.to_string(), sig: None, m4a: false, bitrate: 0, size: None, pieces: true, ready });
+    }
     if f.is_empty() {
         return Err(Error::Refused("YouTube: no plain audio stream for this client".into()));
     }
-    Ok(rank(f))
+    Ok(f)
 }
 
 /// Audio of a Piped `/streams` reply, best first.
@@ -697,6 +896,8 @@ pub fn piped_formats(v: &Value) -> Vec<Format> {
                         m4a: mime.contains("mp4") || codec.starts_with("mp4a"),
                         bitrate: s["bitrate"].as_u64().unwrap_or(0),
                         size: s["contentLength"].as_u64().filter(|&n| n > 0),
+                        pieces: false,
+                        ready: None,
                     })
                 })
                 .collect()
@@ -709,6 +910,85 @@ pub fn piped_formats(v: &Value) -> Vec<Format> {
 /// `hq720` and `maxresdefault` are large and there for most; none of the three is boxed in black bars.
 pub fn art(id: &str, size: &str) -> String {
     format!("https://i.ytimg.com/vi/{id}/{size}.jpg")
+}
+
+#[cfg(test)]
+mod advert_tests {
+    use serde_json::json;
+    use std::time::Duration;
+
+    #[test]
+    fn waits_out_the_advert_ahead_of_a_video() {
+        let ad = |v: serde_json::Value| json!({ "adPlacementRenderer": { "config": { "adPlacementConfig": { "kind": "AD_PLACEMENT_KIND_START" } }, "renderer": v } });
+        let skippable =
+            json!({ "instreamVideoAdRenderer": { "skipOffsetMilliseconds": 5000, "playerVars": "length_seconds=30" } });
+        let whole = json!({ "instreamVideoAdRenderer": { "playerVars": "a=b&length_seconds=15" } });
+        assert_eq!(super::advert(&json!({})), Duration::ZERO);
+        assert_eq!(super::advert(&json!({ "adPlacements": [ad(skippable.clone())] })), Duration::from_secs(5));
+        assert_eq!(
+            super::advert(&json!({ "adPlacements": [ad(skippable), ad(whole.clone())] })),
+            Duration::from_secs(20)
+        );
+        let late = json!({ "adPlacementRenderer": { "config": { "adPlacementConfig": { "kind": "AD_PLACEMENT_KIND_END" } }, "renderer": whole } });
+        assert_eq!(super::advert(&json!({ "adPlacements": [late] })), Duration::ZERO);
+    }
+}
+
+#[cfg(test)]
+mod signed_tests {
+    /// `DJSUGAR_COOKIES=<a cookies.txt> DJSUGAR_VIDEO=<id> cargo test -p sugar-net -- fetches_as_an_account --ignored`
+    #[test]
+    #[ignore = "network"]
+    fn fetches_as_an_account() {
+        let (Ok(file), Ok(video)) = (std::env::var("DJSUGAR_COOKIES"), std::env::var("DJSUGAR_VIDEO")) else { return };
+        let jar = std::fs::read_to_string(file).unwrap();
+        let rows = jar.lines().filter(|l| !l.starts_with("# ")).map(|l| l.split('\t').collect::<Vec<_>>());
+        let cookies: Vec<String> = rows
+            .filter(|r| r.len() == 7 && r[0].ends_with("youtube.com"))
+            .map(|r| format!("{}={}", r[5], r[6]))
+            .collect();
+        crate::notes_to(|note| println!("{note}"));
+        let yt = super::YouTube::new("US", "");
+        yt.sign(&cookies.join("; "));
+        let dir = std::env::temp_dir().join("djsugar-signed");
+        let _ = std::fs::remove_dir_all(&dir);
+        if let Ok(show) = std::env::var("DJSUGAR_SHOW") {
+            let _ = yt.each_source(&video, None, |formats, ua| -> crate::Result<()> {
+                let text: Vec<String> = formats.iter().map(|f| format!("{ua}\n{}", f.url)).collect();
+                std::fs::write(&show, text.join("\n")).unwrap();
+                Err(crate::Error::Stopped)
+            });
+            return;
+        }
+        let only = std::env::var("DJSUGAR_PIECES").is_ok();
+        let to = if only {
+            let got = yt.each_source(&video, None, |formats, ua| {
+                let f = formats.into_iter().find(|f| f.pieces).ok_or(crate::Error::Parse("no stream of pieces"))?;
+                std::fs::create_dir_all(&dir).unwrap();
+                crate::hls::fetch(&f.url, &[("User-Agent", ua)], &dir.join(&video), &|_, _| true)
+            });
+            got.unwrap()
+        } else {
+            yt.fetch(&video, &dir, &|_, _| true).unwrap()
+        };
+        println!("{} {} bytes", to.display(), std::fs::metadata(&to).unwrap().len());
+    }
+}
+
+#[cfg(test)]
+mod elsewhere_tests {
+    #[test]
+    fn a_link_is_tried_on_the_other_servers_it_names() {
+        let link =
+            "https://rr2---sn-aaa-5uis.googlevideo.com/videoplayback?expire=1&mn=sn-aaa-5uis%2Csn-bbb&fvip=4&x=y";
+        let other = super::elsewhere(link);
+        assert_eq!(
+            other[0],
+            "https://rr4---sn-bbb.googlevideo.com/videoplayback?expire=1&mn=sn-aaa-5uis%2Csn-bbb&fvip=4&x=y&fallback_count=1"
+        );
+        assert_eq!(other.len(), 3);
+        assert!(super::elsewhere("https://example.com/a?mn=x").is_empty());
+    }
 }
 
 #[cfg(test)]

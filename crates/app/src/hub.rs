@@ -156,6 +156,8 @@ impl Clients {
         progress: sugar_net::Progress<'_>,
     ) -> Result<PathBuf> {
         let id = hit.id.as_str();
+        let account = ACCOUNT.load(std::sync::atomic::Ordering::Relaxed);
+        self.youtube.sign(&if account { self.ytmusic.cookies() } else { String::new() });
         match sv {
             Service::Spotify => crate::spotify::fetch(&self.spotify, &self.youtube, hit, dir, progress),
             Service::YouTube => self.youtube.fetch(id, dir, progress),
@@ -164,6 +166,13 @@ impl Clients {
             Service::Archive => self.archive.fetch(id, dir, progress),
         }
     }
+}
+
+/// Whether YouTube downloads are asked for as the signed in account.
+static ACCOUNT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_account(on: bool) {
+    ACCOUNT.store(on, std::sync::atomic::Ordering::Relaxed);
 }
 
 impl Clients {

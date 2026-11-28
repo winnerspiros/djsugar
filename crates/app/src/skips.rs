@@ -39,7 +39,17 @@ pub fn within(parts: &[(f64, f64)], at: f64) -> f64 {
 /// anything was learnt; a failed ask is made again the next time.
 pub fn ask(track: &Path) -> bool {
     let Some(video) = crate::lyrics::video(track).filter(|_| unasked(track)) else { return false };
-    sugar_net::sponsorblock::segments(video).map(|parts| save(track, &parts)).is_ok()
+    match sugar_net::sponsorblock::segments(video) {
+        Ok(parts) => {
+            crate::log::note(&format!("sponsorblock {video}: {} parts to skip", parts.len()));
+            save(track, &parts);
+            true
+        }
+        Err(e) => {
+            crate::log::note(&format!("sponsorblock {video}: {e}"));
+            false
+        }
+    }
 }
 
 /// Whether the file at `track` is of a video nobody has been asked about yet, and asking is on.

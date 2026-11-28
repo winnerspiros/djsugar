@@ -84,6 +84,11 @@ impl Account {
         self.kept.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    /// The cookies of the sign-in, empty when signed out.
+    pub fn cookies(&self) -> String {
+        self.kept().cookies.clone()
+    }
+
     pub fn signed_in(&self) -> bool {
         !sapisid(&self.kept().cookies).is_empty()
     }
@@ -404,8 +409,13 @@ fn sapisid(cookies: &str) -> &str {
 
 /// Signed as the web player signs: the time and the SHA-1 of time, cookie and origin, once for each cookie it has.
 fn authorization(cookies: &str, now: u64) -> String {
+    signed(cookies, now, ORIGIN)
+}
+
+/// The signature a page at `origin` sends with the cookies of a signed in account.
+pub(crate) fn signed(cookies: &str, now: u64, origin: &str) -> String {
     let sign = |secret: &str| {
-        let hash = Sha1::digest(format!("{now} {secret} {ORIGIN}"));
+        let hash = Sha1::digest(format!("{now} {secret} {origin}"));
         let hex: String = hash.iter().map(|b| format!("{b:02x}")).collect();
         format!("{now}_{hex}")
     };

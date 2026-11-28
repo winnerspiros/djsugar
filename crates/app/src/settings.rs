@@ -43,6 +43,7 @@ pub enum Opt {
     MixStyle,
     MixRepeat,
     SkipNonMusic,
+    AccountDownloads,
     VinylStop,
     Stems,
     LyricsByEar,
@@ -95,7 +96,7 @@ pub const DUCK_DEPTHS: [f32; 4] = [0.25, 0.5, 0.75, 0.9];
 /// Interface scales offered, on top of the device's own.
 pub const UI_SCALES: [f32; 6] = [0.9, 1.0, 1.1, 1.25, 1.35, 1.5];
 
-pub const OPTIONS: [Spec; 41] = [
+pub const OPTIONS: [Spec; 42] = [
     Spec {
         opt: Opt::RateRange,
         key: "rate_range",
@@ -401,6 +402,14 @@ pub const OPTIONS: [Spec; 41] = [
         default: 1,
     },
     Spec {
+        opt: Opt::AccountDownloads,
+        key: "account_downloads",
+        title: "Download as my account",
+        detail: "YouTube tracks are asked for as the account signed in under YouTube, which gets past most refusals. Off, the account is only used for its playlists and suggestions.",
+        kind: Kind::Switch,
+        default: 0,
+    },
+    Spec {
         opt: Opt::VinylStop,
         key: "vinyl_stop",
         title: "Vinyl stop",
@@ -513,6 +522,7 @@ pub fn page(
             Row::Opt(Opt::Quantize),
             Row::Opt(Opt::Protect),
             Row::Opt(Opt::PflOnLoad),
+            Row::Opt(Opt::AccountDownloads),
             Row::Heading("AUTO RESET ON LOAD"),
             Row::Opt(Opt::ResetTempo),
             Row::Opt(Opt::ResetEq),

@@ -22,14 +22,15 @@ pub fn find(artist: &str, title: &str, seconds: f64) -> Result<Option<String>> {
         return Ok(None);
     }
     let exact = format!("{API}/get?artist_name={a}&track_name={t}&duration={}", seconds.round() as u64);
-    if !artist.trim().is_empty() {
+    // The exact lookup takes lengths of a second to an hour only, and refuses the rest.
+    if !artist.trim().is_empty() && (1.0..=3600.0).contains(&seconds.round()) {
         match get(&exact) {
             Ok(v) => {
                 if let Some(text) = text(&v) {
                     return Ok(Some(text));
                 }
             }
-            Err(Error::Status(404)) => {}
+            Err(Error::Status(400 | 404)) => {}
             Err(e) => return Err(e),
         }
     }

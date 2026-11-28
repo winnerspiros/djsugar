@@ -5,6 +5,7 @@ pub mod archive;
 pub mod audius;
 pub mod botguard;
 pub mod cipher;
+pub mod hls;
 pub mod http;
 pub mod lrclib;
 pub mod lyricsovh;

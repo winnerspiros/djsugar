@@ -7,8 +7,12 @@ const URL: &str = "https://github.com/winnerspiros/djsugar/releases/download/ste
 pub fn ready(stems: bool, lyrics: bool) {
     std::thread::spawn(move || {
         let got = [stems.then(djsugar_engine::separation::fetch), lyrics.then(djsugar_engine::word_timing::fetch)];
-        for why in got.into_iter().flatten().filter_map(Result::err) {
-            crate::log::note(&why);
+        for (what, got) in ["stems", "lyrics"].into_iter().zip(got) {
+            match got {
+                Some(Ok(())) => crate::log::note(&format!("the {what} model is on hand")),
+                Some(Err(why)) => crate::log::note(&format!("the {what} model: {why}")),
+                None => {}
+            }
         }
     });
 }
