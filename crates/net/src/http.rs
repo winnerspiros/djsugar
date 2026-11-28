@@ -64,12 +64,35 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
 const ANSWER: Duration = Duration::from_secs(15);
 const SENDING: Duration = Duration::from_secs(40);
 /// How long connecting to the server holding a file may take: where another holds it too, and where none does.
-const REACHING: Duration = Duration::from_secs(3);
+const REACHING: Duration = Duration::from_secs(2);
 const REACHING_LAST: Duration = Duration::from_secs(6);
 
 /// The server a link names, for the log: never the link itself, which can carry a signature.
 fn host(url: &str) -> &str {
     url.split("://").nth(1).unwrap_or(url).split(['/', '?', ':']).next().unwrap_or_default()
+}
+
+/// Servers that could not be connected to lately, with when: asked last by the downloads that follow.
+static UNREACHED: std::sync::Mutex<Vec<(String, std::time::Instant)>> = std::sync::Mutex::new(Vec::new());
+const UNREACHED_FOR: Duration = Duration::from_secs(10 * 60);
+
+/// The machine a link names: the part of its host after the front that picked it.
+fn machine(url: &str) -> &str {
+    let host = host(url);
+    host.split_once("---").map_or(host, |(_, m)| m)
+}
+
+fn unreached(url: &str) -> bool {
+    let mut seen = UNREACHED.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    seen.retain(|(_, at)| at.elapsed() < UNREACHED_FOR);
+    seen.iter().any(|(m, _)| m == machine(url))
+}
+
+fn note_unreached(url: &str) {
+    UNREACHED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .push((machine(url).to_owned(), std::time::Instant::now()));
 }
 
 /// The most one request asks for; streaming hosts cut longer replies short.
@@ -101,7 +124,14 @@ pub fn download_any(
     progress: crate::Progress<'_>,
 ) -> Result<u64> {
     use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed};
-    let Some(&url) = urls.first() else { return Err(Error::Parse("no link")) };
+    if urls.is_empty() {
+        return Err(Error::Parse("no link"));
+    }
+    // Servers that could not be reached a moment ago are left for last.
+    let mut ordered: Vec<&str> = urls.iter().copied().filter(|u| !unreached(u)).collect();
+    ordered.extend(urls.iter().copied().filter(|u| unreached(u)));
+    let urls = &ordered[..];
+    let url = urls[0];
     let server = AtomicUsize::new(0);
     let part = to.with_extension(format!("{}.part", to.extension().and_then(|e| e.to_str()).unwrap_or("")));
     let total = match size {
@@ -185,6 +215,7 @@ pub fn download_any(
                 Err(Error::Unreachable) if asked + 1 < urls.len() => {
                     if server.compare_exchange(asked, asked + 1, Relaxed, Relaxed).is_ok() {
                         crate::note(&format!("{} can't be reached", host(url)));
+                        note_unreached(url);
                     }
                 }
                 // The last of them is given up on at once only where nothing has come: a line can drop midway.

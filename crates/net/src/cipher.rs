@@ -87,11 +87,22 @@ fn gone() -> Error {
     Error::Refused("The player script engine stopped".into())
 }
 
-/// Loads the current player: its version comes from the iframe API.
+/// How long the player last loaded is taken to be the current one without asking again.
+const FRESH: Duration = Duration::from_secs(20 * 60);
+
+/// Loads the current player: its version comes from the iframe API, asked for at most once in twenty minutes.
 pub fn load() -> Result<Player> {
+    static KNOWN: Mutex<Option<(std::time::Instant, Player)>> = Mutex::new(None);
+    if let Some((_, p)) =
+        KNOWN.lock().unwrap_or_else(PoisonError::into_inner).as_ref().filter(|(at, _)| at.elapsed() < FRESH)
+    {
+        return Ok(p.clone());
+    }
     let (_, page) = read(get("https://www.youtube.com/iframe_api"))?;
     let id = player_id(&page).ok_or(Error::Parse("no player version"))?;
-    ask(|tx| Ask::Load(id, tx))
+    let player = ask(|tx| Ask::Load(id, tx))?;
+    *KNOWN.lock().unwrap_or_else(PoisonError::into_inner) = Some((std::time::Instant::now(), player.clone()));
+    Ok(player)
 }
 
 /// Unlocks one link's signature (when it has one) and `n` value with the loaded player.

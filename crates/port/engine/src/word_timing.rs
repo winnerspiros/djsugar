@@ -94,28 +94,127 @@ pub enum Checked {
     Wrong,
 }
 
+/// How far, in seconds, lyrics may be taken to sit from the track's vocals, and the speeds they may be off by
+/// (a video cut at 25 frames a second runs a twenty-fourth short).
+const REACH: f64 = 45.0;
+
+/// Where `lines`, timed for another recording of the song, sit on this one's vocals: the `(speed, offset)` that
+/// puts them over the most singing, as `time * speed + offset`. None when they are on it already, or no fit is
+/// clear. `levels` are the vocal levels, `rate` a second.
+pub fn by_voice(lines: &[Line], levels: &[u8], rate: f64) -> Option<(f64, f64)> {
+    let timed: Vec<(f64, f64)> = lines
+        .iter()
+        .enumerate()
+        .filter_map(|(i, l)| {
+            let from = l.start?;
+            let next = lines[i + 1..].iter().find_map(|n| n.start).unwrap_or(f64::INFINITY);
+            let long = (l.text.chars().count() as f64 * 0.07).clamp(1.5, 6.0);
+            Some((from, from + long.min(next - from).max(0.5)))
+        })
+        .collect();
+    if timed.len() < 8 || levels.len() < (rate * 30.0) as usize || rate <= 0.0 {
+        return None;
+    }
+    let mean = levels.iter().map(|&v| f64::from(v)).sum::<f64>() / levels.len() as f64 / 255.0;
+    // Running totals of how much more vocal than usual the track is, so a stretch is summed in two reads.
+    let mut total = Vec::with_capacity(levels.len() + 1);
+    total.push(0.0);
+    for &v in levels {
+        total.push(total[total.len() - 1] + f64::from(v) / 255.0 - mean);
+    }
+    let at = |t: f64| ((t * rate).round().max(0.0) as usize).min(levels.len());
+    let sung = |speed: f64, offset: f64| -> f64 {
+        // A line is over singing, and is not over what comes just before it: it starts where the voice does.
+        timed
+            .iter()
+            .map(|&(a, b)| {
+                let (a, b) = (a * speed + offset, b * speed + offset);
+                total[at(b)] - total[at(a)] - 0.5 * (total[at(a)] - total[at(a - 1.0)])
+            })
+            .sum()
+    };
+    let covered: f64 = timed.iter().map(|&(a, b)| b - a).sum::<f64>() * rate;
+    let here = sung(1.0, 0.0);
+    let (mut best, mut fit) = (here, (1.0, 0.0));
+    // Strokes of the 25 fps kind, and every half second of offset first, then the best of them finely.
+    let speeds: Vec<f64> = (-20..=20).map(|k| 1.0 + f64::from(k) * 0.0025).collect();
+    let mut tried: Vec<(f64, f64, f64)> = Vec::new();
+    for &speed in &speeds {
+        let mut offset = -REACH;
+        while offset <= REACH {
+            // A fit far from the lyrics as given must earn it.
+            let cost = covered * (offset.abs() * 0.002 + (speed - 1.0).abs() * 2.0);
+            tried.push((sung(speed, offset) - cost, speed, offset));
+            offset += 0.5;
+        }
+    }
+    tried.sort_by(|a, b| b.0.total_cmp(&a.0));
+    for &(_, speed, offset) in tried.iter().take(6) {
+        for step in -10..=10 {
+            let offset = offset + f64::from(step) * 0.05;
+            let cost = covered * (offset.abs() * 0.002 + (speed - 1.0).abs() * 2.0);
+            let score = sung(speed, offset) - cost;
+            if score > best {
+                best = score;
+                fit = (speed, offset);
+            }
+        }
+    }
+    // Clear when it puts clearly more of the lines over singing than they were, as a share of the time they take.
+    (fit != (1.0, 0.0) && (best - here) / covered >= 0.12).then_some(fit)
+}
+
+/// `lines` with every time moved to `time * speed + offset`.
+pub fn retimed(lines: &[Line], speed: f64, offset: f64) -> Vec<Line> {
+    let on = |t: f64| (t * speed + offset).max(0.0);
+    lines
+        .iter()
+        .map(|l| Line {
+            start: l.start.map(on),
+            end: l.end.map(on),
+            words: l.words.iter().map(|w| Word { start: on(w.start), text: w.text.clone() }).collect(),
+            text: l.text.clone(),
+        })
+        .collect()
+}
+
 /// Holds timed lyrics against the track at `path`: they can drift, or be off by what a video adds to the song.
 /// Words are then set where they are heard; None when they were right, or aren't what is sung. `moved` is the
 /// lines shifted by the parts known not to be the song, taken when that alone puts them right.
 pub fn check_words(path: &Path, lines: &[Line], moved: Option<&[Line]>, report: Report) -> Result<Checked, String> {
     let told = report.clone();
     listen(path, report, |ear, samples| {
-        let hear = || {
-            ear.hear(samples, &|p| {
-                told(Stage::Listening(10 + p * 3 / 5));
-                going()
-            })
-        };
+        // The cheap tellings come first: each is a handful of short listens, where hearing the whole track is the
+        // length of the track.
+        if right(ear, samples, &worded(lines))? {
+            return Ok(Checked::Right);
+        }
+        told(Stage::Listening(20));
         if let Some(moved) = moved {
-            if !right(ear, samples, &worded(lines))? && right(ear, samples, &worded(moved))? {
+            if right(ear, samples, &worded(moved))? {
                 return Ok(Checked::Mended(moved.to_vec()));
             }
         }
-        let mended = mend(ear, samples, lines, hear, &|p| told(Stage::Listening(p)))?;
-        match mended {
+        // Where the voice is says how far off they are, even in a language the model barely makes out.
+        let voiced = crate::vocals::analyse(path, None, going)
+            .ok()
+            .and_then(|levels| by_voice(lines, &levels, crate::vocals::RATE))
+            .map(|(speed, offset)| retimed(lines, speed, offset));
+        told(Stage::Listening(30));
+        if let Some(set) = &voiced {
+            if right(ear, samples, &worded(set))? {
+                return Ok(Checked::Mended(set.clone()));
+            }
+        }
+        let hear = || {
+            ear.hear(samples, &|p| {
+                told(Stage::Listening(30 + p / 2));
+                going()
+            })
+        };
+        match mend(ear, samples, lines, hear, &|p| told(Stage::Listening(p)))? {
             Some(lines) => Ok(Checked::Mended(lines)),
-            None if right(ear, samples, &worded(lines))? => Ok(Checked::Right),
-            None => Ok(Checked::Wrong),
+            None => Ok(voiced.map_or(Checked::Wrong, Checked::Mended)),
         }
     })
 }
@@ -171,10 +270,6 @@ fn mend(
 ) -> Result<Option<Vec<Line>>, String> {
     let mut worded = worded(lines);
     let sung: Vec<usize> = (0..worded.len()).filter(|&i| !worded[i].words.is_empty()).collect();
-    if right(ear, samples, &worded)? {
-        return Ok(None);
-    }
-    told(8);
     // Off: the words are found by what is sung, wherever in the track that is, and whatever else is in it.
     let plain: Vec<Line> = lines.iter().map(|l| Line { text: l.text.clone(), ..Line::default() }).collect();
     if let Ok(mut timed) = align(&plain, &hear()?) {
@@ -290,6 +385,7 @@ fn written(lines: &[Line]) -> Vec<(usize, String, String)> {
 pub fn hear(path: &Path, report: Report) -> Result<Vec<Heard>, String> {
     let told = report.clone();
     listen(path, report, |ear, samples| {
+        ear.alone();
         ear.hear(samples, &|p| {
             told(Stage::Listening(p));
             going()
@@ -318,7 +414,12 @@ fn listen<T>(path: &Path, report: Report, work: impl FnOnce(&Ear, &[f32]) -> Res
         crate::background::lower_rten_priority();
     }
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        work(&Ear::open(&files[0], &files[1], &files[2])?, &samples)
+        let ear = Ear::open(&files[0], &files[1], &files[2])?;
+        // Kept levels cost nothing; none are found here, which takes as long as listening to a stretch.
+        if let Some(levels) = crate::vocals::cached(path) {
+            ear.voiced(levels, crate::vocals::RATE);
+        }
+        work(&ear, &samples)
     }));
     result.unwrap_or_else(|_| Err("the listening model crashed".into()))
 }
@@ -523,6 +624,10 @@ pub fn transcribe(path: &Path, report: Report) -> Result<Vec<Line>, String> {
     if lines.is_empty() {
         return Err("Whisper didn't hear any singing".into());
     }
+    // A few lines are no song: the words of one that could not be made out come in scraps.
+    if lines.iter().filter(|l| !l.text.is_empty()).count() < 6 {
+        return Err("Whisper could not make out the words".into());
+    }
     Ok(lines)
 }
 
@@ -582,6 +687,33 @@ pub fn lines_from(heard: &[Heard]) -> Vec<Line> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lines_over_the_wrong_stretches_are_found_by_the_voice() {
+        // A track sung in stretches of 4 s from 10 s, at gaps that never repeat; its lyrics came 9.3 s early and a
+        // 24th short.
+        let rate = 40.0;
+        let mut levels = vec![0u8; (rate * 400.0) as usize];
+        let (mut t, mut right) = (10.0, Vec::new());
+        for i in 0..30u32 {
+            right.push(t);
+            for k in 0..(4.0 * rate) as usize {
+                levels[(t * rate) as usize + k] = 255;
+            }
+            t += 4.0 + 1.0 + f64::from(i * i * 7 % 11) * 0.45;
+        }
+        let given = |t: f64| (t - 9.3) / (25.0 / 24.0);
+        let line = |t: f64| Line { start: Some(given(t)), text: "la la la la la la".into(), ..Line::default() };
+        let lines: Vec<Line> = right.iter().map(|&t| line(t)).collect();
+        let (speed, offset) = by_voice(&lines, &levels, rate).expect("a fit");
+        let mended = retimed(&lines, speed, offset);
+        for (m, &t) in mended.iter().zip(&right) {
+            assert!((m.start.unwrap() - t).abs() < 0.6, "{} vs {t}", m.start.unwrap());
+        }
+        // Lines already on the singing are left alone.
+        let on: Vec<Line> = right.iter().map(|&t| Line { start: Some(t + 0.3), ..line(t) }).collect();
+        assert_eq!(by_voice(&on, &levels, rate), None);
+    }
 
     fn line(text: &str) -> Line {
         Line { text: text.into(), ..Line::default() }

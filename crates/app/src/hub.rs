@@ -8,7 +8,9 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use sugar_net::archive::Archive;
 use sugar_net::audius::Audius;
 use sugar_net::bandcamp::Bandcamp;
+use sugar_net::catalog::{self, Which};
 use sugar_net::hearthis::HearThis;
+use sugar_net::mixcloud::Mixcloud;
 use sugar_net::soundcloud::SoundCloud;
 use sugar_net::youtube::YouTube;
 use sugar_net::ytmusic::{self, Channel};
@@ -44,11 +46,24 @@ pub enum Service {
     Spotify,
     Bandcamp,
     HearThis,
+    Mixcloud,
+    Deezer,
+    AppleMusic,
 }
 
 impl Service {
-    pub const ALL: [Self; 7] =
-        [Self::YouTube, Self::SoundCloud, Self::Spotify, Self::Bandcamp, Self::Audius, Self::HearThis, Self::Archive];
+    pub const ALL: [Self; 10] = [
+        Self::YouTube,
+        Self::SoundCloud,
+        Self::Spotify,
+        Self::AppleMusic,
+        Self::Deezer,
+        Self::Mixcloud,
+        Self::Bandcamp,
+        Self::Audius,
+        Self::HearThis,
+        Self::Archive,
+    ];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -59,6 +74,9 @@ impl Service {
             Self::Spotify => "SPOTIFY",
             Self::Bandcamp => "BANDCAMP",
             Self::HearThis => "HEARTHIS",
+            Self::Mixcloud => "MIXCLOUD",
+            Self::Deezer => "DEEZER",
+            Self::AppleMusic => "APPLE MUSIC",
         }
     }
 
@@ -72,6 +90,9 @@ impl Service {
             Self::Spotify => "Spotify",
             Self::Bandcamp => "Bandcamp",
             Self::HearThis => "hearthis.at",
+            Self::Mixcloud => "Mixcloud",
+            Self::Deezer => "Deezer",
+            Self::AppleMusic => "Apple Music",
         }
     }
 
@@ -111,6 +132,9 @@ impl Service {
             Self::Spotify => 0x1db954,
             Self::Bandcamp => 0x1da0c3,
             Self::HearThis => 0xd81900,
+            Self::Mixcloud => 0x5000ff,
+            Self::Deezer => 0xa238ff,
+            Self::AppleMusic => 0xfa243c,
         }
     }
 }
@@ -131,6 +155,7 @@ struct Clients {
     archive: Archive,
     bandcamp: Bandcamp,
     hearthis: HearThis,
+    mixcloud: Mixcloud,
     /// Where the Spotify account is kept.
     spotify: PathBuf,
     /// The YouTube Music account, and the file SoundCloud's token and name are kept in.
@@ -159,6 +184,9 @@ impl Clients {
             Service::Archive => self.archive.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Bandcamp => self.bandcamp.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::HearThis => self.hearthis.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::Mixcloud => self.mixcloud.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::Deezer => catalog::search(Which::Deezer, q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::AppleMusic => catalog::search(Which::Apple, q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Spotify => crate::spotify::list(&self.spotify, q, more),
         }
     }
@@ -180,6 +208,11 @@ impl Clients {
             Service::Archive => self.archive.fetch(id, dir, progress),
             Service::Bandcamp => self.bandcamp.fetch(id, dir, progress),
             Service::HearThis => self.hearthis.fetch(id, dir, progress),
+            Service::Mixcloud => self.mixcloud.fetch(id, dir, progress),
+            // These name the track; the sound is its match on YouTube.
+            Service::Deezer | Service::AppleMusic => {
+                crate::spotify::matched(&self.youtube, hit, dir, sv.name(), progress)
+            }
         }
     }
 }
@@ -334,6 +367,7 @@ impl Hub {
                 archive: Archive,
                 bandcamp: Bandcamp,
                 hearthis: HearThis,
+                mixcloud: Mixcloud,
                 spotify,
                 ytmusic: youtube,
                 soundcloud_file,
@@ -605,6 +639,9 @@ impl Hub {
                 }
             });
         }
+        if sv == Service::YouTube {
+            sugar_net::youtube::warm(&c.youtube.visitor());
+        }
         std::thread::spawn(move || {
             let _ = tx.send(match c.search(sv, &q, None, listed) {
                 Ok(p) => Reply::Page(p, false, era),
@@ -717,15 +754,32 @@ impl Hub {
                 }
                 true
             };
+            // The picture and what viewers marked are asked for while the audio comes, not after it.
+            let youtube = sv == Service::YouTube;
+            let picture = {
+                let large = ["maxresdefault", "hq720"].map(|size| sugar_net::youtube::art(&id, size));
+                let art = art.clone();
+                std::thread::spawn(move || {
+                    // The largest picture there is; YouTube has not got the large ones for every video.
+                    let wanted = if youtube { &large[..] } else { &[] };
+                    wanted.iter().chain([&art]).filter(|u| !u.is_empty()).find_map(|u| sugar_net::http::picture(u).ok())
+                })
+            };
+            let marked = (youtube && crate::skips::enabled()).then(|| {
+                let id = id.clone();
+                std::thread::spawn(move || sugar_net::sponsorblock::segments(&id))
+            });
             let r = c.fetch(sv, &wanted, &dir, &progress);
             if let Ok(path) = &r {
-                // The largest picture there is; YouTube has not got the large ones for every video.
-                let large = ["maxresdefault", "hq720"].map(|size| sugar_net::youtube::art(&id, size));
-                let wanted = if sv == Service::YouTube { &large[..] } else { &[] };
-                let _ = wanted.iter().chain([&art]).find(|url| sugar_net::http::save_art(url, path).is_ok());
+                if let Some(bytes) = picture.join().ok().flatten() {
+                    let to = path.with_extension("jpg");
+                    if !to.is_file() {
+                        let _ = std::fs::write(to, bytes);
+                    }
+                }
                 // Asked once a track; a failed ask is made again the next time it is got.
-                if sv == Service::YouTube {
-                    crate::skips::ask(path);
+                if let Some(Ok(answer)) = marked.map(std::thread::JoinHandle::join) {
+                    crate::skips::keep(path, &id, answer);
                 }
             }
             let took = began.elapsed().as_millis();

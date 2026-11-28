@@ -537,6 +537,30 @@ fn service_mark(p: &mut Painter, sv: crate::hub::Service, r: Rect) {
                 p.arc(cx, cy, u * reach, stroke * 0.8, 0.88, 0.24, ink);
             }
         }
+        // A play mark between two bars: a show to listen through.
+        Service::Mixcloud => {
+            for (x, tall) in [(0.22, 0.3), (0.78, 0.3)] {
+                let (x, y) = at(x - 0.04, 0.5 - tall * 0.5);
+                p.rect(x, y, u * 0.08, u * tall, u * 0.04, ink);
+            }
+            p.line(at(0.42, 0.34), at(0.42, 0.66), stroke, ink);
+            p.line(at(0.42, 0.34), at(0.64, 0.5), stroke, ink);
+            p.line(at(0.42, 0.66), at(0.64, 0.5), stroke, ink);
+        }
+        // Bars of a level meter, as its mark has.
+        Service::Deezer => {
+            for (n, tall) in [0.18, 0.3, 0.42, 0.3, 0.2].into_iter().enumerate() {
+                let (x, y) = at(0.2 + n as f32 * 0.14, 0.74 - tall);
+                p.rect(x, y, u * 0.1, u * tall, 0.0, ink);
+            }
+        }
+        // A note.
+        Service::AppleMusic => {
+            let (cx, cy) = at(0.38, 0.7);
+            p.disc(cx, cy, u * 0.13, ink, ink);
+            p.line(at(0.5, 0.7), at(0.5, 0.24), stroke, ink);
+            p.line(at(0.5, 0.24), at(0.74, 0.32), stroke, ink);
+        }
         Service::Spotify => {
             let (cx, cy) = at(0.5, 1.0);
             for (reach, thick) in [(0.68, 1.0), (0.52, 0.85), (0.37, 0.7)] {

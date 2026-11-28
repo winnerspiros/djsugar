@@ -39,7 +39,15 @@ pub fn within(parts: &[(f64, f64)], at: f64) -> f64 {
 /// anything was learnt; a failed ask is made again the next time.
 pub fn ask(track: &Path) -> bool {
     let Some(video) = crate::lyrics::video(track).filter(|_| unasked(track)) else { return false };
-    match sugar_net::sponsorblock::segments(video) {
+    keep(track, video, sugar_net::sponsorblock::segments(video))
+}
+
+/// [`ask`] with the answer already got, as when it was asked for while the file was still coming.
+pub fn keep(track: &Path, video: &str, answer: sugar_net::Result<Vec<(f64, f64)>>) -> bool {
+    if !unasked(track) {
+        return false;
+    }
+    match answer {
         Ok(parts) => {
             crate::log::note(&format!("sponsorblock {video}: {} parts to skip", parts.len()));
             save(track, &parts);
@@ -58,6 +66,11 @@ pub fn unasked(track: &Path) -> bool {
 }
 
 static ON: AtomicBool = AtomicBool::new(true);
+
+/// Whether SponsorBlock is asked at all.
+pub fn enabled() -> bool {
+    ON.load(Ordering::Relaxed)
+}
 
 /// Sets whether SponsorBlock is asked at all: the DJ's switch.
 pub fn set_on(on: bool) {

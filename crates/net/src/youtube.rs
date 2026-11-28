@@ -209,6 +209,27 @@ pub fn set_po_token_source(f: PoTokenSource) {
     let _ = PO_TOKEN_SOURCE.set(f);
 }
 
+/// Gets what a download needs ready while the DJ is still choosing: the player script and the tokens' page.
+pub fn warm(visitor: &str) {
+    static ONCE: std::sync::Mutex<Option<Instant>> = std::sync::Mutex::new(None);
+    {
+        let mut at = ONCE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        if at.is_some_and(|t| t.elapsed() < Duration::from_secs(15 * 60)) {
+            return;
+        }
+        *at = Some(Instant::now());
+    }
+    let visitor = visitor.to_owned();
+    std::thread::spawn(|| {
+        let _ = crate::cipher::load();
+    });
+    if let Some(source) = PO_TOKEN_SOURCE.get() {
+        std::thread::spawn(move || {
+            let _ = source("", &visitor);
+        });
+    }
+}
+
 impl YouTube {
     pub fn new(region: &str, visitor: &str) -> Self {
         let s = Self { region: region.to_string(), ..Self::default() };

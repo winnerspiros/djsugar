@@ -99,20 +99,7 @@ pub fn fetch(
         let (d, id) = (dir.to_path_buf(), hit.id.clone());
         move || djsugar_spotify::lyrics(&d, &id).ok().flatten()
     });
-    let known = cache.join(format!("spotify-{}.txt", hit.id));
-    let video = match std::fs::read_to_string(&known) {
-        Ok(video) => video,
-        Err(_) => {
-            let began = std::time::Instant::now();
-            let found = youtube.search(&format!("{} {}", hit.artist, hit.title), None)?;
-            crate::log::note(&format!("spotify {}: matched in {} ms", hit.id, began.elapsed().as_millis()));
-            let best = closest(&found.hits, hit.seconds).ok_or(Error::Refused("Nothing found".into()))?;
-            let _ = std::fs::create_dir_all(cache);
-            let _ = std::fs::write(&known, &best.id);
-            best.id.clone()
-        }
-    };
-    let sound = youtube.fetch(&video, cache, progress)?;
+    let sound = matched(youtube, hit, cache, "spotify", progress)?;
     let lrc = sound.with_extension("lrc");
     // The words may take longer than the sound; the deck does not wait for them.
     if !lrc.exists() {
@@ -123,6 +110,30 @@ pub fn fetch(
         });
     }
     Ok(sound)
+}
+
+/// The sound of a track a catalogue names: its match on YouTube, looked for once and remembered under `service`.
+pub fn matched(
+    youtube: &YouTube,
+    hit: &Hit,
+    cache: &Path,
+    service: &str,
+    progress: sugar_net::Progress<'_>,
+) -> Result<PathBuf> {
+    let known = cache.join(format!("{}-{}.txt", service.to_ascii_lowercase().replace(' ', ""), hit.id));
+    let video = match std::fs::read_to_string(&known) {
+        Ok(video) => video,
+        Err(_) => {
+            let began = std::time::Instant::now();
+            let found = youtube.search(&format!("{} {}", hit.artist, hit.title), None)?;
+            crate::log::note(&format!("{service} {}: matched in {} ms", hit.id, began.elapsed().as_millis()));
+            let best = closest(&found.hits, hit.seconds).ok_or(Error::Refused("Nothing found".into()))?;
+            let _ = std::fs::create_dir_all(cache);
+            let _ = std::fs::write(&known, &best.id);
+            best.id.clone()
+        }
+    };
+    youtube.fetch(&video, cache, progress)
 }
 
 #[cfg(test)]

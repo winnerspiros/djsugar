@@ -36,9 +36,13 @@ const HEAD: usize = 64;
 const FOLLOW: [(usize, usize); 8] = [(3, 1), (4, 2), (4, 3), (4, 7), (5, 1), (5, 2), (5, 4), (5, 6)];
 /// A window this quiet is not listened to.
 const QUIET: f32 = 1e-4;
+/// Below this vocal level (of 255) all along a window, nobody sings in it.
+const VOICE: u8 = 40;
 /// A window the model calls silent this surely, and writes this unsurely, has no words.
 const SILENT: f32 = 0.6;
 const UNSURE: f32 = -1.0;
+/// A window written with no lyrics to go by, whose words averaged a chance below this (a log), is not taken.
+const DOUBTED: f32 = -0.7;
 /// Placing known words: how long before the first of a window's words the window starts, and how far into it
 /// words are taken, seconds.
 const LEAD: f64 = 1.0;
@@ -382,6 +386,15 @@ fn chances(scores: &mut [f32]) {
     }
 }
 
+/// Whether the words `said` go round in circles, as a model does that has lost the thread.
+fn babbling(said: &[usize], zero: usize) -> bool {
+    let words: Vec<usize> = said.iter().copied().filter(|t| *t < zero).collect();
+    let mut unique = words.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    words.len() >= 12 && unique.len() * 3 < words.len()
+}
+
 /// The token to write next, with its chance: the likeliest one the order of words and times allows after `said`.
 fn choose(mut scores: Vec<f32>, said: &[usize], t: &Tokens) -> (usize, f32) {
     const NEVER: f32 = f32::NEG_INFINITY;
@@ -562,6 +575,10 @@ pub struct Ear {
     language: std::cell::Cell<Option<usize>>,
     /// Windows the encoder has been through, by the sample each starts at.
     sounds: RefCell<Vec<(usize, Rc<Value>)>>,
+    /// The track's vocal levels and their rate, when known: stretches with no voice in them are not listened to.
+    voice: RefCell<Option<(Vec<u8>, f64)>>,
+    /// Whether what is heard stands on its own, with no lyrics to hold it against: windows it is unsure of are left out.
+    alone: std::cell::Cell<bool>,
 }
 
 impl Ear {
@@ -573,7 +590,29 @@ impl Ear {
             bands: bands(),
             language: std::cell::Cell::new(None),
             sounds: RefCell::default(),
+            voice: RefCell::default(),
+            alone: std::cell::Cell::new(false),
         })
+    }
+
+    /// Has what is heard held to a higher standard: nothing says what the words should be, and a language the model
+    /// barely knows comes out as words that are not there.
+    pub fn alone(&self) {
+        self.alone.set(true);
+    }
+
+    /// Tells the ear where the track has a voice: `levels`, `rate` a second.
+    pub fn voiced(&self, levels: Vec<u8>, rate: f64) {
+        *self.voice.borrow_mut() = Some((levels, rate));
+    }
+
+    /// Whether the voice is known to be absent from the window of samples at `from`.
+    fn mute(&self, from: usize) -> bool {
+        let voice = self.voice.borrow();
+        let Some((levels, rate)) = voice.as_ref() else { return false };
+        let at = |s: usize| ((s as f64 / RATE as f64 * rate) as usize).min(levels.len());
+        let part = &levels[at(from)..at(from + WINDOW)];
+        !part.is_empty() && part.iter().all(|&v| v < VOICE)
     }
 
     /// What the encoder makes of the window of `samples` from `seek`, kept for the next that asks.
@@ -602,6 +641,10 @@ impl Ear {
         while seek < samples.len() {
             if !progress((seek * 100 / samples.len()) as i32) {
                 return Err("stopped".into());
+            }
+            if self.mute(seek) {
+                seek += WINDOW;
+                continue;
             }
             let real = &samples[seek..samples.len().min(seek + WINDOW)];
             let loud = (real.iter().map(|s| s * s).sum::<f32>() / real.len() as f32).sqrt();
@@ -641,7 +684,11 @@ impl Ear {
                 _ => (said.len(), WINDOW),
             };
             seek += moved;
-            if silent > SILENT && sure / (looks.len() as f32) < UNSURE {
+            let mean = sure / (looks.len() as f32);
+            if silent > SILENT && mean < UNSURE {
+                continue;
+            }
+            if self.alone.get() && (mean < DOUBTED || babbling(&said, t.zero)) {
                 continue;
             }
             let at = starts(&looks, frames);

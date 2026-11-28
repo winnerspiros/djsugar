@@ -17,10 +17,12 @@ type View = Global<JObject<'static>>;
 struct Mint {
     expires: Option<Instant>,
     seq: u32,
+    /// The streaming token of the last visitor: it belongs to the visitor, so it serves every video.
+    streaming: Option<(String, String)>,
 }
 
 static VIEW: OnceLock<View> = OnceLock::new();
-static MINT: Mutex<Mint> = Mutex::new(Mint { expires: None, seq: 0 });
+static MINT: Mutex<Mint> = Mutex::new(Mint { expires: None, seq: 0, streaming: None });
 const CHUNK: usize = 1000;
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -42,11 +44,19 @@ fn mint_inner(video: &str, visitor: &str) -> Result<PoTokens, String> {
     let mut m = lock(&MINT);
     if m.expires.is_none_or(|t| Instant::now() >= t) {
         m.expires = None;
+        m.streaming = None;
         setup(&mut m)?;
     }
     let visitor = if visitor.is_empty() { video } else { visitor };
-    let streaming = token(&mut m, visitor)?;
-    let player = token(&mut m, video)?;
+    let streaming = match m.streaming.clone().filter(|(v, _)| v == visitor) {
+        Some((_, t)) => t,
+        None => {
+            let t = token(&mut m, visitor)?;
+            m.streaming = Some((visitor.to_owned(), t.clone()));
+            t
+        }
+    };
+    let player = if video.is_empty() { String::new() } else { token(&mut m, video)? };
     Ok(PoTokens { player, streaming, visitor: visitor.to_owned() })
 }
 
