@@ -3,6 +3,7 @@
 //! track with no lyrics is written down instead. The model (OpenAI Whisper base, MIT) is downloaded when first needed.
 
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 
 use crate::lyrics::{Line, Word};
 use crate::whisper::Ear;
@@ -38,6 +39,18 @@ pub enum Stage {
     Listening(i32),
 }
 
+/// Set to call off the listening under way.
+static STOP: AtomicBool = AtomicBool::new(false);
+
+/// Calls off the listening under way, which ends at its next step with nothing kept.
+pub fn stop() {
+    STOP.store(true, Relaxed);
+}
+
+fn going() -> bool {
+    !STOP.load(Relaxed)
+}
+
 /// Where [`time_words`] reports its [`Stage`].
 pub type Report = std::sync::Arc<dyn Fn(Stage) + Send + Sync>;
 
@@ -48,7 +61,7 @@ pub fn time_words(path: &Path, lines: &[Line], report: Report) -> Result<Vec<Lin
     listen(path, report, |ear, samples| {
         let heard = ear.hear(samples, &|p| {
             told(Stage::Listening(p * 2 / 3));
-            true
+            going()
         })?;
         let mut timed = align(lines, &heard)?;
         place(ear, samples, &mut timed, false, &|p| told(Stage::Listening(66 + p / 3)))?;
@@ -84,7 +97,7 @@ pub fn check_words(
         let hear = || {
             ear.hear(samples, &|p| {
                 told(Stage::Listening(10 + p * 3 / 5));
-                true
+                going()
             })
         };
         if let Some(moved) = moved {
@@ -212,7 +225,7 @@ fn place(ear: &Ear, samples: &[f32], timed: &mut [Line], follow: bool, told: &dy
         timed.iter().flat_map(|l| l.words.iter().map(|w| (w.text.as_str(), w.start))).collect();
     let placed = ear.place(samples, &known, follow, &|p| {
         told(p);
-        true
+        going()
     })?;
     let mut placed = placed.into_iter();
     let mut last = 0.0f64;
@@ -268,7 +281,7 @@ pub fn hear(path: &Path, report: Report) -> Result<Vec<Heard>, String> {
     listen(path, report, |ear, samples| {
         ear.hear(samples, &|p| {
             told(Stage::Listening(p));
-            true
+            going()
         })
     })
 }
@@ -280,6 +293,7 @@ pub fn fetch() -> Result<(), String> {
 }
 
 fn listen<T>(path: &Path, report: Report, work: impl FnOnce(&Ear, &[f32]) -> Result<T, String>) -> Result<T, String> {
+    STOP.store(false, Relaxed);
     if MODELS.iter().any(|(name, _)| crate::separation::model(name).is_none()) {
         report(Stage::Downloading);
     }

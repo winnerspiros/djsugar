@@ -123,6 +123,8 @@ pub enum Target {
     Rescan,
     /// Calls off the nth download.
     HubStop(u8),
+    /// Calls off the listening for a track's words.
+    HearStop,
     /// Brings the other deck of a side forward, with four decks in use.
     Layer(usize),
     /// Waits for the key to put an action on, by the key it shipped on; and every key back as shipped.
@@ -3595,6 +3597,11 @@ impl State {
             }
             Target::HubForget => self.hub.forget(),
             Target::HubStop(n) => self.hub.stop(usize::from(n)),
+            Target::HearStop => {
+                if let Some((file, _)) = &self.hearing {
+                    crate::lyrics::call_off(file);
+                }
+            }
             Target::HubLoad(hit, deck) => self.hub.fetch(hit, deck),
             Target::HubSignIn => self.hub.sign_in(),
             Target::HubSignOut => self.hub.sign_out(),

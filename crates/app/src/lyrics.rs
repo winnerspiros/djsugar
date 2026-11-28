@@ -238,6 +238,19 @@ fn report(said: Said) -> djsugar_engine::word_timing::Report {
     })
 }
 
+/// Files whose listening was called off: left alone until the app is started again.
+static CALLED_OFF: std::sync::Mutex<Vec<std::path::PathBuf>> = std::sync::Mutex::new(Vec::new());
+
+/// Calls off the listening to the file at `path`.
+pub fn call_off(path: &std::path::Path) {
+    CALLED_OFF.lock().unwrap_or_else(|e| e.into_inner()).push(path.to_owned());
+    djsugar_engine::word_timing::stop();
+}
+
+fn called_off(path: &std::path::Path) -> bool {
+    CALLED_OFF.lock().unwrap_or_else(|e| e.into_inner()).iter().any(|p| p == path)
+}
+
 /// The file each deck holds: only those are worth listening to.
 static WANTED: std::sync::Mutex<Vec<(usize, std::path::PathBuf)>> = std::sync::Mutex::new(Vec::new());
 
@@ -253,7 +266,7 @@ pub fn want(deck: usize, path: &std::path::Path) {
 pub fn by_ear(path: &std::path::Path, lyrics: Lyrics, said: Said) -> Option<Lyrics> {
     static TURN: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _turn = TURN.lock().unwrap_or_else(|e| e.into_inner());
-    if !WANTED.lock().unwrap_or_else(|e| e.into_inner()).iter().any(|(_, p)| p == path) {
+    if called_off(path) || !WANTED.lock().unwrap_or_else(|e| e.into_inner()).iter().any(|(_, p)| p == path) {
         return None;
     }
     let heard = if lyrics.lines.is_empty() {
@@ -312,6 +325,7 @@ pub fn time(path: &std::path::Path, mut lyrics: Lyrics, said: Said) -> Result<Ly
     let began = std::time::Instant::now();
     match djsugar_engine::word_timing::time_words(path, &lyrics.lines, report(said)) {
         Ok(lines) => lyrics.lines = lines,
+        Err(why) if called_off(path) => return Err(why),
         Err(why) => {
             crate::log::note(&format!("lyrics not timed by word: {why}"));
             let levels = djsugar_engine::vocals::analyse(path, None, || true)?;
@@ -338,6 +352,15 @@ pub fn write(path: &std::path::Path, said: Said) -> Result<Lyrics, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_file_called_off_is_not_listened_to_again() {
+        let path = std::path::Path::new("/nowhere/called-off.m4a");
+        want(0, path);
+        call_off(path);
+        let said: Said = std::sync::Arc::new(|now| panic!("listened: {now}"));
+        assert!(by_ear(path, Lyrics { lines: Vec::new() }, said).is_none());
+    }
 
     /// Run with `DJSUGAR_TRACK` naming a sung track that has untimed words in the `.lrc` beside it.
     #[test]

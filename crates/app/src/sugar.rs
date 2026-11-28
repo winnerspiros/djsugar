@@ -2781,6 +2781,14 @@ fn minis(p: &mut Painter, s: &mut State, r: Rect) -> f32 {
     2.0 * h
 }
 
+/// The cross that calls off the listening for a track's words.
+fn hear_stop(p: &mut Painter, s: &mut State, x: Rect) {
+    let c = (x.x + x.w * 0.5, x.y + x.h * 0.5);
+    p.line((c.0 - 3.5, c.1 - 3.5), (c.0 + 3.5, c.1 + 3.5), 1.5, GREY);
+    p.line((c.0 - 3.5, c.1 + 3.5), (c.0 + 3.5, c.1 - 3.5), 1.5, GREY);
+    hit(s, x, Target::HearStop);
+}
+
 /// Synced lyrics of the playing deck, the current line in the deck colour.
 fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
     section(p, r, INK);
@@ -2789,7 +2797,8 @@ fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
     let Some(d) = (0..2).find(|&d| s.telemetry.decks[d].playing && has(d)).or_else(|| (0..2).find(|&d| has(d))) else {
         p.text_in(r.x + 12.0, r.y + 44.0, r.w - 24.0, ARTIST, "No lyrics for the loaded tracks");
         if let Some((_, now)) = &s.hearing {
-            p.text_in(r.x + 12.0, r.y + 62.0, r.w - 24.0, Style { colour: theme::DIM, ..ARTIST }, now);
+            p.text_in(r.x + 12.0, r.y + 62.0, r.w - 46.0, Style { colour: theme::DIM, ..ARTIST }, now);
+            hear_stop(p, s, Rect::new(r.x + r.w - 32.0, r.y + 48.0, 22.0, 22.0));
         }
         return;
     };
@@ -2797,7 +2806,8 @@ fn lyrics(p: &mut Painter, s: &mut State, r: Rect) {
     if let (Some((file, now)), Some(l)) = (&s.hearing, &s.decks[d].loaded)
         && matches!(&l.entry.source, crate::library::Source::File(f) if f == file)
     {
-        p.text_in(r.x + 70.0, r.y + 20.0, r.w - 82.0, Style { colour: theme::DIM, ..SMALL }, now);
+        p.text_in(r.x + 70.0, r.y + 20.0, r.w - 104.0, Style { colour: theme::DIM, ..SMALL }, now);
+        hear_stop(p, s, Rect::new(r.x + r.w - 32.0, r.y + 5.0, 22.0, 22.0));
     }
     // The words can be moved by hand; let go, they glide back to the line being sung.
     let body = Rect::new(r.x, r.y + 30.0, r.w, r.h - 34.0);
