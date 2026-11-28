@@ -348,7 +348,7 @@ pub const OPTIONS: [Spec; 41] = [
         opt: Opt::LyricsOnline,
         key: "lyrics_online",
         title: "Find lyrics online",
-        detail: "Tracks without an .lrc file get lyrics from LRCLIB, NetEase, KuGou, QQ Music or lyrics.ovh, saved beside the track.",
+        detail: "Tracks without an .lrc file get lyrics from LRCLIB, NetEase, KuGou, QQ Music, lyrics.ovh, AZLyrics or GreekLyrics, saved beside the track.",
         kind: Kind::Switch,
         default: 1,
     },

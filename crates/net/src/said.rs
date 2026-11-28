@@ -19,6 +19,8 @@ const VERSES: usize = 12;
 const LONGEST: usize = 90;
 /// The fewest lines that must start with a time for the times to be kept.
 const TIMED: usize = 8;
+/// How many pages of comments are read, most liked first.
+const PAGES: usize = 4;
 
 fn post(body: &Value) -> Result<Value> {
     let mut body = body.clone();
@@ -64,15 +66,27 @@ fn page(next: &Value) -> (String, Option<String>) {
     (told, more)
 }
 
-/// What each comment of a page says.
-fn comments(page: &Value) -> Vec<String> {
-    let mut out = Vec::new();
+/// What each comment of a page says, and where the comments go on.
+fn comments(page: &Value) -> (Vec<String>, Option<String>) {
+    let (mut out, mut more) = (Vec::new(), None);
     walk(page, &mut |m| {
         if let Some(t) = m.get("commentEntityPayload").and_then(|c| c["properties"]["content"]["content"].as_str()) {
             out.push(t.to_owned());
         }
+        // The page ends with its own continuation; each comment's replies have one inside the comment.
+        if let Some(items) = m.get("continuationItems").and_then(Value::as_array) {
+            let token = &items.last().unwrap_or(&Value::Null)["continuationItemRenderer"]["continuationEndpoint"]["continuationCommand"]
+                ["token"];
+            more = token.as_str().map(str::to_owned).or(more.take());
+        }
     });
-    out
+    (out, more)
+}
+
+/// A line of a list: "3. Name", "3) Name" or a tab after the number.
+fn listed(line: &str) -> bool {
+    let rest = line.trim_start_matches(|c: char| c.is_ascii_digit());
+    rest.len() < line.len() && rest.starts_with(['.', ')', '\t'])
 }
 
 /// "1:05 words" as its seconds and words.
@@ -107,8 +121,13 @@ pub fn verses(text: &str) -> Option<String> {
         }
         run.clear();
     }
-    let lines: Vec<&str> = best.into_iter().filter(|l| !l.is_empty()).collect();
-    if lines.len() < VERSES {
+    let mut lines: Vec<&str> = best.into_iter().filter(|l| !l.is_empty()).collect();
+    // A heading such as "Lyrics:" is not sung.
+    if lines.first().is_some_and(|l| l.ends_with(':')) {
+        lines.remove(0);
+    }
+    // A list of tracks or of moments is short lines too, but numbered ones.
+    if lines.len() < VERSES || lines.iter().filter(|l| listed(l)).count() * 2 > lines.len() {
         return None;
     }
     let times: Vec<(u32, &str)> = lines.iter().filter_map(|l| stamped(l)).filter(|(_, w)| !w.is_empty()).collect();
@@ -129,9 +148,23 @@ pub fn find(video: &str) -> Result<Option<String>> {
         return Ok(Some(words));
     }
     let Some(more) = more else { return Ok(None) };
-    let said = comments(&post(&json!({ "continuation": more }))?);
-    let timed = said.iter().filter_map(|c| verses(c)).find(|w| w.starts_with('['));
-    Ok(timed.or_else(|| said.iter().find_map(|c| verses(c))))
+    // Timed words from any page beat plain ones; of plain ones the longest is the likeliest to be whole.
+    let (mut next, mut plain) = (Some(more), None::<String>);
+    for _ in 0..PAGES {
+        let Some(token) = next.take() else { break };
+        let Ok(page) = post(&json!({ "continuation": token })) else { break };
+        let (said, more) = comments(&page);
+        for words in said.iter().filter_map(|c| verses(c)) {
+            if words.starts_with('[') {
+                return Ok(Some(words));
+            }
+            if plain.as_ref().is_none_or(|p| words.len() > p.len()) {
+                plain = Some(words);
+            }
+        }
+        next = more;
+    }
+    Ok(plain)
 }
 
 #[cfg(test)]
@@ -153,6 +186,14 @@ mod tests {
     }
 
     #[test]
+    fn a_list_of_tracks_is_not_a_song_and_a_heading_is_not_sung() {
+        let list: Vec<String> = (1..=15).map(|i| format!("{i}.\t\"Track {i}\"")).collect();
+        assert_eq!(verses(&list.join("\n")), None);
+        let words: Vec<String> = (0..13).map(|i| format!("Line number {i} of the song")).collect();
+        assert_eq!(verses(&format!("letra:\n{}", words.join("\n"))), Some(words.join("\n")));
+    }
+
+    #[test]
     fn lines_with_times_become_timed() {
         let words: Vec<String> = (0..12).map(|i| format!("{}:{:02} Sing line {i}", i / 6, i * 10 % 60)).collect();
         let got = verses(&words.join("\n")).unwrap();
@@ -167,12 +208,17 @@ mod tests {
             "contents": [{ "continuationItemRenderer": { "continuationEndpoint": { "continuationCommand": { "token": "T" } } } }] }] });
         assert_eq!(page(&next), ("Told".to_owned(), Some("T".to_owned())));
         let more = json!({ "m": [{ "payload": { "commentEntityPayload": { "properties": { "content": { "content": "Hi" } } } } }] });
-        assert_eq!(comments(&more), ["Hi"]);
+        assert_eq!(comments(&more), (vec!["Hi".to_owned()], None));
+        let more = json!({ "continuationItems": [
+            { "replies": { "continuationItemRenderer": { "continuationEndpoint": { "continuationCommand": { "token": "R" } } } } },
+            { "continuationItemRenderer": { "continuationEndpoint": { "continuationCommand": { "token": "N" } } } }] });
+        assert_eq!(comments(&more).1.as_deref(), Some("N"));
     }
 
     #[test]
     #[ignore = "network"]
     fn asks_a_real_video() {
-        find("fJ9rUzIMcZQ").unwrap();
+        let words = find("fJ9rUzIMcZQ").unwrap().unwrap();
+        assert!(words.to_lowercase().contains("is this the real life"), "{words}");
     }
 }

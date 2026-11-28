@@ -119,6 +119,9 @@ pub fn names(artist: &str, title: &str) -> Vec<(String, String)> {
 /// One service's lookup, by artist, title and length.
 type Finder = fn(&str, &str, f64) -> sugar_net::Result<Option<String>>;
 
+/// One site's page of plain words, by artist and title.
+type Page = fn(&str, &str) -> sugar_net::Result<Option<String>>;
+
 fn timed(text: &Option<String>) -> bool {
     text.as_ref().is_some_and(|t| t.contains('['))
 }
@@ -132,7 +135,7 @@ pub fn video(path: &std::path::Path) -> Option<&str> {
 
 /// Lyrics found online, timed ones wanted most. A downloaded video goes by its YouTube Music name first; LRCLIB,
 /// NetEase, KuGou, QQ Music and a signed-in Spotify are asked for timed lines. Plain words are the last resort: YouTube Music's,
-/// those services', lyrics.ovh's, or what is written under the video.
+/// those services', lyrics.ovh's, AZLyrics', GreekLyrics', or what is written under the video.
 fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option<String> {
     let mut names = names(artist, title);
     let song = video.and_then(|v| sugar_net::ytmusic::song_of(v).ok()).unwrap_or_default();
@@ -185,7 +188,18 @@ fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option
         return under;
     }
     if plain.is_none() {
-        plain = names.iter().find_map(|(a, t)| sugar_net::lyricsovh::find(a, t).ok().flatten()).or(under);
+        let pages: [(&str, Page); 3] = [
+            ("lyrics.ovh", sugar_net::lyricsovh::find),
+            ("azlyrics", sugar_net::pages::azlyrics),
+            ("greeklyrics", sugar_net::pages::greeklyrics),
+        ];
+        // Each site is asked by the likeliest two names; more would be a long wait for a song nobody has.
+        plain = pages.iter().find_map(|(who, find)| {
+            let got = names.iter().take(2).find_map(|(a, t)| find(a, t).ok().flatten())?;
+            crate::log::note(&format!("lyrics: plain words from {who}"));
+            Some(got)
+        });
+        plain = plain.or(under);
     }
     let what = if plain.is_some() { "plain words only" } else { "nothing" };
     crate::log::note(&format!("lyrics for \"{artist}\" \"{title}\": {what} after {asked} asks"));
