@@ -83,15 +83,21 @@ const SAMPLE: usize = 5;
 const AGREES: f64 = 0.7;
 const FOUND: f64 = 0.75;
 
+/// What holding timed lyrics against a track found.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Checked {
+    /// The words are sung where they say.
+    Right,
+    /// They were off, and are here set where they are heard.
+    Mended(Vec<Line>),
+    /// They are not what is sung, as far as could be made out.
+    Wrong,
+}
+
 /// Holds timed lyrics against the track at `path`: they can drift, or be off by what a video adds to the song.
 /// Words are then set where they are heard; None when they were right, or aren't what is sung. `moved` is the
 /// lines shifted by the parts known not to be the song, taken when that alone puts them right.
-pub fn check_words(
-    path: &Path,
-    lines: &[Line],
-    moved: Option<&[Line]>,
-    report: Report,
-) -> Result<Option<Vec<Line>>, String> {
+pub fn check_words(path: &Path, lines: &[Line], moved: Option<&[Line]>, report: Report) -> Result<Checked, String> {
     let told = report.clone();
     listen(path, report, |ear, samples| {
         let hear = || {
@@ -102,10 +108,15 @@ pub fn check_words(
         };
         if let Some(moved) = moved {
             if !right(ear, samples, &worded(lines))? && right(ear, samples, &worded(moved))? {
-                return Ok(Some(moved.to_vec()));
+                return Ok(Checked::Mended(moved.to_vec()));
             }
         }
-        mend(ear, samples, lines, hear, &|p| told(Stage::Listening(p)))
+        let mended = mend(ear, samples, lines, hear, &|p| told(Stage::Listening(p)))?;
+        match mended {
+            Some(lines) => Ok(Checked::Mended(lines)),
+            None if right(ear, samples, &worded(lines))? => Ok(Checked::Right),
+            None => Ok(Checked::Wrong),
+        }
     })
 }
 

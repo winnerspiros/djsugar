@@ -1,11 +1,14 @@
 //! Hears the words sung in a track: OpenAI's Whisper (MIT) on the rten runtime. The sound goes through in half-minute
 //! windows; each word's time comes from where the model was listening as it wrote the word.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Range;
 use std::path::Path;
+use std::rc::Rc;
+use std::sync::{Arc, OnceLock};
 
-use rten::{Model, NodeId, Value, ValueOrView, ValueView};
+use rten::{Model, NodeId, RunOptions, ThreadPool, Value, ValueOrView, ValueView};
 use rustfft::{num_complex::Complex32, FftPlanner};
 
 use crate::word_timing::Heard;
@@ -40,6 +43,8 @@ const UNSURE: f32 = -1.0;
 /// words are taken, seconds.
 const LEAD: f64 = 1.0;
 const TAKEN: f64 = 26.0;
+/// How many windows the encoder has been through are kept, for words looked for in the same place again.
+const KEPT: usize = 8;
 /// Following words whose times slip: how far apart the middle half of a window's words may land from where they
 /// were said to be and still be believed, and the most one window may move the next, seconds.
 const AGREED: f64 = 0.5;
@@ -257,6 +262,21 @@ struct Writer {
     looks: Vec<(usize, NodeId)>,
 }
 
+/// The threads the model runs on, its own: half the cores, four at most, and no more pressing than the thread
+/// that first listens.
+fn threads() -> RunOptions {
+    static POOL: OnceLock<Arc<ThreadPool>> = OnceLock::new();
+    let pool = POOL.get_or_init(|| {
+        let most = std::thread::available_parallelism().map_or(2, |n| n.get() / 2).clamp(1, 4);
+        let pool = ThreadPool::with_num_threads(most);
+        if crate::background::is_low() {
+            pool.run(|| drop(rayon::broadcast(|_| crate::background::lower_priority())));
+        }
+        Arc::new(pool)
+    });
+    RunOptions::default().with_thread_pool(Some(pool.clone()))
+}
+
 impl Writer {
     fn load(path: &Path) -> Result<Self, String> {
         let model = Model::load(crate::packed::read(path)?).map_err(fault)?;
@@ -325,7 +345,7 @@ impl Writer {
         let mut wanted = vec![self.logits];
         wanted.extend(renewed.iter().map(|i| self.present[*i]));
         wanted.extend(self.looks.iter().map(|(_, id)| *id));
-        let mut out = self.model.run(inputs, &wanted, None).map_err(fault)?.into_iter();
+        let mut out = self.model.run(inputs, &wanted, Some(threads())).map_err(fault)?.into_iter();
         let (shape, scores): ([usize; 3], Vec<f32>) = out.next().ok_or("no scores")?.into_shape_vec().map_err(fault)?;
         let scores = scores[scores.len() - shape[2]..].to_vec();
         for i in renewed {
@@ -540,6 +560,8 @@ pub struct Ear {
     bands: Vec<(usize, Vec<f32>)>,
     /// The language of what was last heard.
     language: std::cell::Cell<Option<usize>>,
+    /// Windows the encoder has been through, by the sample each starts at.
+    sounds: RefCell<Vec<(usize, Rc<Value>)>>,
 }
 
 impl Ear {
@@ -550,14 +572,24 @@ impl Ear {
             writer: Writer::load(decoder)?,
             bands: bands(),
             language: std::cell::Cell::new(None),
+            sounds: RefCell::default(),
         })
     }
 
-    /// What the encoder makes of a window of sound.
-    fn sound(&self, real: &[f32]) -> Result<Value, String> {
-        let picture = picture(real, &self.bands);
+    /// What the encoder makes of the window of `samples` from `seek`, kept for the next that asks.
+    fn sound(&self, samples: &[f32], seek: usize) -> Result<Rc<Value>, String> {
+        if let Some((_, sound)) = self.sounds.borrow().iter().find(|(at, _)| *at == seek) {
+            return Ok(sound.clone());
+        }
+        let picture = picture(&samples[seek.min(samples.len())..samples.len().min(seek + WINDOW)], &self.bands);
         let input = ValueView::from_shape([1, MELS, FRAMES], &picture[..]).map_err(fault)?;
-        self.listener.run_one(input.into(), None).map_err(fault)
+        let sound = Rc::new(self.listener.run_one(input.into(), Some(threads())).map_err(fault)?);
+        let mut sounds = self.sounds.borrow_mut();
+        if sounds.len() == KEPT {
+            sounds.remove(0);
+        }
+        sounds.push((seek, sound.clone()));
+        Ok(sound)
     }
 
     /// The words sung in `samples` (mono, at [`RATE`]), each with its time. `progress` is told how far along it
@@ -577,7 +609,7 @@ impl Ear {
                 seek += WINDOW;
                 continue;
             }
-            let sound = self.sound(real)?;
+            let sound = self.sound(samples, seek)?;
             let mut memory = Vec::new();
             let (mut scores, _) = writer.feed(&[t.start], &sound, &mut memory)?;
             chances(&mut scores);
@@ -663,7 +695,7 @@ impl Ear {
                 out.extend(known[first..].iter().map(|k| k.1));
                 break;
             }
-            let sound = self.sound(real)?;
+            let sound = self.sound(samples, seek)?;
             let spoken = match self.language.get() {
                 Some(spoken) => spoken,
                 None => {

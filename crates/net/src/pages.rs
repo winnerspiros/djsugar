@@ -11,7 +11,7 @@ use crate::{Error, Result};
 const BROWSER: &str =
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 /// LyricsTranslate turns away what calls itself a browser and is none, and answers what says what it is.
-const OURS: &str = "djsugar (https://github.com/winnerspiros/djsugar)";
+pub(crate) const OURS: &str = "djsugar (https://github.com/winnerspiros/djsugar)";
 const TIMEOUT: Duration = Duration::from_secs(12);
 /// How many songs of one name stixoi.info is asked for.
 const SAME: usize = 3;

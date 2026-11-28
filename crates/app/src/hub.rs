@@ -7,6 +7,8 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 
 use sugar_net::archive::Archive;
 use sugar_net::audius::Audius;
+use sugar_net::bandcamp::Bandcamp;
+use sugar_net::hearthis::HearThis;
 use sugar_net::soundcloud::SoundCloud;
 use sugar_net::youtube::YouTube;
 use sugar_net::ytmusic::{self, Channel};
@@ -40,10 +42,13 @@ pub enum Service {
     Audius,
     Archive,
     Spotify,
+    Bandcamp,
+    HearThis,
 }
 
 impl Service {
-    pub const ALL: [Self; 5] = [Self::YouTube, Self::SoundCloud, Self::Spotify, Self::Audius, Self::Archive];
+    pub const ALL: [Self; 7] =
+        [Self::YouTube, Self::SoundCloud, Self::Spotify, Self::Bandcamp, Self::Audius, Self::HearThis, Self::Archive];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -52,6 +57,8 @@ impl Service {
             Self::Audius => "AUDIUS",
             Self::Archive => "ARCHIVE",
             Self::Spotify => "SPOTIFY",
+            Self::Bandcamp => "BANDCAMP",
+            Self::HearThis => "HEARTHIS",
         }
     }
 
@@ -63,6 +70,8 @@ impl Service {
             Self::Audius => "Audius",
             Self::Archive => "the Internet Archive",
             Self::Spotify => "Spotify",
+            Self::Bandcamp => "Bandcamp",
+            Self::HearThis => "hearthis.at",
         }
     }
 
@@ -100,6 +109,8 @@ impl Service {
             Self::Audius => 0xcc0fe0,
             Self::Archive => 0x9a9a9e,
             Self::Spotify => 0x1db954,
+            Self::Bandcamp => 0x1da0c3,
+            Self::HearThis => 0xd81900,
         }
     }
 }
@@ -118,6 +129,8 @@ struct Clients {
     soundcloud: SoundCloud,
     audius: Audius,
     archive: Archive,
+    bandcamp: Bandcamp,
+    hearthis: HearThis,
     /// Where the Spotify account is kept.
     spotify: PathBuf,
     /// The YouTube Music account, and the file SoundCloud's token and name are kept in.
@@ -144,6 +157,8 @@ impl Clients {
             Service::SoundCloud => self.soundcloud.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Audius => self.audius.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Archive => self.archive.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::Bandcamp => self.bandcamp.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
+            Service::HearThis => self.hearthis.search(q, more).map(|p| Page { hits: p.hits, more: p.more }),
             Service::Spotify => crate::spotify::list(&self.spotify, q, more),
         }
     }
@@ -163,6 +178,8 @@ impl Clients {
             Service::SoundCloud => self.soundcloud.fetch(id, dir, progress),
             Service::Audius => self.audius.fetch(id, dir, progress),
             Service::Archive => self.archive.fetch(id, dir, progress),
+            Service::Bandcamp => self.bandcamp.fetch(id, dir, progress),
+            Service::HearThis => self.hearthis.fetch(id, dir, progress),
         }
     }
 }
@@ -242,7 +259,7 @@ pub struct Hub {
     /// The hits' pictures by ID, fetched as soon as a search answers.
     pub thumbs: std::collections::HashMap<String, Art>,
     /// Each service's account by `Service as usize`: its name once signed in, empty until the service has told it.
-    accounts: [Option<String>; 5],
+    accounts: [Option<String>; Service::ALL.len()],
     /// The service whose sign-in page is open, and what ends the wait for it.
     signing: Option<Service>,
     stop: Arc<std::sync::atomic::AtomicBool>,
@@ -275,7 +292,7 @@ impl Hub {
         let kept = std::fs::read_to_string(&soundcloud_file).unwrap_or_default();
         let (token, name) = kept.split_once('\n').unwrap_or((&kept, ""));
         soundcloud.sign_in(token);
-        let mut accounts = [const { None }; 5];
+        let mut accounts = [const { None }; Service::ALL.len()];
         accounts[Service::YouTube as usize] = youtube.signed_in().then(|| youtube.name());
         accounts[Service::SoundCloud as usize] = soundcloud.signed_in().then(|| name.to_owned());
         accounts[Service::Spotify as usize] = djsugar_spotify::logged_in(&spotify).then(String::new);
@@ -315,6 +332,8 @@ impl Hub {
                 soundcloud,
                 audius: Audius::new(),
                 archive: Archive,
+                bandcamp: Bandcamp,
+                hearthis: HearThis,
                 spotify,
                 ytmusic: youtube,
                 soundcloud_file,

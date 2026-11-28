@@ -522,6 +522,21 @@ fn service_mark(p: &mut Painter, sv: crate::hub::Service, r: Rect) {
                 p.rect(x, y, u * 0.07, u * 0.26, 0.0, ink);
             }
         }
+        // A tent pitched on its ground.
+        Service::Bandcamp => {
+            p.line(at(0.5, 0.24), at(0.2, 0.74), stroke, ink);
+            p.line(at(0.5, 0.24), at(0.8, 0.74), stroke, ink);
+            p.line(at(0.5, 0.5), at(0.5, 0.74), stroke * 0.8, ink);
+            p.line(at(0.16, 0.76), at(0.84, 0.76), stroke * 0.8, ink);
+        }
+        // A sound and the rings it spreads in.
+        Service::HearThis => {
+            let (cx, cy) = at(0.3, 0.5);
+            p.disc(cx, cy, u * 0.09, ink, ink);
+            for reach in [0.26, 0.44] {
+                p.arc(cx, cy, u * reach, stroke * 0.8, 0.88, 0.24, ink);
+            }
+        }
         Service::Spotify => {
             let (cx, cy) = at(0.5, 1.0);
             for (reach, thick) in [(0.68, 1.0), (0.52, 0.85), (0.37, 0.7)] {
@@ -2569,11 +2584,17 @@ fn hub(p: &mut Painter, s: &mut State, r: Rect) {
     p.rect(r.x, r.y + bar - 1.0, r.w, 1.0, 0.0, EDGE);
     let mut x = r.x + 10.0;
     // The rail already names the services; the tabs stand in where it is absent.
+    // Tabs that would crowd the search out keep only their marks, the chosen one its name.
+    let full: f32 = Service::ALL.iter().map(|sv| p.text_width(TAB, sv.name()) + 46.0).sum();
+    let named = full <= r.w - 20.0 - 240.0;
     for sv in Service::ALL.into_iter().filter(|_| rw == 0.0) {
         let on = s.hub.service == sv;
-        let tw = p.text_width(TAB, sv.name()) + 46.0;
+        let label = named || on;
+        let tw = if label { p.text_width(TAB, sv.name()) + 46.0 } else { 40.0 };
         service_mark(p, sv, Rect::new(x + 12.0, r.y + 11.0, 16.0, 16.0));
-        p.text(x + 34.0, r.y + 24.0, Style { colour: if on { TEXT } else { GREY }, ..TAB }, sv.name());
+        if label {
+            p.text(x + 34.0, r.y + 24.0, Style { colour: if on { TEXT } else { GREY }, ..TAB }, sv.name());
+        }
         if on {
             p.rect(x + 8.0, r.y + bar - 3.0, tw - 16.0, 2.0, 1.0, rgb(sv.colour()));
         }

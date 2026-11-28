@@ -754,7 +754,8 @@ fn words(
 ) {
     let mut kept = crate::lyrics::Lyrics { lines: kept };
     if online {
-        let found = crate::lyrics::find(path, &entry.artist, &entry.title, secs, true);
+        let (found, song) = crate::lyrics::find_named(path, &entry.artist, &entry.title, secs, true);
+        let _ = tx.send((Job::Named(path.clone(), song), None));
         if !found.lines.is_empty() {
             kept = crate::lyrics::Lyrics { lines: found.lines.clone() };
             let _ = tx.send((Job::Lyrics(d, path.clone(), found), None));
@@ -784,6 +785,8 @@ enum Job {
     Failed(String),
     /// Lyrics found online for the track now on a deck, by its file.
     Lyrics(usize, std::sync::Arc<std::path::Path>, crate::lyrics::Lyrics),
+    /// A file's lyrics were looked for online, and with them what YouTube Music calls the song.
+    Named(std::sync::Arc<std::path::Path>, Option<(String, String)>),
     /// What is not music in the file on a deck has been learnt.
     Skips(usize, std::sync::Arc<std::path::Path>),
     /// How far listening to a file for its words has come; None once it has ended.
@@ -1365,6 +1368,7 @@ impl State {
                         l.lyrics = ly;
                     }
                 }
+                (Job::Named(path, song), _) => self.name(&path, song),
                 (Job::Scan(found), _) => {
                     self.scans = self.scans.saturating_sub(1);
                     self.entries.truncate(SAMPLES.len());
@@ -2602,6 +2606,28 @@ impl State {
         let at = ORDER.iter().position(|v| *v == self.view).unwrap_or(0);
         let next = ORDER[(at as isize + by).rem_euclid(ORDER.len() as isize) as usize];
         self.press(Target::View(next), 0.0, 0.0);
+    }
+
+    /// Keeps the stream at `path` by the song's name, not the video's: `song` is what YouTube Music calls it.
+    fn name(&mut self, path: &std::path::Path, song: Option<(String, String)>) {
+        let key = path.to_string_lossy();
+        let Some(kept) = self.streamed.iter_mut().find(|t| t.0 == *key).map(|t| &mut t.1) else { return };
+        let [title, artist, service] = &mut kept[..] else { return };
+        let (a, t) = crate::lyrics::known(artist, title, song);
+        if a.is_empty() || t.is_empty() || t.contains(" - ") || (a == *artist && t == *title) {
+            return;
+        }
+        crate::log::note(&format!("\"{title}\" is kept as \"{t}\" by \"{a}\""));
+        let named = library::file(path.into(), &t, &a, service);
+        (*title, *artist) = (t, a);
+        crate::store::save_streamed(&self.streamed);
+        let same = |e: &Entry| matches!(&e.source, Source::File(p) if **p == *path);
+        for e in self.entries.iter_mut().filter(|e| same(e)) {
+            *e = named.clone();
+        }
+        for l in self.decks.iter_mut().filter_map(|d| d.loaded.as_mut()).filter(|l| same(&l.entry)) {
+            l.entry = named.clone();
+        }
     }
 
     pub fn load_deck(&mut self, deck: usize, index: usize) {

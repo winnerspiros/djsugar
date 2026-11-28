@@ -63,8 +63,9 @@ pub fn length(url: &str, headers: &[(&str, &str)]) -> Result<Option<u64>> {
 /// time is asked for again from where it stopped, so a slow line still gets there and a dead one gives up.
 const ANSWER: Duration = Duration::from_secs(15);
 const SENDING: Duration = Duration::from_secs(40);
-/// How long connecting to the server holding a file may take.
-const REACHING: Duration = Duration::from_secs(6);
+/// How long connecting to the server holding a file may take: where another holds it too, and where none does.
+const REACHING: Duration = Duration::from_secs(3);
+const REACHING_LAST: Duration = Duration::from_secs(6);
 
 /// The server a link names, for the log: never the link itself, which can carry a signature.
 fn host(url: &str) -> &str {
@@ -73,6 +74,8 @@ fn host(url: &str) -> &str {
 
 /// The most one request asks for; streaming hosts cut longer replies short.
 pub const PIECE: u64 = 1 << 20;
+/// And the least worth a connection of its own.
+const SMALLEST: u64 = 1 << 18;
 
 /// Downloads `url` to `to` in [`PIECE`] ranges on `workers` threads, each resumed
 /// up to four times; `size` skips asking the length. A short file is an error.
@@ -84,7 +87,22 @@ pub fn download(
     workers: u64,
     progress: crate::Progress<'_>,
 ) -> Result<u64> {
-    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+    download_any(&[url], headers, to, size, workers, progress)
+}
+
+/// [`download`] of a file several servers hold, `urls` its link on each: one that can't be connected to is
+/// left for the next by every thread at once, in the middle of the file as well.
+pub fn download_any(
+    urls: &[&str],
+    headers: &[(&str, &str)],
+    to: &Path,
+    size: Option<u64>,
+    workers: u64,
+    progress: crate::Progress<'_>,
+) -> Result<u64> {
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed};
+    let Some(&url) = urls.first() else { return Err(Error::Parse("no link")) };
+    let server = AtomicUsize::new(0);
     let part = to.with_extension(format!("{}.part", to.extension().and_then(|e| e.to_str()).unwrap_or("")));
     let total = match size {
         Some(n) => n,
@@ -97,7 +115,10 @@ pub fn download(
     file.set_len(total).map_err(net)?;
     let done = AtomicU64::new(0);
     let next = AtomicU64::new(0);
-    let pieces = total.div_ceil(PIECE);
+    // A host that holds each connection to a set speed is faster over more of them: a small file is cut
+    // finer, to keep every thread busy.
+    let piece = (total / workers.max(1)).clamp(SMALLEST, PIECE);
+    let pieces = total.div_ceil(piece);
     let fetch = |from: u64, end: u64| -> Result<()> {
         let mut at = from;
         let mut tries = 0;
@@ -106,6 +127,9 @@ pub fn download(
             if !progress(done.load(Relaxed), total) {
                 return Err(Error::Stopped);
             }
+            let asked = server.load(Relaxed);
+            let url = urls[asked.min(urls.len() - 1)];
+            let reaching = if asked + 1 < urls.len() { REACHING } else { REACHING_LAST };
             let mut req = agent().get(url).header("Range", &format!("bytes={at}-{end}"));
             for (k, v) in headers {
                 req = req.header(*k, *v);
@@ -114,20 +138,16 @@ pub fn download(
             let run = |at: &mut u64| -> Result<()> {
                 let timed = req
                     .config()
-                    .timeout_connect(Some(REACHING))
+                    .timeout_connect(Some(reaching))
                     .timeout_recv_response(Some(ANSWER))
                     .timeout_recv_body(Some(SENDING))
                     .build();
-                // A server that has sent nothing and can't be connected to is not asked again: another may hold
-                // the file. One that goes quiet midway is.
+                // A server that can't be connected to is not asked again: another may hold the file. One that
+                // goes quiet midway is.
                 let mut resp = timed.call().map_err(|e| match e {
                     ureq::Error::Timeout(ureq::Timeout::Connect | ureq::Timeout::Resolve)
                     | ureq::Error::HostNotFound
-                    | ureq::Error::ConnectionFailed
-                        if done.load(Relaxed) == 0 =>
-                    {
-                        Error::Unreachable
-                    }
+                    | ureq::Error::ConnectionFailed => Error::Unreachable,
                     e => net(e),
                 })?;
                 let status = resp.status().as_u16();
@@ -161,9 +181,20 @@ pub fn download(
                 _ if at > end => return Ok(()),
                 Err(Error::Status(s)) if s < 500 => return Err(Error::Status(s)),
                 Err(Error::Stopped) => return Err(Error::Stopped),
-                Err(Error::Unreachable) => {
+                // Said once, by the thread that moves all of them on.
+                Err(Error::Unreachable) if asked + 1 < urls.len() => {
+                    if server.compare_exchange(asked, asked + 1, Relaxed, Relaxed).is_ok() {
+                        crate::note(&format!("{} can't be reached", host(url)));
+                    }
+                }
+                // The last of them is given up on at once only where nothing has come: a line can drop midway.
+                Err(Error::Unreachable) if done.load(Relaxed) == 0 || tries >= 4 => {
                     crate::note(&format!("{} can't be reached", host(url)));
                     return Err(Error::Unreachable);
+                }
+                Err(Error::Unreachable) => {
+                    tries += 1;
+                    std::thread::sleep(Duration::from_millis(500));
                 }
                 // A piece that moved on is not a failed try.
                 _ if at > before => tries = 0,
@@ -186,7 +217,7 @@ pub fn download(
                         if i >= pieces {
                             return Ok(());
                         }
-                        fetch(i * PIECE, ((i + 1) * PIECE).min(total) - 1)?;
+                        fetch(i * piece, ((i + 1) * piece).min(total) - 1)?;
                     }
                 })
             })

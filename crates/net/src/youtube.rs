@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
-use crate::http::{agent, download, net, read};
+use crate::http::{agent, download_any, net, read};
 use crate::{Error, Hit, Result};
 
 /// One InnerTube client identity.
@@ -364,6 +364,25 @@ impl YouTube {
         Err(last)
     }
 
+    /// The captions somebody wrote for a video, as timed lyrics: None where there are none, or only those a
+    /// machine made by ear, which are no use for a song. One client is asked, with no account.
+    pub fn captions(&self, video: &str) -> Result<Option<String>> {
+        if !valid_id(video) || self.resting() {
+            return Ok(None);
+        }
+        let body = json!({ "videoId": video, "contentCheckOk": true, "racyCheckOk": true });
+        let (status, v, raw) = self.post("player", &VR, body, SEARCH_TIMEOUT)?;
+        if let Some(why) = bot_check(status, &v, &raw) {
+            return Err(Error::Refused(why));
+        }
+        let Some(link) = caption_link(&v) else { return Ok(None) };
+        let call = agent().get(&link).header("User-Agent", VR.agent).config().timeout_global(Some(SEARCH_TIMEOUT));
+        match read(call.build().call())? {
+            (200..=299, text) => Ok(caption_lines(&serde_json::from_str(&text).unwrap_or_default())),
+            (s, _) => Err(Error::Status(s)),
+        }
+    }
+
     /// The audio formats YouTube offers for a video, best first.
     /// Offers each client's formats to `take` in turn, moving on when it fails:
     /// a stream 403 gates only that client, so the next one may still serve it.
@@ -550,27 +569,20 @@ impl YouTube {
                     }
                     _ => f.url.clone(),
                 };
-                match download(&url, headers, &to, f.size, CHUNKS, progress) {
-                    Ok(_) => return Ok(to),
+                // A client's formats all sit on one server: the others the link names hold the file too.
+                let others = elsewhere(&url);
+                let links: Vec<&str> = std::iter::once(url.as_str()).chain(others.iter().map(String::as_str)).collect();
+                let asked = Instant::now();
+                match download_any(&links, headers, &to, f.size, CHUNKS, progress) {
+                    Ok(n) => {
+                        let took = asked.elapsed().as_millis().max(1);
+                        crate::note(&format!("youtube: {n} bytes in {took} ms, {} kB/s", u128::from(n) / took));
+                        return Ok(to);
+                    }
                     Err(Error::Stopped) => return Err(Error::Stopped),
                     // A client's files are all refused alike; its stream of pieces is another matter.
-                    Err(Error::Status(403)) => {
-                        last = Error::Status(403);
-                        refused_files = true;
-                    }
-                    // A client's formats all sit on one server: the others the link names hold the file too.
-                    Err(Error::Unreachable) => {
-                        for other in elsewhere(&url) {
-                            match download(&other, headers, &to, f.size, CHUNKS, progress) {
-                                Ok(_) => {
-                                    crate::note("youtube: fetched from another server");
-                                    return Ok(to);
-                                }
-                                Err(Error::Stopped) => return Err(Error::Stopped),
-                                Err(_) => {}
-                            }
-                        }
-                        last = Error::Unreachable;
+                    Err(e @ (Error::Status(403) | Error::Unreachable)) => {
+                        last = e;
                         refused_files = true;
                     }
                     Err(e) => last = e,
@@ -797,6 +809,33 @@ fn elsewhere(url: &str) -> Vec<String> {
         }
     }
     out
+}
+
+/// Where a player reply keeps the captions a person wrote, in the form that carries times.
+fn caption_link(v: &Value) -> Option<String> {
+    let tracks = v["captions"]["playerCaptionsTracklistRenderer"]["captionTracks"].as_array()?;
+    let written = tracks.iter().find(|t| t["kind"].as_str() != Some("asr"))?;
+    let link = written["baseUrl"].as_str()?;
+    Some(format!("{link}&fmt=json3"))
+}
+
+/// Captions as timed lyrics, a line to each: None when they are too few to be a song's words.
+fn caption_lines(v: &Value) -> Option<String> {
+    let mut out = String::new();
+    let mut lines = 0;
+    for event in v["events"].as_array()? {
+        let Some(at) = event["tStartMs"].as_u64() else { continue };
+        let said: String = event["segs"].as_array().into_iter().flatten().filter_map(|s| s["utf8"].as_str()).collect();
+        let said = said.split_whitespace().collect::<Vec<_>>().join(" ");
+        let said = said.trim_matches(|c: char| c == '\u{266a}' || c == '\u{266b}' || c.is_whitespace());
+        // What is told of the sound, "[Music]", is not sung.
+        if said.is_empty() || (said.starts_with('[') && said.ends_with(']')) {
+            continue;
+        }
+        out += &format!("[{:02}:{:02}.{:02}]{said}\n", at / 60_000, at / 1000 % 60, at / 10 % 100);
+        lines += 1;
+    }
+    (lines >= 8).then_some(out)
 }
 
 /// Audio URLs of a player reply, best first; scrambled ones carry what unlocks them.
@@ -1088,5 +1127,29 @@ mod tests {
         assert_eq!(f[0].sig, Some(("AB=C".to_string(), "sig".to_string())));
         assert_eq!(f[1].sig, None);
         assert_eq!(form("a=1+2&b=%2F%zz"), [("a".into(), "1 2".into()), ("b".into(), "/%zz".into())]);
+    }
+
+    #[test]
+    fn captions_a_person_wrote_become_timed_lines() {
+        let reply = json!({ "captions": { "playerCaptionsTracklistRenderer": { "captionTracks": [
+            { "baseUrl": "https://x/api/timedtext?v=a&lang=en&kind=asr", "kind": "asr" },
+            { "baseUrl": "https://x/api/timedtext?v=a&lang=el" },
+        ] } } });
+        assert_eq!(caption_link(&reply).as_deref(), Some("https://x/api/timedtext?v=a&lang=el&fmt=json3"));
+        assert_eq!(
+            caption_link(&json!({ "captions": { "playerCaptionsTracklistRenderer": { "captionTracks": [
+            { "baseUrl": "https://x/a", "kind": "asr" },
+        ] } } })),
+            None
+        );
+        let mut events = vec![json!({ "tStartMs": 0, "segs": [{ "utf8": "[Music]" }] }), json!({ "id": 1 })];
+        events.extend(
+            (1..=8)
+                .map(|i| json!({ "tStartMs": 61_230 * i, "segs": [{ "utf8": "\u{266a} Sing\nline" }, { "utf8": " on \u{266a}" }] })),
+        );
+        let got = caption_lines(&json!({ "events": events })).unwrap();
+        assert!(got.starts_with("[01:01.23]Sing line on\n[02:02.46]Sing line on\n"), "{got}");
+        assert_eq!(got.lines().count(), 8);
+        assert_eq!(caption_lines(&json!({ "events": [{ "tStartMs": 5, "segs": [{ "utf8": "one" }] }] })), None);
     }
 }

@@ -74,12 +74,99 @@ fn bare(title: &str) -> String {
         Some(n) if low.len() == out.len() => &out[..n],
         _ => &out,
     };
-    out.split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .trim_matches(|c: char| c == '-' || c.is_whitespace())
-        .to_string()
+    let mut words: Vec<&str> = out.split_whitespace().collect();
+    // What a video says of itself at the end of its name, with no brackets or dash to tell it by.
+    let tail = words.iter().rev().take_while(|w| SAID.contains(&w.to_lowercase().as_str())).count();
+    let tells = |w: &&str| !MAYBE.contains(&w.to_lowercase().as_str());
+    if tail < words.len() && words[words.len() - tail..].iter().any(tells) {
+        words.truncate(words.len() - tail);
+    }
+    words.join(" ").trim_matches(|c: char| c == '-' || c.is_whitespace()).to_string()
 }
+
+/// Words a video ends its name with that are no part of the song's; [`MAYBE`] those a song may end with too,
+/// which go only along with one of the others.
+const SAID: [&str; 18] = [
+    "official",
+    "music",
+    "video",
+    "audio",
+    "new",
+    "clip",
+    "lyric",
+    "lyrics",
+    "hd",
+    "hq",
+    "4k",
+    "videoclip",
+    "visualizer",
+    "visualiser",
+    "m/v",
+    "mv",
+    "επίσημο",
+    "στίχοι",
+];
+const MAYBE: [&str; 5] = ["music", "video", "audio", "new", "clip"];
+
+/// The words of lyrics, as told apart when two sets of them are compared: without times, marks or accents,
+/// Greek in Latin letters.
+fn worded_as(text: &str) -> std::collections::HashSet<String> {
+    let mut bare = String::with_capacity(text.len());
+    let mut depth = 0u32;
+    for c in text.chars() {
+        match c {
+            '[' | '<' => depth += 1,
+            ']' | '>' => depth = depth.saturating_sub(1),
+            c if depth == 0 => bare.push(if c.is_alphanumeric() { c } else { ' ' }),
+            _ => {}
+        }
+    }
+    crate::library::fold(&bare).split_whitespace().filter(|w| w.chars().count() > 2).map(str::to_owned).collect()
+}
+
+/// How far two sets of lyrics are of the same song, of 1: the share of the shorter's words the longer has.
+/// Two songs in one language share the small words, so only well over half says they are one.
+fn alike(a: &str, b: &str) -> f64 {
+    let (a, b) = (worded_as(a), worded_as(b));
+    let least = a.len().min(b.len());
+    if least < 8 {
+        return 0.0;
+    }
+    a.intersection(&b).count() as f64 / least as f64
+}
+
+/// The writing most of a text's letters are in: 0 for Latin and whatever is not told apart.
+fn writing(text: &str) -> u8 {
+    let mut seen = [0usize; 5];
+    for c in text.chars().filter(|c| c.is_alphabetic()) {
+        seen[match c as u32 {
+            0x370..=0x3ff | 0x1f00..=0x1fff => 1,
+            0x400..=0x52f => 2,
+            0x3040..=0x30ff | 0x3400..=0x9fff => 3,
+            0xac00..=0xd7af => 4,
+            _ => 0,
+        }] += 1;
+    }
+    (0..5).max_by_key(|&i| (seen[i], 5 - i)).unwrap_or(0) as u8
+}
+
+/// Whether lyrics may be those of a song so named: a name not in Latin letters is of a song in its own.
+fn spoken(name: &str, text: &str) -> bool {
+    let (named, sung) = (writing(name), writing(&text.replace(['[', '<'], "\n")));
+    named == 0 || named == sung
+}
+
+/// The services that take the hit of the right length whatever it is called: what they give is unsure
+/// until something bears it out.
+const LOOSE: [&str; 3] = ["netease", "kugou", "qq"];
+
+/// From how alike two sets of lyrics are one song's.
+const SAME: f64 = 0.6;
+
+/// The tag of lyrics found by a title alone, with nothing to bear them out: listening may show them another
+/// song's. And what follows a file's name where such were shown to be, so that they are not taken again.
+const UNSURE: &str = "[re:DJ Sugar unsure]";
+const REFUSED: &str = "lrc.not";
 
 /// An artist without what a channel adds to the name.
 fn act(artist: &str) -> String {
@@ -88,6 +175,16 @@ fn act(artist: &str) -> String {
         a = a.strip_suffix(tail).unwrap_or(a).trim();
     }
     a.to_string()
+}
+
+/// A Greek name as it is written in Latin letters.
+fn latin(name: &str) -> String {
+    let mut low = name.to_lowercase();
+    for (greek, latin) in [("ου", "ou"), ("ού", "ou"), ("ευ", "ev"), ("εύ", "ev"), ("αυ", "av"), ("αύ", "av")]
+    {
+        low = low.replace(greek, latin);
+    }
+    crate::library::fold(&low)
 }
 
 /// The names to ask the services for, likeliest first: a video called "Artist - Song (Official Video)" on a channel
@@ -104,6 +201,11 @@ pub fn names(artist: &str, title: &str) -> Vec<(String, String)> {
     }
     out.push((a.clone(), t.clone()));
     out.push((artist.trim().to_string(), title.trim().to_string()));
+    // Greek names are kept in Latin letters by some.
+    let latin = (latin(&out[0].0), latin(&out[0].1));
+    if latin.1.is_ascii() && !out[0].1.is_ascii() {
+        out.push(latin);
+    }
     out.push((String::new(), t));
     let mut seen: Vec<(String, String)> = Vec::new();
     out.retain(|n| {
@@ -138,74 +240,181 @@ pub fn video(path: &std::path::Path) -> Option<&str> {
     (made && matches!(path.extension()?.to_str()?, "m4a" | "webm" | "aac")).then_some(stem)
 }
 
+/// What was found online for a track.
+#[derive(Default)]
+struct Found {
+    text: Option<String>,
+    /// Found by a title alone, and borne out by nothing else.
+    unsure: bool,
+    /// What YouTube Music calls the song a video is of.
+    song: Option<(String, String)>,
+}
+
+/// How long the services are waited for, at each round of asking: one that hangs is left behind.
+const WAIT: std::time::Duration = std::time::Duration::from_secs(7);
+
+/// Something to be asked, on a thread of its own.
+type Job<T> = Box<dyn FnOnce() -> Option<T> + Send>;
+
+/// Runs every one of `jobs` at once, and gives what each came back with inside [`WAIT`], in their order.
+fn at_once<T: Send + 'static>(jobs: Vec<Job<T>>) -> Vec<Option<T>> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let mut out: Vec<Option<T>> = jobs.iter().map(|_| None).collect();
+    for (i, job) in jobs.into_iter().enumerate() {
+        let tx = tx.clone();
+        std::thread::spawn(move || tx.send((i, job())));
+    }
+    drop(tx);
+    let until = std::time::Instant::now() + WAIT;
+    while let Ok((i, got)) = rx.recv_timeout(until.saturating_duration_since(std::time::Instant::now())) {
+        out[i] = got;
+    }
+    out
+}
+
+/// Asks each of `from` for lyrics by each of `names`, all at once: the answers, with which name and who.
+fn ask(from: &[(&'static str, Finder)], names: &[(String, String)], length: f64) -> Vec<(usize, &'static str, String)> {
+    let mut jobs: Vec<Job<(usize, &'static str, String)>> = Vec::new();
+    for (n, (a, t)) in names.iter().enumerate() {
+        for &(who, find) in from {
+            let (a, t) = (a.clone(), t.clone());
+            jobs.push(Box::new(move || match find(&a, &t, length) {
+                Ok(got) => Some((n, who, got?)),
+                Err(e) => {
+                    crate::log::note(&format!("lyrics {who} \"{a}\" \"{t}\": {e}"));
+                    None
+                }
+            }));
+        }
+    }
+    at_once(jobs).into_iter().flatten().collect()
+}
+
+/// How many other uploads of a song are read for its lyrics, and how far from the track's length, in
+/// seconds, one may be and still be the same recording.
+const UPLOADS: usize = 3;
+const SAME_LENGTH: u32 = 2;
+
+/// What is written under a video and in its captions, and under and in the other uploads of the song: timed
+/// lines where anybody has them, else the plain words under the video itself.
+fn written(video: Option<&str>, name: Option<&(String, String)>, seconds: f64) -> Option<String> {
+    static YOUTUBE: std::sync::OnceLock<sugar_net::youtube::YouTube> = std::sync::OnceLock::new();
+    let youtube = || YOUTUBE.get_or_init(|| sugar_net::youtube::YouTube::new("US", ""));
+    let mut videos: Vec<String> = video.iter().map(|v| v.to_string()).collect();
+    let long = seconds.round() as u32;
+    if let Some((a, t)) = name.filter(|_| long > 0)
+        && let Ok(page) = youtube().search(&format!("{a} {t}"), None)
+    {
+        // Another upload of the same length is the same recording, and what is timed for it fits this one.
+        let same = page.hits.into_iter().filter(|h| h.seconds.abs_diff(long) <= SAME_LENGTH);
+        let others: Vec<String> = same.map(|h| h.id).filter(|id| !videos.contains(id)).take(UPLOADS).collect();
+        videos.extend(others);
+    }
+    let mut jobs: Vec<Job<String>> = Vec::new();
+    for v in &videos {
+        let (under, shown) = (v.clone(), v.clone());
+        jobs.push(Box::new(move || sugar_net::said::find(&under).ok().flatten()));
+        jobs.push(Box::new(move || youtube().captions(&shown).ok().flatten()));
+    }
+    let got = at_once(jobs);
+    let timed = got.iter().flatten().find(|text| text.starts_with('['));
+    // Plain words under another upload may be of another version; only the video's own are taken.
+    timed.or(got.first().and_then(Option::as_ref).filter(|_| video.is_some())).cloned()
+}
+
 /// Lyrics found online, those timed word by word wanted most, then timed lines. A downloaded video goes by its
-/// YouTube Music name first. Plain words are the last resort: YouTube Music's, the timed services', the lyric sites'
-/// pages, or what is written under the video.
-fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option<String> {
+/// YouTube Music name first, and its words there are what the others' are held against; those like `refused`
+/// are passed over. Plain words are the last resort.
+fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64, refused: Option<&str>) -> Found {
+    let began = std::time::Instant::now();
     let mut names = names(artist, title);
     let song = video.and_then(|v| sugar_net::ytmusic::song_of(v).ok()).unwrap_or_default();
+    let mut found = Found::default();
     if !song.title.is_empty() && !song.artist.is_empty() {
         crate::log::note(&format!("lyrics: the video is \"{}\" by \"{}\"", song.title, song.artist));
         let known = self::names(&song.artist, &song.title);
+        found.song = known.first().cloned();
         names.retain(|n| !known.contains(n));
-        names.splice(0..0, known);
+        // The video's own name goes first where it names the artist: YouTube Music may have a channel's.
+        let at = usize::from(names.first().is_some_and(|n| !n.0.is_empty() && bare(title).contains(" - ")));
+        names.splice(at..at, known);
+        names.sort_by_key(|n| n.0.is_empty());
     }
-    let mut plain: Option<String> = song.words;
-    let mut asked = 0;
-    for length in [seconds, 0.0] {
-        for (a, t) in &names {
-            let from: [(&str, Finder); 5] = [
-                ("lrclib", sugar_net::lrclib::find),
-                ("netease", sugar_net::netease::find),
-                ("kugou", sugar_net::kugou::find),
-                ("qq", sugar_net::qq::find),
-                ("lrc.red", sugar_net::lrcred::find),
-            ];
-            // Words a person timed one by one beat lines: once a name has timed lines, the rest are asked by that
-            // name for words, and no other name is tried.
-            let mut lined: Option<String> = None;
-            for (who, find) in from {
-                // The others take their first hit when no length is given, which is too loose to trust.
-                if length <= 0.0 && (who != "lrclib" || seconds <= 0.0) {
-                    continue;
-                }
-                asked += 1;
-                let got = find(a, t, length);
-                if let Err(e) = &got {
-                    crate::log::note(&format!("lyrics {who} \"{a}\" \"{t}\": {e}"));
-                }
-                let got = got.ok().flatten();
-                if worded(&got) {
-                    crate::log::note(&format!("lyrics timed by word from {who} as \"{a}\" \"{t}\" after {asked} asks"));
-                    return got;
-                }
-                if timed(&got) && lined.is_none() {
-                    crate::log::note(&format!("lyrics timed from {who} as \"{a}\" \"{t}\" after {asked} asks"));
-                    lined = got;
-                } else {
-                    plain = plain.or(got);
-                }
-            }
-            if lined.is_some() {
-                return lined;
-            }
+    let sure = song.words;
+    let fits = |who: &str, text: &str| {
+        let other = sure.as_deref().is_some_and(|sure| alike(text, sure) < SAME && worded_as(sure).len() >= 8);
+        let again = refused.is_some_and(|r| alike(text, r) >= SAME);
+        let foreign = !spoken(title, text);
+        if other || again || foreign {
+            crate::log::note(&format!("lyrics from {who} are another song's"));
         }
+        !(other || again || foreign)
+    };
+    let mut plain: Option<String> = sure.clone();
+    // Everything any service has said, for telling whether two of them agree.
+    let mut seen: Vec<String> = Vec::new();
+    let mut asked = 0;
+    let all: [(&str, Finder); 6] = [
+        ("lrclib", sugar_net::lrclib::find),
+        ("netease", sugar_net::netease::find),
+        ("kugou", sugar_net::kugou::find),
+        ("qq", sugar_net::qq::find),
+        ("lrc.red", sugar_net::lrcred::find),
+        ("deezer", sugar_net::deezer::find),
+    ];
+    // The likeliest name alone, as it mostly is enough; then the others together; then all with no length
+    // given, of the one service that still goes by the name then. The others take their first hit.
+    let most = names.len().min(1);
+    let rounds =
+        [(&names[..most], seconds, &all[..]), (&names[most..], seconds, &all[..]), (&names[..], 0.0, &all[..1])];
+    for (round, length, from) in rounds {
+        // With no length to go by at all, nobody's first hit is to be trusted.
+        if round.is_empty() || seconds <= 0.0 {
+            continue;
+        }
+        asked += round.len() * from.len();
+        let mut got = ask(from, round, length);
+        got.retain(|(_, who, text)| fits(who, text));
+        let agreed = |text: &str| {
+            let all = got.iter().map(|g| &g.2).chain(seen.iter());
+            all.filter(|other| alike(text, other) >= SAME).count()
+        };
+        // The likelier name first; then words a person timed one by one over lines; then those more agree with.
+        let rank = |g: &&(usize, &str, String)| (std::cmp::Reverse(g.0), worded(&Some(g.2.clone())), agreed(&g.2));
+        if let Some((n, who, text)) = got.iter().filter(|g| g.2.contains('[')).max_by_key(rank) {
+            let (a, t) = &round[*n];
+            // Itself is one of those it agrees with.
+            found.unsure = (a.is_empty() || LOOSE.contains(who)) && sure.is_none() && agreed(text) < 2;
+            let how = if worded(&Some(text.clone())) { "timed by word" } else { "timed" };
+            let doubt = if found.unsure { ", unsure" } else { "" };
+            let took = began.elapsed().as_millis();
+            crate::log::note(&format!(
+                "lyrics {how} from {who} as \"{a}\" \"{t}\" after {asked} asks, {took} ms{doubt}"
+            ));
+            found.text = Some(text.clone());
+            return found;
+        }
+        plain = plain.or_else(|| got.first().map(|g| g.2.clone()));
+        seen.extend(got.into_iter().map(|g| g.2));
     }
     if let Some((a, t)) = names.first() {
-        let got = crate::spotify::words(a, t, seconds);
+        let got = crate::spotify::words(a, t, seconds).filter(|text| fits("spotify", text));
         if timed(&got) {
             crate::log::note(&format!("lyrics timed from spotify as \"{a}\" \"{t}\""));
-            return got;
+            found.text = got;
+            return found;
         }
         plain = plain.or(got);
     }
-    let under = video.and_then(|v| sugar_net::said::find(v).ok().flatten());
+    let under = written(video, names.first().filter(|n| !n.0.is_empty()), seconds).filter(|text| fits("YouTube", text));
     if timed(&under) {
-        crate::log::note("lyrics timed from what is written under the video");
-        return under;
+        crate::log::note("lyrics timed from what is written under an upload of the song, or in its captions");
+        found.text = under;
+        return found;
     }
     if plain.is_none() {
-        let pages: [(&str, Page); 7] = [
+        let pages: [(&'static str, Page); 8] = [
+            ("genius", sugar_net::genius::find),
             ("lyrics.ovh", sugar_net::lyricsovh::find),
             ("azlyrics", sugar_net::pages::azlyrics),
             ("lyricstranslate", sugar_net::pages::lyricstranslate),
@@ -214,35 +423,66 @@ fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option
             ("hiphoplyrics", sugar_net::pages::hiphoplyrics),
             ("j-lyric", sugar_net::pages::jlyric),
         ];
-        // Each site is asked by the likeliest two names; more would be a long wait for a song nobody has.
-        plain = pages.iter().find_map(|(who, find)| {
-            let got = names.iter().take(2).find_map(|(a, t)| find(a, t).ok().flatten())?;
+        // Each site is asked by the likeliest two names, all at once; the first in this order that has it wins.
+        let mut jobs: Vec<Job<String>> = Vec::new();
+        for (_, find) in pages {
+            let names: Vec<_> = names.iter().take(2).cloned().collect();
+            jobs.push(Box::new(move || names.iter().find_map(|(a, t)| find(a, t).ok().flatten())));
+        }
+        let got = at_once(jobs);
+        let had =
+            got.into_iter().zip(pages).find_map(|(text, (who, _))| Some((who, text.filter(|t| spoken(title, t))?)));
+        if let Some((who, text)) = had {
             crate::log::note(&format!("lyrics: plain words from {who}"));
-            Some(got)
-        });
+            plain = Some(text);
+        }
         plain = plain.or(under);
     }
     let what = if plain.is_some() { "plain words only" } else { "nothing" };
-    crate::log::note(&format!("lyrics for \"{artist}\" \"{title}\": {what} after {asked} asks"));
-    plain
+    let took = began.elapsed().as_millis();
+    crate::log::note(&format!("lyrics for \"{artist}\" \"{title}\": {what} after {asked} asks, {took} ms"));
+    found.text = plain;
+    found
+}
+
+/// The artist and title a stream is to be kept by, from the name its service gave it and what YouTube Music
+/// calls the song: what the video's name says of itself first, as that keeps a Greek name in Greek.
+pub fn known(artist: &str, title: &str, song: Option<(String, String)>) -> (String, String) {
+    let own = names(artist, title).swap_remove(0);
+    if bare(title).contains(" - ") { own } else { song.unwrap_or(own) }
 }
 
 /// Lyrics for a file: its `.lrc` beside it, else what is found online, saved beside it for next time. Words kept
 /// without times are asked for again, in case somebody has timed them since.
 pub fn find(path: &std::path::Path, artist: &str, title: &str, seconds: f64, online: bool) -> Lyrics {
+    find_named(path, artist, title, seconds, online).0
+}
+
+/// [`find`], and with it what YouTube Music calls the song, where it was asked.
+pub fn find_named(
+    path: &std::path::Path,
+    artist: &str,
+    title: &str,
+    seconds: f64,
+    online: bool,
+) -> (Lyrics, Option<(String, String)>) {
     let lrc = path.with_extension("lrc");
     let kept = std::fs::read_to_string(&lrc).ok();
     // Words this app wrote down by ear give way to a person's, once those are found with times.
     let ours = kept.as_deref().is_some_and(lrc::is_auto);
     if !online || (timed(&kept) && !ours) {
-        return kept.map(|t| Lyrics::parse(&t)).unwrap_or_default();
+        return (kept.map(|t| Lyrics::parse(&t)).unwrap_or_default(), None);
     }
-    let found = fetch(video(path), artist, title, seconds);
-    if found.is_some() && (kept.is_none() || timed(&found)) {
-        let _ = std::fs::write(&lrc, found.as_deref().unwrap_or_default());
-        return found.map(|t| Lyrics::parse(&t)).unwrap_or_default();
+    let refused = std::fs::read_to_string(path.with_extension(REFUSED)).ok();
+    let found = fetch(video(path), artist, title, seconds, refused.as_deref());
+    if let Some(text) = &found.text
+        && (kept.is_none() || text.contains('['))
+    {
+        let mark = if found.unsure { format!("{UNSURE}\n") } else { String::new() };
+        let _ = std::fs::write(&lrc, format!("{mark}{text}"));
+        return (Lyrics::parse(text), found.song);
     }
-    kept.map(|t| Lyrics::parse(&t)).unwrap_or_default()
+    (kept.map(|t| Lyrics::parse(&t)).unwrap_or_default(), found.song)
 }
 
 /// The vocal level, of 255, from which a moment counts as sung.
@@ -313,7 +553,10 @@ pub fn by_ear(path: &std::path::Path, lyrics: Lyrics, said: Said) -> Option<Lyri
     } else if lyrics.untimed() {
         time(path, lyrics, said).map(Some)
     } else if unchecked(path) {
-        check(path, &lyrics, said)
+        check(path, &lyrics, said.clone()).and_then(|checked| match checked {
+            Some(lines) => Ok(lines),
+            None => write(path, said).map(Some),
+        })
     } else {
         Ok(None)
     };
@@ -328,9 +571,11 @@ pub fn unchecked(path: &std::path::Path) -> bool {
     })
 }
 
-/// Holds a file's timed lyrics against the singing, once: Some, with every word where it is heard, when they
-/// were off. The `.lrc` is marked either way, so the track is not listened to again.
-fn check(path: &std::path::Path, lyrics: &Lyrics, said: Said) -> Result<Option<Lyrics>, String> {
+/// Holds a file's timed lyrics against the singing, once: Some of Some, with every word where it is heard,
+/// when they were off. The `.lrc` is marked, so the track is not listened to again. None when they were found
+/// by a title alone and are not what is sung: they are put aside, never to be taken for this file again.
+fn check(path: &std::path::Path, lyrics: &Lyrics, said: Said) -> Result<Option<Option<Lyrics>>, String> {
+    use djsugar_engine::word_timing::Checked;
     let began = std::time::Instant::now();
     // Lyrics timed to the song are late in its video by what the video adds; viewers may have marked that.
     let parts = crate::skips::marked(path);
@@ -346,16 +591,28 @@ fn check(path: &std::path::Path, lyrics: &Lyrics, said: Said) -> Result<Option<L
         })
         .collect();
     let moved = (!parts.is_empty()).then_some(&moved[..]);
-    let mended = djsugar_engine::word_timing::check_words(path, &lyrics.lines, moved, report(said))?;
-    let what = if mended.is_some() { "were off and are set by ear" } else { "are left as they came" };
-    crate::log::note(&format!("lyrics checked in {:.0} s: the times {what}", began.elapsed().as_secs_f64()));
+    let checked = djsugar_engine::word_timing::check_words(path, &lyrics.lines, moved, report(said))?;
     let lrc = path.with_extension("lrc");
+    let kept = std::fs::read_to_string(&lrc).unwrap_or_default();
+    let unsure = kept.lines().next().is_some_and(|l| l.trim() == UNSURE);
+    let what = match &checked {
+        Checked::Mended(_) => "the times were off and are set by ear",
+        Checked::Wrong if unsure => "they are another song's, and are put aside",
+        Checked::Wrong => "little of them was made out, and they are left as they came",
+        Checked::Right => "the times are left as they came",
+    };
+    crate::log::note(&format!("lyrics checked in {:.0} s: {what}", began.elapsed().as_secs_f64()));
+    if checked == Checked::Wrong && unsure {
+        let _ = std::fs::rename(&lrc, path.with_extension(REFUSED));
+        return Ok(None);
+    }
+    let mended = if let Checked::Mended(lines) = checked { Some(lines) } else { None };
     let kept = match &mended {
         Some(lines) => lrc::to_lrc(lines),
-        None => std::fs::read_to_string(&lrc).unwrap_or_default(),
+        None => kept.strip_prefix(UNSURE).unwrap_or(&kept).trim_start().to_owned(),
     };
     let _ = std::fs::write(lrc, format!("{CHECKED}\n{kept}"));
-    Ok(mended.map(|lines| Lyrics { lines }))
+    Ok(Some(mended.map(|lines| Lyrics { lines })))
 }
 
 /// Times a file's untimed lyrics and keeps them beside it as an `.lrc`: each word where it is heard sung, or, when
@@ -442,8 +699,47 @@ mod tests {
     #[test]
     #[ignore = "network"]
     fn finds_timed_words_for_a_video_name() {
-        let l = fetch(None, "DuaLipaVEVO", "Dua Lipa - Levitating (Official Video)", 203.0).unwrap();
+        let l = fetch(None, "DuaLipaVEVO", "Dua Lipa - Levitating (Official Video)", 203.0, None).text.unwrap();
         assert!(l.contains("[0"), "{l}");
+    }
+
+    #[test]
+    fn what_a_video_says_of_itself_is_no_part_of_the_song() {
+        assert_eq!(bare("Levitating Official Music Video"), "Levitating");
+        assert_eq!(bare("Το Γράμμα Official Video HD"), "Το Γράμμα");
+        assert_eq!(bare("Λογαριασμός στίχοι"), "Λογαριασμός");
+        assert_eq!(bare("Something New"), "Something New");
+        assert_eq!(bare("Music Video"), "Music Video");
+        assert_eq!(bare("Lyrics"), "Lyrics");
+        let n = names("Mazonakis Official", "Γιώργος Μαζωνάκης - Οινόπνευμα Φτηνό - Official Music Video");
+        assert!(n.contains(&("giorgos mazonakis".to_string(), "oinopnevma ftino".to_string())), "{n:?}");
+        assert_eq!(latin("Που είσαι αύριο"), "pou eisai avrio");
+        assert!(n.last().unwrap().0.is_empty());
+    }
+
+    #[test]
+    fn lyrics_of_one_song_are_told_from_another() {
+        let one = "[00:01.00]<00:01.00>Θέλω <00:01.40>να σε δω ξανά\n[00:05.00]μέσα στη βροχή περπατώ μόνος\nκαι ψάχνω τα μάτια σου";
+        let same = "thelo na se do xana\nmesa sti vrochi perpato monos\nkai psachno ta matia sou paντού";
+        let other = "You said the rain would never fall on summer nights like these\nand walking home alone again";
+        assert!(alike(one, same) >= SAME, "{}", alike(one, same));
+        assert!(alike(one, other) < SAME);
+        assert!(alike("la la", "la la") < SAME);
+        assert!(!spoken("Το Γράμμα", "[00:24.600]欠二两笔墨债\n[00:27.390]闲听梅雨窗外"));
+        assert!(spoken("Το Γράμμα", "[00:19.23] Ήρθες εχθές μετά από χρόνια"));
+        assert!(spoken("Lemon", "[00:01.00]夢ならばどれほどよかったでしょう"));
+    }
+
+    #[test]
+    fn a_stream_is_kept_by_what_its_name_says() {
+        let song = Some(("Giorgos Mazonakis".to_string(), "Inopnevma Ftino".to_string()));
+        let k = known("Mazonakis", "Γιώργος Μαζωνάκης - Οινόπνευμα Φτηνό - Official Music Video", song.clone());
+        assert_eq!(k, ("Γιώργος Μαζωνάκης".to_string(), "Οινόπνευμα Φτηνό".to_string()));
+        assert_eq!(known("LightVEVO", "Baba Yaga", Some(("Light".into(), "Baba Yaga".into()))).0, "Light");
+        assert_eq!(
+            known("LightVEVO", "Baba Yaga (Official Video)", None),
+            ("Light".to_string(), "Baba Yaga".to_string())
+        );
     }
 
     #[test]
@@ -457,7 +753,9 @@ mod tests {
     #[test]
     #[ignore = "network"]
     fn a_video_with_an_odd_name_is_found_by_what_it_is() {
-        let l = fetch(Some("TUVcZfQe-Kw"), "", "dl lev mv", 231.0).unwrap();
+        let found = fetch(Some("TUVcZfQe-Kw"), "", "dl lev mv", 231.0, None);
+        assert_eq!(found.song, Some(("Dua Lipa".to_string(), "Levitating".to_string())));
+        let l = found.text.unwrap();
         assert!(l.contains("[0"), "{l}");
     }
 

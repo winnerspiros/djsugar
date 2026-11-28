@@ -3,8 +3,12 @@
 
 pub mod archive;
 pub mod audius;
+pub mod bandcamp;
 pub mod botguard;
 pub mod cipher;
+pub mod deezer;
+pub mod genius;
+pub mod hearthis;
 pub mod hls;
 pub mod http;
 pub mod kugou;
