@@ -132,7 +132,7 @@ pub(crate) fn spleeter_net() -> Result<Arc<spleeter::cpu::Net>, String> {
         return Ok(n.clone());
     }
     let path = model_or_fetch(SPLEETER, &MODELS)?;
-    let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let bytes = crate::packed::read(&path)?;
     let n = Arc::new(spleeter::cpu::Net::load(&bytes)?);
     // Half the cores, so a playing deck keeps its share.
     let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
@@ -258,7 +258,7 @@ fn htdemucs(path: &Path, weights: &Path) -> Result<StemSource, String> {
     let audio = crate::decode::decode(path)?;
     let rate = audio.sample_rate;
     let [l, r] = channels(&audio);
-    let bytes = std::fs::read(weights).map_err(|e| format!("{}: {e}", weights.display()))?;
+    let bytes = crate::packed::read(weights)?;
     let model = HtDemucs::load(&bytes, &djsugar_separation::gpu())?;
     let stems = model.separate([&l, &r])?;
     let model_rate = djsugar_separation::SAMPLE_RATE;
@@ -321,6 +321,33 @@ mod tests {
         let no_drums = rms([0.0, 1.0, 1.0, 1.0, 0.0]);
         println!("full {full:.1}, without kick and hats {no_drums:.1}");
         assert!(no_drums < full);
+    }
+
+    /// How far weights kept as 8 bits move the stems: `DJSUGAR_WHOLE=<the weights as converted>
+    /// DJSUGAR_TRACK=<a track at 44.1 kHz> cargo test -p djsugar-engine -- --ignored packed_weights`.
+    #[test]
+    #[ignore = "the weights as converted and a track of one's own"]
+    fn packed_weights_split_as_the_whole_ones_do() {
+        let (Ok(whole), Ok(track)) = (std::env::var("DJSUGAR_WHOLE"), std::env::var("DJSUGAR_TRACK")) else { return };
+        let whole = std::fs::read(whole).unwrap();
+        let small = std::env::temp_dir().join("djsugar-packed-weights");
+        std::fs::write(&small, crate::packed::pack(&whole).unwrap()).unwrap();
+        println!("{} bytes whole, {} packed", whole.len(), std::fs::metadata(&small).unwrap().len());
+        let small = crate::packed::read(&small).unwrap();
+        let audio = crate::decode::decode(Path::new(&track)).unwrap();
+        let [l, r] = channels(&audio);
+        let n = l.len().min(30 * 44_100);
+        let split = |bytes: &[u8]| {
+            spleeter::separate(&spleeter::cpu::Net::load(bytes).unwrap(), [&l[..n], &r[..n]], 0, |_, _| {})
+        };
+        let (a, b) = (split(&whole), split(&small));
+        for (s, name) in spleeter::STEMS.iter().enumerate() {
+            let power: f32 = a[s][0].iter().map(|v| v * v).sum();
+            let off: f32 = a[s][0].iter().zip(&b[s][0]).map(|(x, y)| (x - y) * (x - y)).sum();
+            let under = 10.0 * (power / off).log10();
+            println!("{name}: the difference is {under:.1} dB under the stem");
+            assert!(under > 20.0, "{name}");
+        }
     }
 
     #[test]

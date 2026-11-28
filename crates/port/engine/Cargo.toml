@@ -24,6 +24,7 @@ rustfft = "6"
 matrixmultiply = { version = "0.3", features = ["std"] }
 djsugar-stretch = { path = "../stretch" }
 serde_json = "1"
+half = "2"
 djsugar-link = { path = "../link" }
 # MIDI clock out to drum machines and other apps.
 midir = "0.11"

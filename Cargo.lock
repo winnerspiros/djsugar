@@ -3236,6 +3236,7 @@ dependencies = [
  "fastrand",
  "flacenc",
  "flate2",
+ "half",
  "image",
  "jiff",
  "libc",
