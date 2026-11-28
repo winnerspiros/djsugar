@@ -13,6 +13,7 @@ rustls-rustcrypto = "=0.1.0-pre.0"
 sha1 = { version = "0.10", default-features = false }
 sha2 = { version = "0.11", default-features = false }
 serde_json = "1"
+flate2 = "1"
 boa_engine = { version = "0.22", features = ["jsvalue-enum"] }
 
 [lints]

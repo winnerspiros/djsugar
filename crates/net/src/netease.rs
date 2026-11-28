@@ -23,8 +23,10 @@ pub fn find(artist: &str, title: &str, seconds: f64) -> Result<Option<String>> {
     let q = crate::soundcloud::encode(format!("{} {}", artist.trim(), title.trim()).trim());
     let hits = get(&format!("{API}/search/get?s={q}&type=1&limit=10"))?;
     let Some(id) = pick(&hits, seconds) else { return Ok(None) };
-    let v = get(&format!("{API}/song/lyric?id={id}&lv=1"))?;
-    Ok(v["lrc"]["lyric"].as_str().map(clean).filter(|t| !t.is_empty()))
+    let v = get(&format!("{API}/song/lyric/v1?id={id}&lv=-1&yv=1"))?;
+    // Timed word by word where somebody has done that, else line by line.
+    let worded = v["yrc"]["lyric"].as_str().and_then(|t| crate::worded::lrc(t, crate::worded::Kind::Yrc));
+    Ok(worded.or_else(|| v["lrc"]["lyric"].as_str().map(clean).filter(|t| !t.is_empty())))
 }
 
 fn get(url: &str) -> Result<Value> {
@@ -54,14 +56,16 @@ fn pick(v: &Value, seconds: f64) -> Option<u64> {
     v["result"]["songs"].as_array()?.iter().find(near)?["id"].as_u64()
 }
 
+/// Whether a line's words are a credit, not sung.
+pub(crate) fn credit(words: &str) -> bool {
+    CREDITS.iter().any(|c| words.trim_start().starts_with(c))
+}
+
 /// The timed lines with words in them, credits left out.
 pub(crate) fn clean(lrc: &str) -> String {
     let keep = |l: &&str| {
         let words = l.rsplit(']').next().unwrap_or("").trim();
-        l.starts_with('[')
-            && l.as_bytes().get(1).is_some_and(u8::is_ascii_digit)
-            && !words.is_empty()
-            && !CREDITS.iter().any(|c| words.starts_with(c))
+        l.starts_with('[') && l.as_bytes().get(1).is_some_and(u8::is_ascii_digit) && !words.is_empty() && !credit(words)
     };
     lrc.lines().map(str::trim).filter(keep).collect::<Vec<_>>().join("\n")
 }
@@ -85,6 +89,6 @@ mod tests {
     #[ignore = "network"]
     fn live_lookup() {
         let l = find("Daft Punk", "One More Time", 320.0).unwrap().unwrap();
-        assert!(l.contains("One more time"), "{l}");
+        assert!(l.contains(">One <") && l.contains(">more <"), "{l}");
     }
 }

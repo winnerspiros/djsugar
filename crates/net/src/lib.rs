@@ -9,6 +9,7 @@ pub mod hls;
 pub mod http;
 pub mod kugou;
 pub mod lrclib;
+pub mod lrcred;
 pub mod lyricsovh;
 pub mod netease;
 pub mod pages;
@@ -16,6 +17,7 @@ pub mod qq;
 pub mod said;
 pub mod soundcloud;
 pub mod sponsorblock;
+mod worded;
 pub mod youtube;
 pub mod ytmusic;
 

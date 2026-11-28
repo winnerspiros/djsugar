@@ -23,11 +23,22 @@ pub fn find(artist: &str, title: &str, seconds: f64) -> Result<Option<String>> {
     let Some(hash) = pick(&hits, seconds) else { return Ok(None) };
     let sent = get_from(&format!("https://krcs.kugou.com/search?ver=1&man=yes&client=mobi&hash={hash}"), SITE)?;
     let Some((id, key)) = best(&sent) else { return Ok(None) };
-    let v = get_from(
-        &format!("https://lyrics.kugou.com/download?ver=1&client=pc&id={id}&accesskey={key}&fmt=lrc&charset=utf8"),
-        SITE,
-    )?;
-    let text = v["content"].as_str().and_then(crate::botguard::b64_decode).and_then(|b| String::from_utf8(b).ok());
+    let sent = |fmt: &str| {
+        let v = get_from(
+            &format!(
+                "https://lyrics.kugou.com/download?ver=1&client=pc&id={id}&accesskey={key}&fmt={fmt}&charset=utf8"
+            ),
+            SITE,
+        )?;
+        Ok::<_, crate::Error>(v["content"].as_str().and_then(crate::botguard::b64_decode))
+    };
+    // Timed word by word where somebody has done that, else line by line.
+    let worded =
+        sent("krc").ok().flatten().and_then(|b| crate::worded::lrc(&crate::worded::krc(&b)?, crate::worded::Kind::Krc));
+    if worded.is_some() {
+        return Ok(worded);
+    }
+    let text = sent("lrc")?.and_then(|b| String::from_utf8(b).ok());
     Ok(text.map(|t| clean(&t)).filter(|t| !t.is_empty()))
 }
 
@@ -67,6 +78,6 @@ mod tests {
     #[ignore = "network"]
     fn live_lookup() {
         let l = find("Daft Punk", "One More Time", 320.0).unwrap().unwrap();
-        assert!(l.contains("One more time") && !l.contains("[ti:"), "{l}");
+        assert!(l.contains(">One <") && l.contains(">more <") && !l.contains("[ti:"), "{l}");
     }
 }

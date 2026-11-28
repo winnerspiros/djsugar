@@ -119,6 +119,11 @@ pub fn names(artist: &str, title: &str) -> Vec<(String, String)> {
 /// One service's lookup, by artist, title and length.
 type Finder = fn(&str, &str, f64) -> sugar_net::Result<Option<String>>;
 
+/// Whether lyrics have a time ahead of each word.
+fn worded(text: &Option<String>) -> bool {
+    text.as_deref().is_some_and(|t| t.lines().filter(|l| l.contains("]<")).count() * 2 > t.lines().count())
+}
+
 /// One site's page of plain words, by artist and title.
 type Page = fn(&str, &str) -> sugar_net::Result<Option<String>>;
 
@@ -133,9 +138,9 @@ pub fn video(path: &std::path::Path) -> Option<&str> {
     (made && matches!(path.extension()?.to_str()?, "m4a" | "webm" | "aac")).then_some(stem)
 }
 
-/// Lyrics found online, timed ones wanted most. A downloaded video goes by its YouTube Music name first; LRCLIB,
-/// NetEase, KuGou, QQ Music and a signed-in Spotify are asked for timed lines. Plain words are the last resort: YouTube Music's,
-/// those services', lyrics.ovh's, AZLyrics', GreekLyrics', or what is written under the video.
+/// Lyrics found online, those timed word by word wanted most, then timed lines. A downloaded video goes by its
+/// YouTube Music name first. Plain words are the last resort: YouTube Music's, the timed services', the lyric sites'
+/// pages, or what is written under the video.
 fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option<String> {
     let mut names = names(artist, title);
     let song = video.and_then(|v| sugar_net::ytmusic::song_of(v).ok()).unwrap_or_default();
@@ -149,12 +154,16 @@ fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option
     let mut asked = 0;
     for length in [seconds, 0.0] {
         for (a, t) in &names {
-            let from: [(&str, Finder); 4] = [
+            let from: [(&str, Finder); 5] = [
                 ("lrclib", sugar_net::lrclib::find),
                 ("netease", sugar_net::netease::find),
                 ("kugou", sugar_net::kugou::find),
                 ("qq", sugar_net::qq::find),
+                ("lrc.red", sugar_net::lrcred::find),
             ];
+            // Words a person timed one by one beat lines: once a name has timed lines, the rest are asked by that
+            // name for words, and no other name is tried.
+            let mut lined: Option<String> = None;
             for (who, find) in from {
                 // The others take their first hit when no length is given, which is too loose to trust.
                 if length <= 0.0 && (who != "lrclib" || seconds <= 0.0) {
@@ -166,11 +175,19 @@ fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option
                     crate::log::note(&format!("lyrics {who} \"{a}\" \"{t}\": {e}"));
                 }
                 let got = got.ok().flatten();
-                if timed(&got) {
-                    crate::log::note(&format!("lyrics timed from {who} as \"{a}\" \"{t}\" after {asked} asks"));
+                if worded(&got) {
+                    crate::log::note(&format!("lyrics timed by word from {who} as \"{a}\" \"{t}\" after {asked} asks"));
                     return got;
                 }
-                plain = plain.or(got);
+                if timed(&got) && lined.is_none() {
+                    crate::log::note(&format!("lyrics timed from {who} as \"{a}\" \"{t}\" after {asked} asks"));
+                    lined = got;
+                } else {
+                    plain = plain.or(got);
+                }
+            }
+            if lined.is_some() {
+                return lined;
             }
         }
     }
@@ -188,10 +205,14 @@ fn fetch(video: Option<&str>, artist: &str, title: &str, seconds: f64) -> Option
         return under;
     }
     if plain.is_none() {
-        let pages: [(&str, Page); 3] = [
+        let pages: [(&str, Page); 7] = [
             ("lyrics.ovh", sugar_net::lyricsovh::find),
             ("azlyrics", sugar_net::pages::azlyrics),
+            ("lyricstranslate", sugar_net::pages::lyricstranslate),
+            ("stixoi.info", sugar_net::pages::stixoi),
             ("greeklyrics", sugar_net::pages::greeklyrics),
+            ("hiphoplyrics", sugar_net::pages::hiphoplyrics),
+            ("j-lyric", sugar_net::pages::jlyric),
         ];
         // Each site is asked by the likeliest two names; more would be a long wait for a song nobody has.
         plain = pages.iter().find_map(|(who, find)| {

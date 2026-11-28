@@ -8508,6 +8508,7 @@ name = "sugar-net"
 version = "0.1.0"
 dependencies = [
  "boa_engine",
+ "flate2",
  "rustls-rustcrypto",
  "serde_json",
  "sha1",

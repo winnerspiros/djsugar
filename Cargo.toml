@@ -33,6 +33,7 @@ strip = true
 # speed is not heard, and it is a large share of the binary. Sound, drawing and ciphers keep the full optimization.
 [profile.release.package]
 djsugar-spotify.opt-level = "s"
+sugar-net.opt-level = "s"
 librespot-core.opt-level = "s"
 librespot-metadata.opt-level = "s"
 librespot-protocol.opt-level = "s"

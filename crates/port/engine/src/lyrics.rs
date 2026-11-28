@@ -120,6 +120,26 @@ pub struct Fill {
     pub rest: String,
 }
 
+/// The pieces a line is sung in, each with the space after it: its words, and where it is written without spaces,
+/// as Japanese is, each run of characters or katakana with the hiragana that ends it.
+fn pieces(text: &str) -> Vec<&str> {
+    let hiragana = |c: char| ('\u{3041}'..='\u{309f}').contains(&c);
+    let opens = |c: char| matches!(c, '\u{30a0}'..='\u{30ff}' | '\u{3400}'..='\u{9fff}');
+    let mut out = Vec::new();
+    for word in text.split_inclusive(char::is_whitespace).filter(|w| !w.trim().is_empty()) {
+        let (mut from, mut last) = (0, ' ');
+        for (at, c) in word.char_indices() {
+            if at > from && opens(c) && (hiragana(last) || !last.is_alphanumeric()) {
+                out.push(&word[from..at]);
+                from = at;
+            }
+            last = c;
+        }
+        out.push(&word[from..]);
+    }
+    out
+}
+
 /// Seconds a word of `chars` letters is reckoned to last when nothing says.
 pub fn word_length(chars: usize) -> f64 {
     0.35 + chars as f64 * 0.08
@@ -150,8 +170,7 @@ impl Line {
                 })
                 .collect();
         }
-        let words: Vec<&str> =
-            self.text.split_inclusive(char::is_whitespace).filter(|w| !w.trim().is_empty()).collect();
+        let words = pieces(&self.text);
         let weight = |w: &str| w.trim().chars().count() as f64 + 1.0;
         let total: f64 = words.iter().map(|w| weight(w)).sum();
         let sung: f64 = words.iter().map(|w| word_length(w.trim().chars().count())).sum();
@@ -638,6 +657,16 @@ pub fn save(track: &Path, store: Option<&Path>, text: &str) -> std::io::Result<O
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn splits_lines_written_without_spaces() {
+        assert_eq!(pieces("Hold the  line"), ["Hold ", "the ", "line"]);
+        assert_eq!(pieces("沈むように溶けてゆくように"), ["沈むように", "溶けてゆくように"]);
+        assert_eq!(pieces("二人だけの空が広がる夜に"), ["二人だけの", "空が", "広がる", "夜に"]);
+        assert_eq!(pieces("「さよなら」だけだった"), ["「さよなら」だけだった"]);
+        assert_eq!(pieces("チックタックと 鳴る世界で"), ["チックタックと ", "鳴る", "世界で"]);
+        assert_eq!(pieces("你好世界"), ["你好世界"]);
+    }
 
     #[test]
     fn knows_lyrics_it_transcribed() {
